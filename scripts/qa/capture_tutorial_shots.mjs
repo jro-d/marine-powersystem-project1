@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 
-const chromePath = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const chromePath = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const port = 9225;
 const tempUserDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'chrome-tut-full-'));
 

@@ -147,22 +147,22 @@
           "category": "PodHousing",
           "code": "PRT-05",
           "label": "05 · Right-Angle Gear Pod",
-          "shortLabel": "GEAR POD HOUSING",
-          "material": "Cast Marine Bronze / Steel",
-          "axisName": "Datum [0, 0, 0]",
+          "shortLabel": "RIGHT-ANGLE GEAR POD",
+          "material": "GGG40 Nodular Cast Iron",
+          "axisName": "-Z Aft Axial (-5.2m)",
           "explode": [
             0,
             0,
-            0
+            -5.2
           ],
           "labelAnchorOffset": [
-            0.9,
-            -0.4,
-            0
+            0,
+            1.8,
+            -0.4
           ],
           "labelScreenDir": {
-            "x": 140,
-            "y": 40
+            "x": 120,
+            "y": -65
           },
           "description": "Hydrodynamically streamlined central hub casing enclosing the 90° bevel gearbox, lubricating oil sump, and propeller shaft thrust bearings."
         },
@@ -170,22 +170,22 @@
           "category": "Gears",
           "code": "PRT-06",
           "label": "06 · Internal Bevel Gears & Prop Shaft",
-          "shortLabel": "SPIRAL BEVEL GEAR SET",
-          "material": "Case-Hardened Carburized Steel",
-          "axisName": "+Z Axial (+1.8m)",
+          "shortLabel": "INTERNAL BEVEL GEARS & SHAFT",
+          "material": "18CrNiMo7-6 Case-Hardened Steel",
+          "axisName": "-Z Aft Axial (-8.5m)",
           "explode": [
             0,
             0,
-            1.8
+            -8.5
           ],
           "labelAnchorOffset": [
-            0,
             0.4,
-            0.8
+            0,
+            -1.2
           ],
           "labelScreenDir": {
             "x": 135,
-            "y": -50
+            "y": 45
           },
           "description": "Matched spiral bevel ring gear and horizontal drive shaft converting vertical motor RPM to horizontal propeller rotation."
         },
@@ -328,7 +328,10 @@
         "rotatingPrefixes": [
           "Propeller_",
           "Hub_",
-          "Shaft_",
+          "Shaft_Retaining_Nut",
+          "Shaft_Aft_Taper",
+          "Shaft_Coupling_Flange",
+          "Shaft_End_Collar",
           "Tailshaft_"
         ]
       },
@@ -1654,8 +1657,8 @@
         "inrushMultiplier": 4.5
       },
       "kinematics": {
-        "axis": "z",
-        "pivotY": 0.45,
+        "axis": "x",
+        "pivotY": 0.9,
         "rpm": 1750,
         "rotatingPrefixes": [
           "Impeller_",
@@ -1670,15 +1673,15 @@
           "label": "01 · Fabricated Structural Base Skid",
           "shortLabel": "BASE SKID & MOUNT",
           "material": "Marine Structural Steel (IS 2062)",
-          "axisName": "Datum [0, 0, 0]",
+          "axisName": "-Y Downward (-0.45m)",
           "explode": [
             0,
-            -0.4,
+            -0.45,
             0
           ],
           "labelAnchorOffset": [
             0,
-            -0.2,
+            0.12,
             0
           ],
           "description": "Fabricated steel baseplate maintaining precision angular alignment between motor and pump."
@@ -1689,16 +1692,16 @@
           "label": "02 · 440 V / 75 kW Marine Induction Motor",
           "shortLabel": "440V INDUCTION MOTOR",
           "material": "Cast Iron (EN-GJL-250) Housing / Copper Windings",
-          "axisName": "-Z Backward (-0.8m)",
+          "axisName": "-X Drive End (-1.25m)",
           "explode": [
+            -1.25,
             0,
-            0,
-            -0.8
+            0
           ],
           "labelAnchorOffset": [
-            0,
-            0.5,
-            -0.8
+            -0.85,
+            0.98,
+            0
           ],
           "description": "Totally enclosed fan-cooled (TEFC) Class F insulated marine motor driving the seawater pump."
         },
@@ -1708,16 +1711,16 @@
           "label": "03 · Flexible Spacer Coupling & Guard",
           "shortLabel": "FLEXIBLE SPACER COUPLING",
           "material": "Forged 40Cr Steel / Polyurethane Element",
-          "axisName": "Center [-0.3m Z]",
+          "axisName": "-X Axial (-0.65m)",
           "explode": [
+            -0.65,
             0,
-            0,
-            -0.3
+            0
           ],
           "labelAnchorOffset": [
-            0,
-            0.4,
-            -0.3
+            -0.32,
+            0.9,
+            0
           ],
           "description": "Flexible coupling transmitting high torsional drive power while isolating shaft angular misalignment."
         },
@@ -1727,16 +1730,16 @@
           "label": "04 · Nitronic 50 High-Strength Stainless Shaft",
           "shortLabel": "NITRONIC PUMP SHAFT",
           "material": "Nitronic 50 / AISI 316L Stainless Steel",
-          "axisName": "+Z Forward (+0.2m)",
+          "axisName": "-X Axial (-0.20m)",
           "explode": [
+            -0.2,
             0,
-            0,
-            0.2
+            0
           ],
           "labelAnchorOffset": [
             0,
-            0.4,
-            0.2
+            0.9,
+            0
           ],
           "description": "Precision ground seawater-resistant drive shaft carrying torque directly from coupling to impeller."
         },
@@ -1746,16 +1749,16 @@
           "label": "05 · Silicon Carbide Cartridge Mechanical Seal",
           "shortLabel": "MECHANICAL CARTRIDGE SEAL",
           "material": "SiC / Carbon / Hastelloy-C Spring",
-          "axisName": "+Z Forward (+0.4m)",
+          "axisName": "+X Axial (+0.15m)",
           "explode": [
+            0.15,
             0,
-            0,
-            0.4
+            0
           ],
           "labelAnchorOffset": [
-            0,
-            0.35,
-            0.4
+            0.15,
+            0.9,
+            0
           ],
           "description": "Balanced cartridge mechanical seal preventing seawater egress along the rotating pump shaft."
         },
@@ -1765,16 +1768,16 @@
           "label": "06 · Nickel-Aluminium Bronze Volute Casing",
           "shortLabel": "NAB VOLUTE CASING",
           "material": "Nickel-Aluminium Bronze (Cu3 / CuAl10Fe5Ni5)",
-          "axisName": "+Z Forward (+0.6m)",
+          "axisName": "+X Volute End (+0.65m)",
           "explode": [
+            0.65,
             0,
-            0,
-            0.6
+            0
           ],
           "labelAnchorOffset": [
-            0,
-            0.5,
-            0.6
+            0.55,
+            1.15,
+            0
           ],
           "description": "High-pressure double-volute hydraulic casing converting high fluid velocity into static discharge head."
         },
@@ -1784,16 +1787,16 @@
           "label": "07 · Backward-Curved Centrifugal Impeller",
           "shortLabel": "NAB CENTRIFUGAL IMPELLER",
           "material": "Precision Cast Nickel-Aluminium Bronze",
-          "axisName": "+Z Forward (+0.85m)",
+          "axisName": "+X Axial (+1.65m)",
           "explode": [
+            1.65,
             0,
-            0,
-            0.85
+            0
           ],
           "labelAnchorOffset": [
-            0,
-            0.4,
-            0.85
+            0.55,
+            0.9,
+            0
           ],
           "description": "Dynamically balanced 6-blade centrifugal impeller delivering 450 m³/h cooling water circulation."
         },
@@ -1803,16 +1806,16 @@
           "label": "08 · Axial Suction Port & Bolted Flange",
           "shortLabel": "AXIAL SUCTION INLET",
           "material": "NAB Cast Flange / EPDM Gasket",
-          "axisName": "+Z Forward (+1.1m)",
+          "axisName": "+X Suction End (+2.45m)",
           "explode": [
+            2.45,
             0,
-            0,
-            1.1
+            0
           ],
           "labelAnchorOffset": [
-            0,
-            0.3,
-            1.1
+            1.05,
+            0.9,
+            0
           ],
           "description": "Axial sea chest suction connection equipped with sacrificial zinc anode mounting boss."
         },
@@ -1822,16 +1825,16 @@
           "label": "09 · Radial Discharge Neck & Flange",
           "shortLabel": "RADIAL DISCHARGE NECK",
           "material": "NAB Cast Flange (DIN PN16)",
-          "axisName": "+Y Vertical (+0.6m)",
+          "axisName": "+Y Radial Discharge (+0.85m)",
           "explode": [
-            0,
-            0.6,
-            0.6
+            0.65,
+            0.85,
+            0
           ],
           "labelAnchorOffset": [
-            0,
-            0.8,
-            0.6
+            0.55,
+            1.68,
+            0
           ],
           "description": "Radial discharge connection feeding auxiliary sea water mains to primary heat exchangers."
         }
@@ -1859,15 +1862,15 @@
           "label": "01 · Fabricated Structural Base Skid",
           "shortLabel": "BASE SKID & MOUNT",
           "material": "Marine Structural Steel (IS 2062)",
-          "axisName": "Datum [0, 0, 0]",
+          "axisName": "-Y Downward (-0.45m)",
           "explode": [
             0,
-            -0.4,
+            -0.45,
             0
           ],
           "labelAnchorOffset": [
             0,
-            -0.2,
+            0.12,
             0
           ],
           "description": "Fabricated steel baseplate maintaining precision angular alignment between motor and pump."
@@ -1878,16 +1881,16 @@
           "label": "02 · 440 V / 95 kW Marine Fire Pump Motor",
           "shortLabel": "95 kW FIRE PUMP MOTOR",
           "material": "Cast Iron (EN-GJL-250) Housing / Copper Windings",
-          "axisName": "-Z Backward (-0.8m)",
+          "axisName": "-X Drive End (-1.25m)",
           "explode": [
+            -1.25,
             0,
-            0,
-            -0.8
+            0
           ],
           "labelAnchorOffset": [
-            0,
-            0.5,
-            -0.8
+            -0.85,
+            0.98,
+            0
           ],
           "description": "Totally enclosed fan-cooled (TEFC) Class F insulated marine motor driving the seawater pump."
         },
@@ -1897,16 +1900,16 @@
           "label": "03 · Flexible Spacer Coupling & Guard",
           "shortLabel": "FLEXIBLE SPACER COUPLING",
           "material": "Forged 40Cr Steel / Polyurethane Element",
-          "axisName": "Center [-0.3m Z]",
+          "axisName": "-X Axial (-0.65m)",
           "explode": [
+            -0.65,
             0,
-            0,
-            -0.3
+            0
           ],
           "labelAnchorOffset": [
-            0,
-            0.4,
-            -0.3
+            -0.32,
+            0.9,
+            0
           ],
           "description": "Flexible coupling transmitting high torsional drive power while isolating shaft angular misalignment."
         },
@@ -1916,16 +1919,16 @@
           "label": "04 · Nitronic 50 High-Strength Stainless Shaft",
           "shortLabel": "NITRONIC PUMP SHAFT",
           "material": "Nitronic 50 / AISI 316L Stainless Steel",
-          "axisName": "+Z Forward (+0.2m)",
+          "axisName": "-X Axial (-0.20m)",
           "explode": [
+            -0.2,
             0,
-            0,
-            0.2
+            0
           ],
           "labelAnchorOffset": [
             0,
-            0.4,
-            0.2
+            0.9,
+            0
           ],
           "description": "Precision ground seawater-resistant drive shaft carrying torque directly from coupling to impeller."
         },
@@ -1935,16 +1938,16 @@
           "label": "05 · Silicon Carbide Cartridge Mechanical Seal",
           "shortLabel": "MECHANICAL CARTRIDGE SEAL",
           "material": "SiC / Carbon / Hastelloy-C Spring",
-          "axisName": "+Z Forward (+0.4m)",
+          "axisName": "+X Axial (+0.15m)",
           "explode": [
+            0.15,
             0,
-            0,
-            0.4
+            0
           ],
           "labelAnchorOffset": [
-            0,
-            0.35,
-            0.4
+            0.15,
+            0.9,
+            0
           ],
           "description": "Balanced cartridge mechanical seal preventing seawater egress along the rotating pump shaft."
         },
@@ -1954,16 +1957,16 @@
           "label": "06 · SOLAS High-Pressure Bronze Volute Casing",
           "shortLabel": "HIGH-PRESSURE CASING",
           "material": "Nickel-Aluminium Bronze (Cu3 / CuAl10Fe5Ni5)",
-          "axisName": "+Z Forward (+0.6m)",
+          "axisName": "+X Volute End (+0.65m)",
           "explode": [
+            0.65,
             0,
-            0,
-            0.6
+            0
           ],
           "labelAnchorOffset": [
-            0,
-            0.5,
-            0.6
+            0.55,
+            1.15,
+            0
           ],
           "description": "High-pressure double-volute hydraulic casing converting high fluid velocity into static discharge head."
         },
@@ -1973,16 +1976,16 @@
           "label": "07 · 6-Blade High-Head Fire Main Impeller",
           "shortLabel": "FIRE MAIN IMPELLER",
           "material": "Precision Cast Nickel-Aluminium Bronze",
-          "axisName": "+Z Forward (+0.85m)",
+          "axisName": "+X Axial (+1.65m)",
           "explode": [
+            1.65,
             0,
-            0,
-            0.85
+            0
           ],
           "labelAnchorOffset": [
-            0,
-            0.4,
-            0.85
+            0.55,
+            0.9,
+            0
           ],
           "description": "Dynamically balanced 6-blade centrifugal impeller delivering 450 m³/h cooling water circulation."
         },
@@ -1992,16 +1995,16 @@
           "label": "08 · Axial Suction Port & Bolted Flange",
           "shortLabel": "AXIAL SUCTION INLET",
           "material": "NAB Cast Flange / EPDM Gasket",
-          "axisName": "+Z Forward (+1.1m)",
+          "axisName": "+X Suction End (+2.45m)",
           "explode": [
+            2.45,
             0,
-            0,
-            1.1
+            0
           ],
           "labelAnchorOffset": [
-            0,
-            0.3,
-            1.1
+            1.05,
+            0.9,
+            0
           ],
           "description": "Axial sea chest suction connection equipped with sacrificial zinc anode mounting boss."
         },
@@ -2011,23 +2014,23 @@
           "label": "09 · Radial Discharge Neck & Flange",
           "shortLabel": "RADIAL DISCHARGE NECK",
           "material": "NAB Cast Flange (DIN PN16)",
-          "axisName": "+Y Vertical (+0.6m)",
+          "axisName": "+Y Radial Discharge (+0.85m)",
           "explode": [
-            0,
-            0.6,
-            0.6
+            0.65,
+            0.85,
+            0
           ],
           "labelAnchorOffset": [
-            0,
-            0.8,
-            0.6
+            0.55,
+            1.68,
+            0
           ],
           "description": "Radial discharge connection feeding auxiliary sea water mains to primary heat exchangers."
         }
       },
       "kinematics": {
-        "axis": "z",
-        "pivotY": 0.45,
+        "axis": "x",
+        "pivotY": 0.9,
         "rpm": 1750,
         "rotatingPrefixes": [
           "Impeller_",
@@ -2052,7 +2055,7 @@
         "inrushMultiplier": 4
       },
       "kinematics": {
-        "axis": "x",
+        "axis": "y",
         "pivotY": 0.5,
         "rpm": 1450,
         "rotatingPrefixes": [
@@ -2217,15 +2220,15 @@
           "label": "01 · Fabricated Structural Base Skid",
           "shortLabel": "BASE SKID & MOUNT",
           "material": "Marine Structural Steel (IS 2062)",
-          "axisName": "Datum [0, 0, 0]",
+          "axisName": "-Y Downward (-0.45m)",
           "explode": [
             0,
-            -0.4,
+            -0.45,
             0
           ],
           "labelAnchorOffset": [
             0,
-            -0.2,
+            0.12,
             0
           ],
           "description": "Fabricated steel baseplate maintaining precision angular alignment between motor and pump."
@@ -2236,16 +2239,16 @@
           "label": "02 · 440 V / 45 kW Machinery Bilge Pump Motor",
           "shortLabel": "45 kW BILGE MOTOR",
           "material": "Cast Iron (EN-GJL-250) Housing / Copper Windings",
-          "axisName": "-Z Backward (-0.8m)",
+          "axisName": "-X Drive End (-1.25m)",
           "explode": [
+            -1.25,
             0,
-            0,
-            -0.8
+            0
           ],
           "labelAnchorOffset": [
-            0,
-            0.5,
-            -0.8
+            -0.85,
+            0.98,
+            0
           ],
           "description": "Totally enclosed fan-cooled (TEFC) Class F insulated marine motor driving the seawater pump."
         },
@@ -2255,16 +2258,16 @@
           "label": "03 · Flexible Spacer Coupling & Guard",
           "shortLabel": "FLEXIBLE SPACER COUPLING",
           "material": "Forged 40Cr Steel / Polyurethane Element",
-          "axisName": "Center [-0.3m Z]",
+          "axisName": "-X Axial (-0.65m)",
           "explode": [
+            -0.65,
             0,
-            0,
-            -0.3
+            0
           ],
           "labelAnchorOffset": [
-            0,
-            0.4,
-            -0.3
+            -0.32,
+            0.9,
+            0
           ],
           "description": "Flexible coupling transmitting high torsional drive power while isolating shaft angular misalignment."
         },
@@ -2274,16 +2277,16 @@
           "label": "04 · Nitronic 50 High-Strength Stainless Shaft",
           "shortLabel": "NITRONIC PUMP SHAFT",
           "material": "Nitronic 50 / AISI 316L Stainless Steel",
-          "axisName": "+Z Forward (+0.2m)",
+          "axisName": "-X Axial (-0.20m)",
           "explode": [
+            -0.2,
             0,
-            0,
-            0.2
+            0
           ],
           "labelAnchorOffset": [
             0,
-            0.4,
-            0.2
+            0.9,
+            0
           ],
           "description": "Precision ground seawater-resistant drive shaft carrying torque directly from coupling to impeller."
         },
@@ -2293,16 +2296,16 @@
           "label": "05 · Silicon Carbide Cartridge Mechanical Seal",
           "shortLabel": "MECHANICAL CARTRIDGE SEAL",
           "material": "SiC / Carbon / Hastelloy-C Spring",
-          "axisName": "+Z Forward (+0.4m)",
+          "axisName": "+X Axial (+0.15m)",
           "explode": [
+            0.15,
             0,
-            0,
-            0.4
+            0
           ],
           "labelAnchorOffset": [
-            0,
-            0.35,
-            0.4
+            0.15,
+            0.9,
+            0
           ],
           "description": "Balanced cartridge mechanical seal preventing seawater egress along the rotating pump shaft."
         },
@@ -2312,16 +2315,16 @@
           "label": "06 · Bronze Bilge Volute Casing & Strainer",
           "shortLabel": "BILGE VOLUTE CASING",
           "material": "Nickel-Aluminium Bronze (Cu3 / CuAl10Fe5Ni5)",
-          "axisName": "+Z Forward (+0.6m)",
+          "axisName": "+X Volute End (+0.65m)",
           "explode": [
+            0.65,
             0,
-            0,
-            0.6
+            0
           ],
           "labelAnchorOffset": [
-            0,
-            0.5,
-            0.6
+            0.55,
+            1.15,
+            0
           ],
           "description": "High-pressure double-volute hydraulic casing converting high fluid velocity into static discharge head."
         },
@@ -2331,16 +2334,16 @@
           "label": "07 · Bronze Oily Bilge Stripping Impeller",
           "shortLabel": "BILGE IMPELLER",
           "material": "Precision Cast Nickel-Aluminium Bronze",
-          "axisName": "+Z Forward (+0.85m)",
+          "axisName": "+X Axial (+1.65m)",
           "explode": [
+            1.65,
             0,
-            0,
-            0.85
+            0
           ],
           "labelAnchorOffset": [
-            0,
-            0.4,
-            0.85
+            0.55,
+            0.9,
+            0
           ],
           "description": "Dynamically balanced 6-blade centrifugal impeller delivering 450 m³/h cooling water circulation."
         },
@@ -2350,16 +2353,16 @@
           "label": "08 · Axial Suction Port & Bolted Flange",
           "shortLabel": "AXIAL SUCTION INLET",
           "material": "NAB Cast Flange / EPDM Gasket",
-          "axisName": "+Z Forward (+1.1m)",
+          "axisName": "+X Suction End (+2.45m)",
           "explode": [
+            2.45,
             0,
-            0,
-            1.1
+            0
           ],
           "labelAnchorOffset": [
-            0,
-            0.3,
-            1.1
+            1.05,
+            0.9,
+            0
           ],
           "description": "Axial sea chest suction connection equipped with sacrificial zinc anode mounting boss."
         },
@@ -2369,23 +2372,23 @@
           "label": "09 · Radial Discharge Neck & Flange",
           "shortLabel": "RADIAL DISCHARGE NECK",
           "material": "NAB Cast Flange (DIN PN16)",
-          "axisName": "+Y Vertical (+0.6m)",
+          "axisName": "+Y Radial Discharge (+0.85m)",
           "explode": [
-            0,
-            0.6,
-            0.6
+            0.65,
+            0.85,
+            0
           ],
           "labelAnchorOffset": [
-            0,
-            0.8,
-            0.6
+            0.55,
+            1.68,
+            0
           ],
           "description": "Radial discharge connection feeding auxiliary sea water mains to primary heat exchangers."
         }
       },
       "kinematics": {
-        "axis": "z",
-        "pivotY": 0.45,
+        "axis": "x",
+        "pivotY": 0.9,
         "rpm": 1450,
         "rotatingPrefixes": [
           "Impeller_",
@@ -3004,7 +3007,7 @@
         "inrushMultiplier": 4.5
       },
       "kinematics": {
-        "axis": "x",
+        "axis": "z",
         "pivotY": 0.4,
         "rpm": 850,
         "rotatingPrefixes": [
@@ -3569,22 +3572,22 @@
           "category": "PodHousing",
           "code": "PRT-05",
           "label": "05 · Right-Angle Gear Pod",
-          "shortLabel": "GEAR POD HOUSING",
-          "material": "Cast Marine Bronze / Steel",
-          "axisName": "Datum [0, 0, 0]",
+          "shortLabel": "RIGHT-ANGLE GEAR POD",
+          "material": "GGG40 Nodular Cast Iron",
+          "axisName": "-Z Aft Axial (-5.2m)",
           "explode": [
             0,
             0,
-            0
+            -5.2
           ],
           "labelAnchorOffset": [
-            0.9,
-            -0.4,
-            0
+            0,
+            1.8,
+            -0.4
           ],
           "labelScreenDir": {
-            "x": 140,
-            "y": 40
+            "x": 120,
+            "y": -65
           },
           "description": "Hydrodynamically streamlined central hub casing enclosing the 90° bevel gearbox, lubricating oil sump, and propeller shaft thrust bearings."
         },
@@ -3592,22 +3595,22 @@
           "category": "Gears",
           "code": "PRT-06",
           "label": "06 · Internal Bevel Gears & Prop Shaft",
-          "shortLabel": "SPIRAL BEVEL GEAR SET",
-          "material": "Case-Hardened Carburized Steel",
-          "axisName": "+Z Axial (+1.8m)",
+          "shortLabel": "INTERNAL BEVEL GEARS & SHAFT",
+          "material": "18CrNiMo7-6 Case-Hardened Steel",
+          "axisName": "-Z Aft Axial (-8.5m)",
           "explode": [
             0,
             0,
-            1.8
+            -8.5
           ],
           "labelAnchorOffset": [
-            0,
             0.4,
-            0.8
+            0,
+            -1.2
           ],
           "labelScreenDir": {
             "x": 135,
-            "y": -50
+            "y": 45
           },
           "description": "Matched spiral bevel ring gear and horizontal drive shaft converting vertical motor RPM to horizontal propeller rotation."
         },
@@ -3750,7 +3753,10 @@
         "rotatingPrefixes": [
           "Propeller_",
           "Hub_",
-          "Shaft_",
+          "Shaft_Retaining_Nut",
+          "Shaft_Aft_Taper",
+          "Shaft_Coupling_Flange",
+          "Shaft_End_Collar",
           "Tailshaft_"
         ]
       },
@@ -5108,7 +5114,202 @@
     },
     "cooling": {
       "id": "coolingPump",
-      "glb": "/models/marine_cooling_pump.glb"
+      "title": "Auxiliary Sea Water Cooling Pump Set",
+      "subtitle": "Continuous-Duty 440 V Centrifugal Auxiliary Sea Water Cooling Pump · Bronze Impeller",
+      "glb": "/models/marine_cooling_pump.glb",
+      "electrical": {
+        "voltage": "440 V",
+        "ratedKw": 75,
+        "powerFactor": 0.86,
+        "breakerId": "cooling1Feed",
+        "busId": "lvBus",
+        "priority": "essential",
+        "startingMethod": "Star-Delta / Soft Starter",
+        "inrushMultiplier": 4.5
+      },
+      "kinematics": {
+        "axis": "x",
+        "pivotY": 0.9,
+        "rpm": 1750,
+        "rotatingPrefixes": [
+          "Impeller_",
+          "Pump_Shaft",
+          "Shaft_Coupling"
+        ]
+      },
+      "parts": {
+        "Pump_Skid": {
+          "category": "Skid",
+          "code": "PRT-01",
+          "label": "01 · Fabricated Structural Base Skid",
+          "shortLabel": "BASE SKID & MOUNT",
+          "material": "Marine Structural Steel (IS 2062)",
+          "axisName": "-Y Downward (-0.45m)",
+          "explode": [
+            0,
+            -0.45,
+            0
+          ],
+          "labelAnchorOffset": [
+            0,
+            0.12,
+            0
+          ],
+          "description": "Fabricated steel baseplate maintaining precision angular alignment between motor and pump."
+        },
+        "Motor_Body": {
+          "category": "Motor",
+          "code": "PRT-02",
+          "label": "02 · 440 V / 75 kW Marine Induction Motor",
+          "shortLabel": "440V INDUCTION MOTOR",
+          "material": "Cast Iron (EN-GJL-250) Housing / Copper Windings",
+          "axisName": "-X Drive End (-1.25m)",
+          "explode": [
+            -1.25,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            -0.85,
+            0.98,
+            0
+          ],
+          "description": "Totally enclosed fan-cooled (TEFC) Class F insulated marine motor driving the seawater pump."
+        },
+        "Shaft_Coupling": {
+          "category": "Shaft",
+          "code": "PRT-03",
+          "label": "03 · Flexible Spacer Coupling & Guard",
+          "shortLabel": "FLEXIBLE SPACER COUPLING",
+          "material": "Forged 40Cr Steel / Polyurethane Element",
+          "axisName": "-X Axial (-0.65m)",
+          "explode": [
+            -0.65,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            -0.32,
+            0.9,
+            0
+          ],
+          "description": "Flexible coupling transmitting high torsional drive power while isolating shaft angular misalignment."
+        },
+        "Pump_Shaft": {
+          "category": "Shaft",
+          "code": "PRT-04",
+          "label": "04 · Nitronic 50 High-Strength Stainless Shaft",
+          "shortLabel": "NITRONIC PUMP SHAFT",
+          "material": "Nitronic 50 / AISI 316L Stainless Steel",
+          "axisName": "-X Axial (-0.20m)",
+          "explode": [
+            -0.2,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            0,
+            0.9,
+            0
+          ],
+          "description": "Precision ground seawater-resistant drive shaft carrying torque directly from coupling to impeller."
+        },
+        "Shaft_Seal": {
+          "category": "Seal",
+          "code": "PRT-05",
+          "label": "05 · Silicon Carbide Cartridge Mechanical Seal",
+          "shortLabel": "MECHANICAL CARTRIDGE SEAL",
+          "material": "SiC / Carbon / Hastelloy-C Spring",
+          "axisName": "+X Axial (+0.15m)",
+          "explode": [
+            0.15,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            0.15,
+            0.9,
+            0
+          ],
+          "description": "Balanced cartridge mechanical seal preventing seawater egress along the rotating pump shaft."
+        },
+        "Pump_Casing": {
+          "category": "Casing",
+          "code": "PRT-06",
+          "label": "06 · Nickel-Aluminium Bronze Volute Casing",
+          "shortLabel": "NAB VOLUTE CASING",
+          "material": "Nickel-Aluminium Bronze (Cu3 / CuAl10Fe5Ni5)",
+          "axisName": "+X Volute End (+0.65m)",
+          "explode": [
+            0.65,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            0.55,
+            1.15,
+            0
+          ],
+          "description": "High-pressure double-volute hydraulic casing converting high fluid velocity into static discharge head."
+        },
+        "Impeller_Hub": {
+          "category": "Impeller",
+          "code": "PRT-07",
+          "label": "07 · Backward-Curved Centrifugal Impeller",
+          "shortLabel": "NAB CENTRIFUGAL IMPELLER",
+          "material": "Precision Cast Nickel-Aluminium Bronze",
+          "axisName": "+X Axial (+1.65m)",
+          "explode": [
+            1.65,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            0.55,
+            0.9,
+            0
+          ],
+          "description": "Dynamically balanced 6-blade centrifugal impeller delivering 450 m³/h cooling water circulation."
+        },
+        "Suction_Port": {
+          "category": "Ports",
+          "code": "PRT-08",
+          "label": "08 · Axial Suction Port & Bolted Flange",
+          "shortLabel": "AXIAL SUCTION INLET",
+          "material": "NAB Cast Flange / EPDM Gasket",
+          "axisName": "+X Suction End (+2.45m)",
+          "explode": [
+            2.45,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            1.05,
+            0.9,
+            0
+          ],
+          "description": "Axial sea chest suction connection equipped with sacrificial zinc anode mounting boss."
+        },
+        "Discharge_Port": {
+          "category": "Ports",
+          "code": "PRT-09",
+          "label": "09 · Radial Discharge Neck & Flange",
+          "shortLabel": "RADIAL DISCHARGE NECK",
+          "material": "NAB Cast Flange (DIN PN16)",
+          "axisName": "+Y Radial Discharge (+0.85m)",
+          "explode": [
+            0.65,
+            0.85,
+            0
+          ],
+          "labelAnchorOffset": [
+            0.55,
+            1.68,
+            0
+          ],
+          "description": "Radial discharge connection feeding auxiliary sea water mains to primary heat exchangers."
+        }
+      }
     },
     "fire": {
       "id": "firePump",
@@ -5124,6 +5325,189 @@
         "priority": "essential",
         "startingMethod": "DOL",
         "inrushMultiplier": 5.5
+      },
+      "parts": {
+        "Pump_Skid": {
+          "category": "Skid",
+          "code": "PRT-01",
+          "label": "01 · Fabricated Structural Base Skid",
+          "shortLabel": "BASE SKID & MOUNT",
+          "material": "Marine Structural Steel (IS 2062)",
+          "axisName": "-Y Downward (-0.45m)",
+          "explode": [
+            0,
+            -0.45,
+            0
+          ],
+          "labelAnchorOffset": [
+            0,
+            0.12,
+            0
+          ],
+          "description": "Fabricated steel baseplate maintaining precision angular alignment between motor and pump."
+        },
+        "Motor_Body": {
+          "category": "Motor",
+          "code": "PRT-02",
+          "label": "02 · 440 V / 95 kW Marine Fire Pump Motor",
+          "shortLabel": "95 kW FIRE PUMP MOTOR",
+          "material": "Cast Iron (EN-GJL-250) Housing / Copper Windings",
+          "axisName": "-X Drive End (-1.25m)",
+          "explode": [
+            -1.25,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            -0.85,
+            0.98,
+            0
+          ],
+          "description": "Totally enclosed fan-cooled (TEFC) Class F insulated marine motor driving the seawater pump."
+        },
+        "Shaft_Coupling": {
+          "category": "Shaft",
+          "code": "PRT-03",
+          "label": "03 · Flexible Spacer Coupling & Guard",
+          "shortLabel": "FLEXIBLE SPACER COUPLING",
+          "material": "Forged 40Cr Steel / Polyurethane Element",
+          "axisName": "-X Axial (-0.65m)",
+          "explode": [
+            -0.65,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            -0.32,
+            0.9,
+            0
+          ],
+          "description": "Flexible coupling transmitting high torsional drive power while isolating shaft angular misalignment."
+        },
+        "Pump_Shaft": {
+          "category": "Shaft",
+          "code": "PRT-04",
+          "label": "04 · Nitronic 50 High-Strength Stainless Shaft",
+          "shortLabel": "NITRONIC PUMP SHAFT",
+          "material": "Nitronic 50 / AISI 316L Stainless Steel",
+          "axisName": "-X Axial (-0.20m)",
+          "explode": [
+            -0.2,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            0,
+            0.9,
+            0
+          ],
+          "description": "Precision ground seawater-resistant drive shaft carrying torque directly from coupling to impeller."
+        },
+        "Shaft_Seal": {
+          "category": "Seal",
+          "code": "PRT-05",
+          "label": "05 · Silicon Carbide Cartridge Mechanical Seal",
+          "shortLabel": "MECHANICAL CARTRIDGE SEAL",
+          "material": "SiC / Carbon / Hastelloy-C Spring",
+          "axisName": "+X Axial (+0.15m)",
+          "explode": [
+            0.15,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            0.15,
+            0.9,
+            0
+          ],
+          "description": "Balanced cartridge mechanical seal preventing seawater egress along the rotating pump shaft."
+        },
+        "Pump_Casing": {
+          "category": "Casing",
+          "code": "PRT-06",
+          "label": "06 · SOLAS High-Pressure Bronze Volute Casing",
+          "shortLabel": "HIGH-PRESSURE CASING",
+          "material": "Nickel-Aluminium Bronze (Cu3 / CuAl10Fe5Ni5)",
+          "axisName": "+X Volute End (+0.65m)",
+          "explode": [
+            0.65,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            0.55,
+            1.15,
+            0
+          ],
+          "description": "High-pressure double-volute hydraulic casing converting high fluid velocity into static discharge head."
+        },
+        "Impeller_Hub": {
+          "category": "Impeller",
+          "code": "PRT-07",
+          "label": "07 · 6-Blade High-Head Fire Main Impeller",
+          "shortLabel": "FIRE MAIN IMPELLER",
+          "material": "Precision Cast Nickel-Aluminium Bronze",
+          "axisName": "+X Axial (+1.65m)",
+          "explode": [
+            1.65,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            0.55,
+            0.9,
+            0
+          ],
+          "description": "Dynamically balanced 6-blade centrifugal impeller delivering 450 m³/h cooling water circulation."
+        },
+        "Suction_Port": {
+          "category": "Ports",
+          "code": "PRT-08",
+          "label": "08 · Axial Suction Port & Bolted Flange",
+          "shortLabel": "AXIAL SUCTION INLET",
+          "material": "NAB Cast Flange / EPDM Gasket",
+          "axisName": "+X Suction End (+2.45m)",
+          "explode": [
+            2.45,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            1.05,
+            0.9,
+            0
+          ],
+          "description": "Axial sea chest suction connection equipped with sacrificial zinc anode mounting boss."
+        },
+        "Discharge_Port": {
+          "category": "Ports",
+          "code": "PRT-09",
+          "label": "09 · Radial Discharge Neck & Flange",
+          "shortLabel": "RADIAL DISCHARGE NECK",
+          "material": "NAB Cast Flange (DIN PN16)",
+          "axisName": "+Y Radial Discharge (+0.85m)",
+          "explode": [
+            0.65,
+            0.85,
+            0
+          ],
+          "labelAnchorOffset": [
+            0.55,
+            1.68,
+            0
+          ],
+          "description": "Radial discharge connection feeding auxiliary sea water mains to primary heat exchangers."
+        }
+      },
+      "kinematics": {
+        "axis": "x",
+        "pivotY": 0.9,
+        "rpm": 1750,
+        "rotatingPrefixes": [
+          "Impeller_",
+          "Pump_Shaft",
+          "Shaft_Coupling"
+        ]
       }
     },
     "eFire": {
@@ -5140,11 +5524,349 @@
         "priority": "essential",
         "startingMethod": "DOL",
         "inrushMultiplier": 5.5
+      },
+      "parts": {
+        "Pump_Skid": {
+          "category": "Skid",
+          "code": "PRT-01",
+          "label": "01 · Fabricated Structural Base Skid",
+          "shortLabel": "BASE SKID & MOUNT",
+          "material": "Marine Structural Steel (IS 2062)",
+          "axisName": "-Y Downward (-0.45m)",
+          "explode": [
+            0,
+            -0.45,
+            0
+          ],
+          "labelAnchorOffset": [
+            0,
+            0.12,
+            0
+          ],
+          "description": "Fabricated steel baseplate maintaining precision angular alignment between motor and pump."
+        },
+        "Motor_Body": {
+          "category": "Motor",
+          "code": "PRT-02",
+          "label": "02 · 440 V / 95 kW Marine Fire Pump Motor",
+          "shortLabel": "95 kW FIRE PUMP MOTOR",
+          "material": "Cast Iron (EN-GJL-250) Housing / Copper Windings",
+          "axisName": "-X Drive End (-1.25m)",
+          "explode": [
+            -1.25,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            -0.85,
+            0.98,
+            0
+          ],
+          "description": "Totally enclosed fan-cooled (TEFC) Class F insulated marine motor driving the seawater pump."
+        },
+        "Shaft_Coupling": {
+          "category": "Shaft",
+          "code": "PRT-03",
+          "label": "03 · Flexible Spacer Coupling & Guard",
+          "shortLabel": "FLEXIBLE SPACER COUPLING",
+          "material": "Forged 40Cr Steel / Polyurethane Element",
+          "axisName": "-X Axial (-0.65m)",
+          "explode": [
+            -0.65,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            -0.32,
+            0.9,
+            0
+          ],
+          "description": "Flexible coupling transmitting high torsional drive power while isolating shaft angular misalignment."
+        },
+        "Pump_Shaft": {
+          "category": "Shaft",
+          "code": "PRT-04",
+          "label": "04 · Nitronic 50 High-Strength Stainless Shaft",
+          "shortLabel": "NITRONIC PUMP SHAFT",
+          "material": "Nitronic 50 / AISI 316L Stainless Steel",
+          "axisName": "-X Axial (-0.20m)",
+          "explode": [
+            -0.2,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            0,
+            0.9,
+            0
+          ],
+          "description": "Precision ground seawater-resistant drive shaft carrying torque directly from coupling to impeller."
+        },
+        "Shaft_Seal": {
+          "category": "Seal",
+          "code": "PRT-05",
+          "label": "05 · Silicon Carbide Cartridge Mechanical Seal",
+          "shortLabel": "MECHANICAL CARTRIDGE SEAL",
+          "material": "SiC / Carbon / Hastelloy-C Spring",
+          "axisName": "+X Axial (+0.15m)",
+          "explode": [
+            0.15,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            0.15,
+            0.9,
+            0
+          ],
+          "description": "Balanced cartridge mechanical seal preventing seawater egress along the rotating pump shaft."
+        },
+        "Pump_Casing": {
+          "category": "Casing",
+          "code": "PRT-06",
+          "label": "06 · SOLAS High-Pressure Bronze Volute Casing",
+          "shortLabel": "HIGH-PRESSURE CASING",
+          "material": "Nickel-Aluminium Bronze (Cu3 / CuAl10Fe5Ni5)",
+          "axisName": "+X Volute End (+0.65m)",
+          "explode": [
+            0.65,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            0.55,
+            1.15,
+            0
+          ],
+          "description": "High-pressure double-volute hydraulic casing converting high fluid velocity into static discharge head."
+        },
+        "Impeller_Hub": {
+          "category": "Impeller",
+          "code": "PRT-07",
+          "label": "07 · 6-Blade High-Head Fire Main Impeller",
+          "shortLabel": "FIRE MAIN IMPELLER",
+          "material": "Precision Cast Nickel-Aluminium Bronze",
+          "axisName": "+X Axial (+1.65m)",
+          "explode": [
+            1.65,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            0.55,
+            0.9,
+            0
+          ],
+          "description": "Dynamically balanced 6-blade centrifugal impeller delivering 450 m³/h cooling water circulation."
+        },
+        "Suction_Port": {
+          "category": "Ports",
+          "code": "PRT-08",
+          "label": "08 · Axial Suction Port & Bolted Flange",
+          "shortLabel": "AXIAL SUCTION INLET",
+          "material": "NAB Cast Flange / EPDM Gasket",
+          "axisName": "+X Suction End (+2.45m)",
+          "explode": [
+            2.45,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            1.05,
+            0.9,
+            0
+          ],
+          "description": "Axial sea chest suction connection equipped with sacrificial zinc anode mounting boss."
+        },
+        "Discharge_Port": {
+          "category": "Ports",
+          "code": "PRT-09",
+          "label": "09 · Radial Discharge Neck & Flange",
+          "shortLabel": "RADIAL DISCHARGE NECK",
+          "material": "NAB Cast Flange (DIN PN16)",
+          "axisName": "+Y Radial Discharge (+0.85m)",
+          "explode": [
+            0.65,
+            0.85,
+            0
+          ],
+          "labelAnchorOffset": [
+            0.55,
+            1.68,
+            0
+          ],
+          "description": "Radial discharge connection feeding auxiliary sea water mains to primary heat exchangers."
+        }
+      },
+      "kinematics": {
+        "axis": "x",
+        "pivotY": 0.9,
+        "rpm": 1750,
+        "rotatingPrefixes": [
+          "Impeller_",
+          "Pump_Shaft",
+          "Shaft_Coupling"
+        ]
       }
     },
     "ballast": {
       "id": "ballastPump",
-      "glb": "/models/ballast_ows_skid.glb"
+      "title": "Ballast Pump & Oily Water Separator Skid",
+      "subtitle": "High-Capacity Centrifugal Ballast Pump · 440 V / 110 kW · Bilge & OWS Interlock",
+      "glb": "/models/ballast_ows_skid.glb",
+      "electrical": {
+        "voltage": "440 V",
+        "ratedKw": 110,
+        "powerFactor": 0.87,
+        "breakerId": "ballastFeed",
+        "busId": "lvBus",
+        "priority": "operational",
+        "startingMethod": "Star-Delta",
+        "inrushMultiplier": 4
+      },
+      "kinematics": {
+        "axis": "y",
+        "pivotY": 0.5,
+        "rpm": 1450,
+        "rotatingPrefixes": [
+          "Pump_Impeller"
+        ]
+      },
+      "parts": {
+        "Ballast_Pump_Casing": {
+          "category": "Pump",
+          "code": "PRT-01",
+          "label": "01 · Heavy-Duty Double-Volute Ballast Casing",
+          "shortLabel": "BALLAST PUMP CASING",
+          "material": "Marine Ductile Iron (GGG-40.3) / Bronze Wear Rings",
+          "axisName": "Datum [0, 0, 0]",
+          "explode": [
+            0,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            0,
+            0.6,
+            0
+          ],
+          "description": "Heavy marine pump casing capable of moving 650 m³/h seawater for trim, heel, and deballasting operations."
+        },
+        "440V_Drive_Motor": {
+          "category": "Motor",
+          "code": "PRT-02",
+          "label": "02 · 110 kW Marine Squirrel-Cage Induction Motor",
+          "shortLabel": "110 kW DRIVE MOTOR",
+          "material": "Cast Iron Frame / VPI Class H Windings",
+          "axisName": "-X Port (-0.65m)",
+          "explode": [
+            -0.65,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            -0.65,
+            0.6,
+            0
+          ],
+          "description": "Robust 440 V marine electric motor equipped with internal anti-condensation space heaters."
+        },
+        "Pump_Impeller": {
+          "category": "Impeller",
+          "code": "PRT-03",
+          "label": "03 · Bronze Enclosed Non-Clogging Impeller",
+          "shortLabel": "NON-CLOGGING IMPELLER",
+          "material": "Cast Leaded Tin Bronze (RG10)",
+          "axisName": "+X Starboard (+0.45m)",
+          "explode": [
+            0.45,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            0.45,
+            0.5,
+            0
+          ],
+          "description": "High-volume enclosed impeller designed to handle sediment, harbor mud, and ballast water solids."
+        },
+        "OWS_Pressure_Vessel": {
+          "category": "OWS",
+          "code": "PRT-04",
+          "label": "04 · 15 PPM Coalescing Oily Water Separator Vessel",
+          "shortLabel": "OWS PRESSURE VESSEL",
+          "material": "Epoxy-Lined Pressure Vessel Steel (P265GH)",
+          "axisName": "+Z Forward (+0.75m)",
+          "explode": [
+            0,
+            0.25,
+            0.75
+          ],
+          "labelAnchorOffset": [
+            0,
+            0.75,
+            0.75
+          ],
+          "description": "IMO MEPC.107(49) certified separation chamber utilizing gravity differential and oleophilic plates."
+        },
+        "Coalescer_Filter": {
+          "category": "Filter",
+          "code": "PRT-05",
+          "label": "05 · Micro-Fiber Oleophilic Coalescing Cartridge",
+          "shortLabel": "COALESCER FILTER",
+          "material": "Sintered Polypropylene & Microglass",
+          "axisName": "+Y Up (+0.85m)",
+          "explode": [
+            0,
+            0.85,
+            0.75
+          ],
+          "labelAnchorOffset": [
+            0,
+            1.1,
+            0.75
+          ],
+          "description": "Secondary high-efficiency filter stage removing finely dispersed oil droplets down to < 5 microns."
+        },
+        "Oil_Content_Monitor": {
+          "category": "Instrumentation",
+          "code": "PRT-06",
+          "label": "06 · 15 PPM Optical Bilge Alarm Monitor (OCM)",
+          "shortLabel": "OIL CONTENT MONITOR",
+          "material": "Optical Cell / Microprocessor Electronics",
+          "axisName": "Forward-Right [0.35, 0.45, 0.95]",
+          "explode": [
+            0.35,
+            0.45,
+            0.95
+          ],
+          "labelAnchorOffset": [
+            0.35,
+            0.8,
+            0.95
+          ],
+          "description": "Automatic sample turbidimeter triggering overboard 3-way discharge diversion if oil content exceeds 15 ppm."
+        },
+        "Control_Panel": {
+          "category": "Control",
+          "code": "PRT-07",
+          "label": "07 · IP55 Skid Automation & Valve Control Panel",
+          "shortLabel": "OWS AUTOMATION PANEL",
+          "material": "Sheet Steel Enclosure / PLC Display",
+          "axisName": "Forward-Left [-0.45, 0.45, 0.75]",
+          "explode": [
+            -0.45,
+            0.45,
+            0.75
+          ],
+          "labelAnchorOffset": [
+            -0.45,
+            0.8,
+            0.75
+          ],
+          "description": "Integrated PLC panel sequencing backwash cycles, level sensors, and pneumatic overboard discharge valves."
+        }
+      }
     },
     "bilge": {
       "id": "bilgePump",
@@ -5160,6 +5882,189 @@
         "priority": "essential",
         "startingMethod": "DOL",
         "inrushMultiplier": 5
+      },
+      "parts": {
+        "Pump_Skid": {
+          "category": "Skid",
+          "code": "PRT-01",
+          "label": "01 · Fabricated Structural Base Skid",
+          "shortLabel": "BASE SKID & MOUNT",
+          "material": "Marine Structural Steel (IS 2062)",
+          "axisName": "-Y Downward (-0.45m)",
+          "explode": [
+            0,
+            -0.45,
+            0
+          ],
+          "labelAnchorOffset": [
+            0,
+            0.12,
+            0
+          ],
+          "description": "Fabricated steel baseplate maintaining precision angular alignment between motor and pump."
+        },
+        "Motor_Body": {
+          "category": "Motor",
+          "code": "PRT-02",
+          "label": "02 · 440 V / 45 kW Machinery Bilge Pump Motor",
+          "shortLabel": "45 kW BILGE MOTOR",
+          "material": "Cast Iron (EN-GJL-250) Housing / Copper Windings",
+          "axisName": "-X Drive End (-1.25m)",
+          "explode": [
+            -1.25,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            -0.85,
+            0.98,
+            0
+          ],
+          "description": "Totally enclosed fan-cooled (TEFC) Class F insulated marine motor driving the seawater pump."
+        },
+        "Shaft_Coupling": {
+          "category": "Shaft",
+          "code": "PRT-03",
+          "label": "03 · Flexible Spacer Coupling & Guard",
+          "shortLabel": "FLEXIBLE SPACER COUPLING",
+          "material": "Forged 40Cr Steel / Polyurethane Element",
+          "axisName": "-X Axial (-0.65m)",
+          "explode": [
+            -0.65,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            -0.32,
+            0.9,
+            0
+          ],
+          "description": "Flexible coupling transmitting high torsional drive power while isolating shaft angular misalignment."
+        },
+        "Pump_Shaft": {
+          "category": "Shaft",
+          "code": "PRT-04",
+          "label": "04 · Nitronic 50 High-Strength Stainless Shaft",
+          "shortLabel": "NITRONIC PUMP SHAFT",
+          "material": "Nitronic 50 / AISI 316L Stainless Steel",
+          "axisName": "-X Axial (-0.20m)",
+          "explode": [
+            -0.2,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            0,
+            0.9,
+            0
+          ],
+          "description": "Precision ground seawater-resistant drive shaft carrying torque directly from coupling to impeller."
+        },
+        "Shaft_Seal": {
+          "category": "Seal",
+          "code": "PRT-05",
+          "label": "05 · Silicon Carbide Cartridge Mechanical Seal",
+          "shortLabel": "MECHANICAL CARTRIDGE SEAL",
+          "material": "SiC / Carbon / Hastelloy-C Spring",
+          "axisName": "+X Axial (+0.15m)",
+          "explode": [
+            0.15,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            0.15,
+            0.9,
+            0
+          ],
+          "description": "Balanced cartridge mechanical seal preventing seawater egress along the rotating pump shaft."
+        },
+        "Pump_Casing": {
+          "category": "Casing",
+          "code": "PRT-06",
+          "label": "06 · Bronze Bilge Volute Casing & Strainer",
+          "shortLabel": "BILGE VOLUTE CASING",
+          "material": "Nickel-Aluminium Bronze (Cu3 / CuAl10Fe5Ni5)",
+          "axisName": "+X Volute End (+0.65m)",
+          "explode": [
+            0.65,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            0.55,
+            1.15,
+            0
+          ],
+          "description": "High-pressure double-volute hydraulic casing converting high fluid velocity into static discharge head."
+        },
+        "Impeller_Hub": {
+          "category": "Impeller",
+          "code": "PRT-07",
+          "label": "07 · Bronze Oily Bilge Stripping Impeller",
+          "shortLabel": "BILGE IMPELLER",
+          "material": "Precision Cast Nickel-Aluminium Bronze",
+          "axisName": "+X Axial (+1.65m)",
+          "explode": [
+            1.65,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            0.55,
+            0.9,
+            0
+          ],
+          "description": "Dynamically balanced 6-blade centrifugal impeller delivering 450 m³/h cooling water circulation."
+        },
+        "Suction_Port": {
+          "category": "Ports",
+          "code": "PRT-08",
+          "label": "08 · Axial Suction Port & Bolted Flange",
+          "shortLabel": "AXIAL SUCTION INLET",
+          "material": "NAB Cast Flange / EPDM Gasket",
+          "axisName": "+X Suction End (+2.45m)",
+          "explode": [
+            2.45,
+            0,
+            0
+          ],
+          "labelAnchorOffset": [
+            1.05,
+            0.9,
+            0
+          ],
+          "description": "Axial sea chest suction connection equipped with sacrificial zinc anode mounting boss."
+        },
+        "Discharge_Port": {
+          "category": "Ports",
+          "code": "PRT-09",
+          "label": "09 · Radial Discharge Neck & Flange",
+          "shortLabel": "RADIAL DISCHARGE NECK",
+          "material": "NAB Cast Flange (DIN PN16)",
+          "axisName": "+Y Radial Discharge (+0.85m)",
+          "explode": [
+            0.65,
+            0.85,
+            0
+          ],
+          "labelAnchorOffset": [
+            0.55,
+            1.68,
+            0
+          ],
+          "description": "Radial discharge connection feeding auxiliary sea water mains to primary heat exchangers."
+        }
+      },
+      "kinematics": {
+        "axis": "x",
+        "pivotY": 0.9,
+        "rpm": 1450,
+        "rotatingPrefixes": [
+          "Impeller_",
+          "Pump_Shaft",
+          "Shaft_Coupling"
+        ]
       }
     },
     "nav": {

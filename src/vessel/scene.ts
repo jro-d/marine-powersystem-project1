@@ -24,7 +24,7 @@ import {
 import { vesselLayout, SHIP } from './vessel-layout';
 
 const C = { live: 0xff2222, dead: 0x6b7f8f, open: 0xdf8a1c, selected: 0x0b2a3b };
-const BG = { vessel: 0xdfe3e6, exploded: 0xeceef0 };
+const BG = { vessel: 0xf8fafc, exploded: 0xeceef0 };
 const UP_AXIS = new THREE.Vector3(0, 1, 0);
 
 function renderer(host: HTMLElement): THREE.WebGLRenderer {
@@ -68,9 +68,9 @@ function lineBetween(a: THREE.Vector3, b: THREE.Vector3, radius = .012): THREE.M
 }
 
 /**
- * Maritime navy blue floor with an engineering net (grid) texture and soft radial falloff.
- * Provides high-contrast backdrop so the lighter ship hull, interior equipment, and
- * animated electrical power flows remain vividly legible.
+ * Clean white ocean floor with a subtle engineering grid texture and soft radial falloff.
+ * Provides a bright, unobstructed backdrop so the ship hull, interior equipment, and
+ * animated electrical power flows read cleanly without dark color cast.
  */
 function createNetFloor(): THREE.Mesh {
   const material = new THREE.ShaderMaterial({
@@ -97,34 +97,34 @@ function createNetFloor(): THREE.Mesh {
         vec2 gridMajor = abs(fract(p / 5.0 - 0.5) - 0.5) / fwidth(p / 5.0);
         float lineMajor = 1.0 - min(min(gridMajor.x, gridMajor.y), 1.0);
 
-        // Net intersections / knot accents
+        // Subtle intersection accents
         vec2 knotDelta = abs(fract(p - 0.5) - 0.5);
-        float knots = smoothstep(0.12, 0.0, length(knotDelta)) * 0.45;
+        float knots = smoothstep(0.10, 0.0, length(knotDelta)) * 0.25;
 
-        // Combined net line intensity
-        float net = max(lineFine * 0.45, lineMajor * 0.85) + knots;
+        // Combined subtle grid line intensity
+        float net = clamp(max(lineFine * 0.30, lineMajor * 0.65) + knots, 0.0, 1.0);
 
-        // Soft radial fade so the net floor blends smoothly outward
+        // Soft radial fade so the floor blends seamlessly into the light horizon
         float dist = length(p);
-        float fade = smoothstep(75.0, 22.0, dist);
+        float fade = smoothstep(80.0, 24.0, dist);
 
-        // Deep maritime navy blue base with subtle radial depth
-        vec3 coreNavy = vec3(0.040, 0.082, 0.165);  // #0a152a
-        vec3 outerNavy = vec3(0.055, 0.110, 0.215); // #0e1c37
-        vec3 floorNavy = mix(coreNavy, outerNavy, smoothstep(5.0, 48.0, dist));
+        // Pure white ocean floor base transitioning gently toward studio horizon
+        vec3 coreWhite = vec3(1.0, 1.0, 1.0);       // #ffffff
+        vec3 outerWhite = vec3(0.973, 0.980, 0.988); // #f8fafc
+        vec3 floorBase = mix(coreWhite, outerWhite, smoothstep(8.0, 55.0, dist));
 
-        // Luminous technical net lines (cyan/electric blue)
-        vec3 netFineColor = vec3(0.18, 0.45, 0.72);   // crisp cyan-blue net line
-        vec3 netMajorColor = vec3(0.35, 0.75, 0.98);  // glowing primary cord
-        vec3 knotColor = vec3(0.55, 0.88, 1.0);       // knot accents
+        // Crisp, subtle architectural slate grid lines on white
+        vec3 netFineColor = vec3(0.886, 0.910, 0.941);  // #e2e8f0
+        vec3 netMajorColor = vec3(0.796, 0.835, 0.882); // #cbd5e1
+        vec3 knotColor = vec3(0.720, 0.780, 0.845);
 
         vec3 netCol = mix(netFineColor, netMajorColor, lineMajor);
         netCol = mix(netCol, knotColor, clamp(knots * 2.0, 0.0, 1.0));
 
-        vec3 col = mix(floorNavy, netCol, net);
+        vec3 col = mix(floorBase, netCol, net);
 
-        // Opacity: solid navy ground with glowing net, fading out at outer edge
-        float alpha = fade * (0.92 + net * 0.08);
+        // Solid crisp white floor fading smoothly at far perimeter
+        float alpha = fade * 0.98;
         gl_FragColor = vec4(col, alpha);
       }
     `

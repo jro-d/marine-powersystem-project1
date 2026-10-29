@@ -5,7 +5,7 @@ Output: public/bridge_navcom_suite.glb
 
 Can be run:
   1. From CLI:
-     "D:\\Blender\\blender.exe" --background --python scripts/generate_bridge_navcom.py
+     blender --background --python scripts/blender/generate_bridge_navcom.py
   2. Inside Blender GUI:
      Open Blender -> Scripting workspace -> Open this file -> Click "Run Script" (or Alt+P)
 

@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 
-const chromePath = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const chromePath = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const port = 9223;
 
 const chrome = spawn(chromePath, [

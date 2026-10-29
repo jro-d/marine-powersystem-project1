@@ -8,6 +8,9 @@ Thumbs.db
 !public/**/*.png
 __pycache__/
 .vscode/
+.conda/
+.env
+.env.*
 *.pyc
 session.txt
 add-workspace.py

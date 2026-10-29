@@ -318,8 +318,10 @@
         let isIsolated = false;
 
         let assemblyRoot = new THREE.Group();
+        let groundMesh = null;
         const partMeshGroups = {};
         const animatedMeshes = [];
+        const glbRotorPivots = [];
         let catalogEquipment = {};
         let canonicalList = [];
         let modelCenter = new THREE.Vector3(0, 0, 0);
@@ -343,7 +345,10 @@
         // Specific Bow Thruster procedural handles
         let isProceduralBowThruster = false;
         let bowRotatingMeshes = { prop: [], vertShaft: [], gears: [] };
-        let bowTunnelCutaway = false;
+        let bowTunnelCutaway = true;
+        let bowXRayPod = false;
+        let bowShowMotor = true;
+        let bowCadTraceGroup = null;
         let bowWaterStreamlinesGroup = null;
         let bowFullTunnelMesh = null;
         let bowCutawayTunnelMesh = null;
@@ -352,6 +357,7 @@
         const ALIAS_MAP = {
             bow: 'bowThruster',
             bowthruster: 'bowThruster',
+            sternthruster: 'bowThruster',
             thruster: 'bowThruster',
             prop: 'propeller',
             propeller: 'propeller',
@@ -366,9 +372,14 @@
             steering: 'steeringGear',
             steeringgear: 'steeringGear',
             cooling: 'coolingPump',
+            cooling1: 'coolingPump',
+            cooling2: 'coolingPump',
             coolingpump: 'coolingPump',
             pump_cooling: 'coolingPump',
             fire: 'firePump',
+            fire1: 'firePump',
+            fire2: 'firePump',
+            efire: 'firePump',
             firepump: 'firePump',
             pump_fire: 'firePump',
             ballast: 'ballastPump',
@@ -447,7 +458,7 @@
             // Ground Contact Plane with soft shadow receiver
             const groundGeo = new THREE.PlaneGeometry(35, 35);
             const groundMat = new THREE.ShadowMaterial({ opacity: 0.22 });
-            const groundMesh = new THREE.Mesh(groundGeo, groundMat);
+            groundMesh = new THREE.Mesh(groundGeo, groundMat);
             groundMesh.rotation.x = -Math.PI / 2;
             groundMesh.position.y = -0.05;
             groundMesh.receiveShadow = true;
@@ -478,7 +489,7 @@
                     const opt = document.createElement('option');
                     opt.value = id;
                     const rawTitle = item.title || item.name || id;
-                    const cleanTitle = rawTitle.split('—')[0].split('-')[0].split('(')[0].trim();
+                    const cleanTitle = rawTitle.split('—')[0].split(' - ')[0].split('(')[0].trim();
                     opt.textContent = `${cleanTitle} (${item.electrical?.voltage || '440 V'})`;
                     selectEl.appendChild(opt);
                 });
@@ -533,9 +544,15 @@
 
             for (const k in partMeshGroups) delete partMeshGroups[k];
             animatedMeshes.length = 0;
+            glbRotorPivots.length = 0;
             for (const k in calloutDOMMap) delete calloutDOMMap[k];
             isProceduralBowThruster = false;
+            bowXRayPod = false;
             bowRotatingMeshes = { prop: [], vertShaft: [], gears: [] };
+            bowCadTraceGroup = null;
+            bowWaterStreamlinesGroup = null;
+            bowFullTunnelMesh = null;
+            bowCutawayTunnelMesh = null;
 
             // Electrical telemetry in BOM sidebar
             document.getElementById('elec-telemetry').innerHTML = `
@@ -565,10 +582,77 @@
                 await loadGLBModel(currentItem, partsMeta);
             }
 
+            if (groundMesh) {
+                groundMesh.position.y = isProceduralBowThruster ? -2.85 : -0.05;
+            }
+
             // Reset explosion and focus
             targetExplodeFactor = 0.0;
             updateExplosionPositions(0.0);
             selectPart(null);
+        }
+
+        function matchMeshToPartId(meshName, partKeys) {
+            if (!partKeys || partKeys.length === 0) return meshName;
+
+            // 1. Direct prefix or substring match
+            let direct = partKeys.find(k => meshName.startsWith(k));
+            if (direct) return direct;
+            direct = partKeys.find(k => k.startsWith(meshName) || meshName.includes(k));
+            if (direct) return direct;
+
+            const has = (k) => partKeys.includes(k) ? k : null;
+
+            // 2. Centrifugal Pumps (firePump, coolingPump, bilgePump)
+            if (meshName.startsWith('Impeller_')) return has('Impeller_Hub') || partKeys[0];
+            if (meshName.startsWith('Motor_')) return has('Motor_Body') || partKeys[0];
+            if (meshName.startsWith('Casing_')) return has('Pump_Casing') || partKeys[0];
+            if (meshName.startsWith('Suction_')) return has('Suction_Port') || partKeys[0];
+            if (meshName.startsWith('Discharge_')) return has('Discharge_Port') || partKeys[0];
+            if (meshName.startsWith('Skid_')) return has('Pump_Skid') || partKeys[0];
+
+            // 3. Main Propeller & Stern Tube
+            if (meshName.startsWith('Hub_')) return has('Hub_Aft_Nose') || has('Propeller_Hub') || partKeys[0];
+            if (meshName === 'Propeller_Key') return has('Propeller_Hub') || partKeys[0];
+            if (meshName === 'Propeller_Shaft' || meshName === 'Shaft_Aft_Taper') return has('Tailshaft_Core') || partKeys[0];
+            if (meshName.startsWith('Coupling_') || meshName === 'Shaft_Coupling_Flange' || meshName === 'Shaft_End_Collar') return has('Intermediate_Shaft_Coupling') || partKeys[0];
+            if (meshName.startsWith('Forward_Tube_') || meshName === 'Thrust_Washer') return has('Shaft_Forward_Collar') || partKeys[0];
+            if (meshName.startsWith('Aft_Gland_') || meshName === 'Oil_Seal' || meshName.startsWith('Seal_Retainer_') || meshName.startsWith('Sealing_Housing') || meshName.startsWith('Stepping_Ring_Seal_')) return has('Stern_Tube_Aft_Seal') || partKeys[0];
+            if (meshName.startsWith('Stern_Tube_Bearing_')) return has('Stern_Tube_Aft_Bearing') || partKeys[0];
+            if (meshName.startsWith('Stern_Tube_') || meshName.startsWith('Housing_') || meshName === 'Shaft_Bracket_Cutaway') return has('Stern_Tube_Bossing') || partKeys[0];
+
+            // 4. Propulsion Motor
+            if (meshName.startsWith('Fan_Blade_') || meshName === 'Fan_Guard') return has('Cooling_Fan_Hub') || partKeys[0];
+            if (meshName === 'Shaft_Key' || meshName === 'Shaft_Output_Taper' || meshName.startsWith('Rotor_')) return has('Rotor_Shaft') || partKeys[0];
+            if (meshName === 'Bearing_Front') return has('End_Bell_Front') || partKeys[0];
+            if (meshName === 'Bearing_Rear') return has('End_Bell_Rear') || partKeys[0];
+            if (meshName.startsWith('Terminal_Gland_')) return has('Terminal_Box') || partKeys[0];
+            if (meshName.startsWith('Mounting_Bolt_') || meshName === 'Support_Bracket') return has('Mounting_Foot') || partKeys[0];
+            if (meshName.startsWith('Cooling_Rib_') || meshName.startsWith('Lifting_Eye_')) return has('Motor_Frame') || partKeys[0];
+
+            // 5. Dry-Type / Cast-Resin Transformer
+            if (meshName.startsWith('Transformer_HV_Bushing_') || meshName.startsWith('Transformer_HV_Terminal_') || meshName.startsWith('Transformer_Neutral_') || meshName.startsWith('Transformer_HV_Busbar_')) return has('Transformer_HV_Bushing_Flange_A') || partKeys[0];
+            if (meshName.startsWith('Transformer_HV_Winding_') || meshName.startsWith('Transformer_HV_Disc_') || meshName.startsWith('Transformer_Insulation_Barrier_')) return has('Transformer_HV_Winding_A') || partKeys[0];
+            if (meshName.startsWith('Transformer_LV_')) return has('Transformer_LV_Winding_A') || partKeys[0];
+            if (meshName.startsWith('Transformer_Core_')) return has('Transformer_Core_Top_Yoke') || partKeys[0];
+            if (meshName.startsWith('Transformer_Fan_') || meshName.startsWith('Transformer_Radiator_')) return has('Transformer_Radiator_Bank_Port') || partKeys[0];
+            if (meshName.startsWith('Transformer_Inspection_Window_') || meshName.startsWith('Transformer_Hazard_Warning_')) return has('Transformer_Front_Access_Door') || partKeys[0];
+            if (meshName.startsWith('Transformer_Base_') || meshName.startsWith('Transformer_Anchor_Pad_') || meshName === 'Transformer_Earth_Boss' || meshName.startsWith('Transformer_Casing_')) return has('Transformer_Base_Skid_Port') || partKeys[0];
+            if (meshName.startsWith('Transformer_Lifting_Lug_') || meshName.startsWith('Transformer_Cable_Gland_')) return has('Transformer_Tank_Lid') || partKeys[0];
+
+            // 6. Steering Gear & Reefer Panel
+            if (meshName === 'Tiller_Crosshead') return has('Tiller_Head') || partKeys[0];
+            if (meshName.includes('Starboard')) return has('Hydraulic_Ram_Starboard') || partKeys[0];
+            if (meshName.includes('Port')) return has('Hydraulic_Ram_Port') || partKeys[0];
+            if (meshName === 'Motor_Terminal') return has('Steering_Motor') || partKeys[0];
+            if (meshName.startsWith('Base_Mount_')) return has('Steering_Base') || partKeys[0];
+            if (meshName === 'Cabinet_Handle') return has('Cabinet_Door_Trim') || partKeys[0];
+            if (meshName.startsWith('Protection_')) return has('Outlet_Protection') || partKeys[0];
+            if (meshName.startsWith('Socket_')) return has('Reefer_Sockets') || partKeys[0];
+            if (meshName.startsWith('Vent_Slat_')) return has('Deck_Cable_Route') || partKeys[0];
+            if (meshName.startsWith('Earth_Insulator_')) return has('Earth_Terminal_Bar') || partKeys[0];
+
+            return partKeys[0];
         }
 
         async function loadGLBModel(item, partsMeta) {
@@ -579,20 +663,24 @@
 
             try {
                 const gltf = await loader.loadAsync(glbUrl);
+                gltf.scene.updateMatrixWorld(true);
+
                 const childMeshes = [];
                 gltf.scene.traverse((child) => {
                     if (child.isMesh) childMeshes.push(child);
                 });
 
-                // Compute bounding box & auto-center
+                // Compute bounding box & auto-center so base sits cleanly on Y = 0
                 const rawBox = new THREE.Box3().setFromObject(gltf.scene);
-                modelCenter = rawBox.getCenter(new THREE.Vector3());
+                const rawCenter = rawBox.getCenter(new THREE.Vector3());
                 const size = rawBox.getSize(new THREE.Vector3());
                 modelMaxDim = Math.max(size.x, size.y, size.z, 2.0);
 
-                // Offset root group so model center sits cleanly at origin
-                gltf.scene.position.set(-modelCenter.x, -modelCenter.y + size.y / 2, -modelCenter.z);
-                controls.target.set(0, size.y / 2, 0);
+                gltf.scene.position.set(-rawCenter.x, -rawBox.min.y, -rawCenter.z);
+                gltf.scene.updateMatrixWorld(true);
+
+                modelCenter = new THREE.Vector3(0, size.y / 2, 0);
+                controls.target.copy(modelCenter);
                 controls.update();
 
                 // Prepare normalized parts list
@@ -616,7 +704,6 @@
                         });
                     });
                 } else {
-                    // Fallback to mesh names if catalog parts aren't pre-listed
                     childMeshes.forEach((mesh, idx) => {
                         normalizedParts.push({
                             id: mesh.name,
@@ -634,41 +721,69 @@
                 }
 
                 // Create part groups
+                const normIds = normalizedParts.map(p => p.id);
                 normalizedParts.forEach((part) => {
                     const grp = new THREE.Group();
                     grp.name = part.id;
                     assemblyRoot.add(grp);
-                    partMeshGroups[part.id] = { group: grp, meta: part, meshes: [] };
+                    partMeshGroups[part.id] = { group: grp, meta: part, meshes: [], rotorPivot: null };
                 });
 
-                // Assign meshes into corresponding part groups
+                // Compute exact coaxial world rotation center across all rotating meshes
+                const rotorWorldBox = new THREE.Box3();
                 childMeshes.forEach((mesh) => {
-                    let match = normalizedParts.find(p => mesh.name.startsWith(p.id));
-                    if (!match) {
-                        // fuzzy prefix matching
-                        match = normalizedParts.find(p => p.id.startsWith(mesh.name) || mesh.name.includes(p.id));
+                    const isRot = Boolean(
+                        currentKinematics?.rotatingPrefixes?.some(pref => mesh.name.startsWith(pref)) &&
+                        !mesh.name.includes('Bracket_Cutaway')
+                    );
+                    mesh.userData._isRotating = isRot;
+                    if (isRot) {
+                        const mBox = new THREE.Box3().setFromObject(mesh);
+                        rotorWorldBox.union(mBox);
                     }
-                    const partId = match ? match.id : normalizedParts[0].id;
-                    const pEntry = partMeshGroups[partId];
+                });
+                const rotorCenter = !rotorWorldBox.isEmpty()
+                    ? rotorWorldBox.getCenter(new THREE.Vector3())
+                    : modelCenter.clone();
 
-                    mesh.userData.partId = partId;
+                // Ensure assemblyRoot world matrices are up to date before reparenting via .attach()
+                assemblyRoot.updateMatrixWorld(true);
+
+                // Assign meshes into corresponding part groups while preserving world transforms
+                childMeshes.forEach((mesh) => {
+                    const partId = matchMeshToPartId(mesh.name, normIds);
+                    const pEntry = partMeshGroups[partId] || partMeshGroups[normIds[0]];
+
+                    mesh.userData.partId = pEntry.meta.id;
                     mesh.castShadow = true;
                     mesh.receiveShadow = true;
 
-                    // Clone material so we can highlight safely without affecting shared assets
                     if (mesh.material) {
                         mesh.material = mesh.material.clone();
                         mesh.userData.origEmissive = mesh.material.emissive ? mesh.material.emissive.clone() : new THREE.Color(0, 0, 0);
                         mesh.userData.origEmissiveIntensity = mesh.material.emissiveIntensity !== undefined ? mesh.material.emissiveIntensity : 1.0;
                     }
 
-                    pEntry.group.add(mesh);
-                    pEntry.meshes.push(mesh);
+                    const isRotating = mesh.userData._isRotating;
+                    if (isRotating) {
+                        if (!pEntry.rotorPivot) {
+                            const pivot = new THREE.Group();
+                            pivot.name = `${pEntry.meta.id}_rotorPivot`;
+                            pivot.position.copy(rotorCenter);
+                            pEntry.group.add(pivot);
+                            pivot.updateMatrixWorld(true);
+                            pEntry.rotorPivot = pivot;
+                            glbRotorPivots.push(pivot);
+                        }
+                        pEntry.rotorPivot.attach(mesh);
+                    } else {
+                        pEntry.group.attach(mesh);
+                    }
 
-                    const isRotating = currentKinematics?.rotatingPrefixes?.some(pref => mesh.name.startsWith(pref));
+                    pEntry.meshes.push(mesh);
                     animatedMeshes.push({
                         mesh,
-                        partId,
+                        partId: pEntry.meta.id,
                         isRotating
                     });
                 });
@@ -687,7 +802,7 @@
         }
 
         // ============================================================================
-        // 4. PROCEDURAL BOW THRUSTER BUILDER (GOLD STANDARD TEMPLATE)
+        // 4. PROCEDURAL HI-SEA BOW THRUSTER BUILDER (COMPLETE GOLD-STANDARD MODEL)
         // ============================================================================
         function buildProceduralBowThruster(partsMeta) {
             isProceduralBowThruster = true;
@@ -756,6 +871,13 @@
                     color: 0x1e293b,
                     roughness: 0.85,
                     metalness: 0.1
+                }),
+                motorGreen: new THREE.MeshStandardMaterial({
+                    color: 0x3b5e4c,
+                    roughness: 0.45,
+                    metalness: 0.4,
+                    bumpMap: castBump,
+                    bumpScale: 0.01
                 })
             };
 
@@ -784,122 +906,491 @@
                 partMeshGroups[key] = { group: grp, meta: partObj, meshes: [] };
             });
 
-            const addMeshToPart = (partId, mesh) => {
-                if (!mesh) return;
-                mesh.castShadow = true;
-                mesh.receiveShadow = true;
-                mesh.userData.partId = partId;
-                if (mesh.material) {
-                    mesh.material = mesh.material.clone();
-                    mesh.userData.origEmissive = mesh.material.emissive ? mesh.material.emissive.clone() : new THREE.Color(0, 0, 0);
-                    mesh.userData.origEmissiveIntensity = mesh.material.emissiveIntensity !== undefined ? mesh.material.emissiveIntensity : 1.0;
-                }
-                if (partMeshGroups[partId]) {
-                    partMeshGroups[partId].group.add(mesh);
-                    partMeshGroups[partId].meshes.push(mesh);
-                }
+            // Helper: register any Mesh or nested Group hierarchy into a BOM part
+            const registerPartObject = (partId, obj) => {
+                if (!obj || !partMeshGroups[partId]) return;
+                obj.traverse((child) => {
+                    child.userData.partId = partId;
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                        if (child.material) {
+                            child.material = child.material.clone();
+                            child.userData.origEmissive = child.material.emissive ? child.material.emissive.clone() : new THREE.Color(0, 0, 0);
+                            child.userData.origEmissiveIntensity = child.material.emissiveIntensity !== undefined ? child.material.emissiveIntensity : 1.0;
+                        }
+                        partMeshGroups[partId].meshes.push(child);
+                    }
+                });
+                partMeshGroups[partId].group.add(obj);
             };
 
-            // 1. Splined Shaft & Coupling (PRT-01)
-            const splineShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 2.4, 32), mats.polishedSteel);
-            splineShaft.position.set(0, 5.8, 0);
-            addMeshToPart('splined_shaft', splineShaft);
-            const clawCoupling = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.6, 24), mats.machinedGrey);
-            clawCoupling.position.set(0, 6.8, 0);
-            addMeshToPart('splined_shaft', clawCoupling);
-            bowRotatingMeshes.vertShaft.push(splineShaft, clawCoupling);
+            const tunnelRadius = 2.55;
+            const tunnelLength = 3.8;
+            const bracketCenterZ = -0.35;
+            const bracketBaseY = tunnelRadius + 0.88;
+            const podZ = -0.35;
 
-            // 2. Mounting Bracket & Upper Casing (PRT-02)
-            const pedCylinder = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.95, 2.2, 32, 1, true), mats.machinedGrey);
-            pedCylinder.position.set(0, 4.0, 0);
-            addMeshToPart('mounting_bracket', pedCylinder);
-            const lowerFlange = new THREE.Mesh(new THREE.CylinderGeometry(1.35, 1.35, 0.22, 32), mats.machinedGrey);
-            lowerFlange.position.set(0, 2.9, 0);
-            addMeshToPart('mounting_bracket', lowerFlange);
+            // ------------------------------------------------------------------------
+            // PART 4: TUNNEL CASING (Both HI-SEA Cutaway Mode & Full Ribbed Tunnel Mode)
+            // ------------------------------------------------------------------------
+            const tunnelCutawayGroup = new THREE.Group();
+            const tunnelFullGroup = new THREE.Group();
 
-            // 3. Vertical Drive Shaft & Seals (PRT-03)
-            const vShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 2.6, 28), mats.polishedSteel);
-            vShaft.position.set(0, 2.0, 0);
-            addMeshToPart('vertical_drive_shaft', vShaft);
-            const bevelPinion = createBevelGearMesh(0.52, 0.22, 0.45, 18, mats.darkSteel);
-            bevelPinion.position.set(0, 0.8, 0);
-            addMeshToPart('vertical_drive_shaft', bevelPinion);
-            bowRotatingMeshes.vertShaft.push(vShaft, bevelPinion);
+            // A) Full Ribbed Tunnel
+            const fullWallOuter = new THREE.CylinderGeometry(tunnelRadius, tunnelRadius, tunnelLength, 64, 1, true);
+            fullWallOuter.rotateX(Math.PI / 2);
+            tunnelFullGroup.add(new THREE.Mesh(fullWallOuter, mats.terracotta));
 
-            // 4. Thruster Tunnel Casing (PRT-04)
-            const tunnelOuterR = 2.45, tunnelInnerR = 2.30, tunnelLen = 8.5;
-            const fullTunnelGeom = new THREE.CylinderGeometry(tunnelOuterR, tunnelOuterR, tunnelLen, 48, 1, true);
-            fullTunnelGeom.rotateX(Math.PI / 2);
-            bowFullTunnelMesh = new THREE.Mesh(fullTunnelGeom, mats.terracotta);
-            bowFullTunnelMesh.position.set(0, 0, 0);
-            bowFullTunnelMesh.visible = !bowTunnelCutaway;
-            addMeshToPart('tunnel_casing', bowFullTunnelMesh);
+            const fullWallInner = new THREE.CylinderGeometry(tunnelRadius - 0.16, tunnelRadius - 0.16, tunnelLength, 64, 1, true);
+            fullWallInner.rotateX(Math.PI / 2);
+            tunnelFullGroup.add(new THREE.Mesh(fullWallInner, mats.innerPrimerGrey));
 
-            const cutawayGeom = new THREE.CylinderGeometry(tunnelOuterR, tunnelOuterR, tunnelLen, 48, 1, true, Math.PI * 0.15, Math.PI * 1.7);
-            cutawayGeom.rotateX(Math.PI / 2);
-            bowCutawayTunnelMesh = new THREE.Mesh(cutawayGeom, mats.terracotta);
-            bowCutawayTunnelMesh.position.set(0, 0, 0);
-            bowCutawayTunnelMesh.visible = bowTunnelCutaway;
-            addMeshToPart('tunnel_casing', bowCutawayTunnelMesh);
+            [-tunnelLength / 2, tunnelLength / 2].forEach(zPos => {
+                const flange = new THREE.Mesh(new THREE.RingGeometry(tunnelRadius - 0.16, tunnelRadius + 0.32, 64), mats.terracotta);
+                flange.position.z = zPos;
+                tunnelFullGroup.add(flange);
 
-            // 5. Gear Pod (PRT-05)
-            const podBody = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 2.8, 32), mats.podTerracotta);
-            podBody.rotation.x = Math.PI / 2;
-            addMeshToPart('gear_pod', podBody);
-            const podNose = new THREE.Mesh(new THREE.SphereGeometry(0.85, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), mats.podTerracotta);
-            podNose.rotation.x = -Math.PI / 2;
-            podNose.position.set(0, 0, -1.4);
-            addMeshToPart('gear_pod', podNose);
+                const rimGeo = new THREE.CylinderGeometry(tunnelRadius + 0.32, tunnelRadius + 0.32, 0.16, 64, 1, true);
+                rimGeo.rotateX(Math.PI / 2);
+                const rim = new THREE.Mesh(rimGeo, mats.terracotta);
+                rim.position.z = zPos + (zPos > 0 ? -0.08 : 0.08);
+                tunnelFullGroup.add(rim);
 
-            // 6. Internal Bevel Gears & Prop Shaft (PRT-06)
-            const propShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 3.8, 32), mats.polishedSteel);
-            propShaft.rotation.x = Math.PI / 2;
-            propShaft.position.set(0, 0, 1.2);
-            addMeshToPart('internal_bevel_gears', propShaft);
-            const bevelCrown = createBevelGearMesh(0.88, 0.55, 0.45, 32, mats.darkSteel);
-            bevelCrown.rotation.x = -Math.PI / 2;
-            bevelCrown.position.set(0, 0, 0.2);
-            addMeshToPart('internal_bevel_gears', bevelCrown);
-            bowRotatingMeshes.prop.push(propShaft, bevelCrown);
+                for (let i = 0; i < 24; i++) {
+                    const a = (i / 24) * Math.PI * 2;
+                    const holeGeo = new THREE.CylinderGeometry(0.055, 0.055, 0.2, 12);
+                    holeGeo.rotateX(Math.PI / 2);
+                    const hole = new THREE.Mesh(holeGeo, mats.darkSteel);
+                    hole.position.set(Math.cos(a) * (tunnelRadius + 0.14), Math.sin(a) * (tunnelRadius + 0.14), zPos);
+                    tunnelFullGroup.add(hole);
+                }
+            });
 
-            // 7. Propeller Bearing & Seal (PRT-07)
-            const propBearing = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.35, 32), mats.darkSteel);
-            propBearing.rotation.x = Math.PI / 2;
-            propBearing.position.set(0, 0, 2.0);
-            addMeshToPart('propeller_bearing', propBearing);
-
-            // 8. 4-Blade Skewed Kaplan Propeller (PRT-08)
-            const propBladeGroup = new THREE.Group();
-            for (let b = 0; b < 4; b++) {
-                const bladeMesh = new THREE.Mesh(createKaplanBladeGeometry(), mats.bronzeBlade);
-                bladeMesh.rotation.z = (Math.PI / 2) * b;
-                propBladeGroup.add(bladeMesh);
+            [-0.95, 0, 0.95].forEach(zRib => {
+                const rib = new THREE.Mesh(new THREE.TorusGeometry(tunnelRadius + 0.08, 0.11, 16, 64), mats.terracotta);
+                rib.position.z = zRib;
+                tunnelFullGroup.add(rib);
+            });
+            for (let i = 0; i < 12; i++) {
+                const a = (i / 12) * Math.PI * 2;
+                if (Math.sin(a) > 0.75) continue;
+                const longRib = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.18, tunnelLength - 0.2), mats.terracotta);
+                longRib.position.set(Math.cos(a) * (tunnelRadius + 0.09), Math.sin(a) * (tunnelRadius + 0.09), 0);
+                longRib.rotation.z = a - Math.PI / 2;
+                tunnelFullGroup.add(longRib);
             }
-            propBladeGroup.position.set(0, 0, 2.8);
-            addMeshToPart('propeller_blades', propBladeGroup);
-            bowRotatingMeshes.prop.push(propBladeGroup);
 
-            // 9. Propeller Hub (PRT-09)
-            const propHub = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.55, 0.9, 32), mats.bronzeHub);
-            propHub.rotation.x = Math.PI / 2;
-            propHub.position.set(0, 0, 2.8);
-            addMeshToPart('propeller_hub', propHub);
-            bowRotatingMeshes.prop.push(propHub);
+            // B) HI-SEA Cutaway Tunnel with Lower Cradle & Stiffening Ribs
+            const arcStart = Math.PI * 0.42;
+            const arcLen = Math.PI * 1.48;
+            const cutShellGeo = new THREE.CylinderGeometry(tunnelRadius, tunnelRadius, tunnelLength, 64, 1, true, arcStart, arcLen);
+            cutShellGeo.rotateX(Math.PI / 2);
+            tunnelCutawayGroup.add(new THREE.Mesh(cutShellGeo, mats.terracotta));
 
-            // 10. Cap, Lock Nut & Fasteners (PRT-10)
-            const fairingCone = new THREE.Mesh(new THREE.ConeGeometry(0.55, 0.9, 32), mats.bronzeHub);
-            fairingCone.rotation.x = Math.PI / 2;
-            fairingCone.position.set(0, 0, 3.7);
-            addMeshToPart('cap_fasteners', fairingCone);
-            bowRotatingMeshes.prop.push(fairingCone);
+            const cutInnerGeo = new THREE.CylinderGeometry(tunnelRadius - 0.15, tunnelRadius - 0.15, tunnelLength, 64, 1, true, arcStart, arcLen);
+            cutInnerGeo.rotateX(Math.PI / 2);
+            tunnelCutawayGroup.add(new THREE.Mesh(cutInnerGeo, mats.innerPrimerGrey));
 
-            // 11. Top Electric Motor (PRT-11)
-            const motorBody = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 2.8, 32), mats.darkSteel);
-            motorBody.position.set(0, 8.8, 0);
-            addMeshToPart('electric_motor', motorBody);
-            const motorCap = new THREE.Mesh(new THREE.SphereGeometry(1.2, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), mats.darkSteel);
-            motorCap.position.set(0, 10.2, 0);
-            addMeshToPart('electric_motor', motorCap);
+            const troughGeo = new THREE.CylinderGeometry(tunnelRadius, tunnelRadius, tunnelLength * 1.45, 48, 1, true, Math.PI * 0.78, Math.PI * 0.62);
+            troughGeo.rotateX(Math.PI / 2);
+            const troughMesh = new THREE.Mesh(troughGeo, mats.terracotta);
+            troughMesh.position.z = -tunnelLength * 0.22;
+            tunnelCutawayGroup.add(troughMesh);
+
+            [-2.2, -1.1, 0, 1.1].forEach(zPos => {
+                const ribArc = new THREE.Mesh(new THREE.TorusGeometry(tunnelRadius + 0.1, 0.1, 12, 48, Math.PI * 0.65), mats.terracotta);
+                ribArc.rotation.z = -Math.PI * 0.82;
+                ribArc.position.z = zPos;
+                tunnelCutawayGroup.add(ribArc);
+            });
+
+            const frontRing = new THREE.Mesh(new THREE.RingGeometry(tunnelRadius - 0.16, tunnelRadius + 0.25, 64), mats.terracotta);
+            frontRing.position.z = tunnelLength / 2;
+            tunnelCutawayGroup.add(frontRing);
+
+            // Shared Top Cylindrical Neck & Flange on Tunnel Casing
+            const neckGroup = new THREE.Group();
+            const neckCyl = new THREE.Mesh(new THREE.CylinderGeometry(1.18, 1.24, 1.05, 40, 1, true), mats.terracotta);
+            neckCyl.position.set(0, tunnelRadius + 0.28, -0.35);
+            neckGroup.add(neckCyl);
+
+            const topFlange = new THREE.Mesh(new THREE.CylinderGeometry(1.52, 1.52, 0.18, 40), mats.terracotta);
+            topFlange.position.set(0, tunnelRadius + 0.78, -0.35);
+            neckGroup.add(topFlange);
+
+            const topBore = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.05, 0.22, 36), mats.innerPrimerGrey);
+            topBore.position.set(0, tunnelRadius + 0.78, -0.35);
+            neckGroup.add(topBore);
+
+            bowFullTunnelMesh = tunnelFullGroup;
+            bowCutawayTunnelMesh = tunnelCutawayGroup;
+            bowFullTunnelMesh.visible = !bowTunnelCutaway;
+            bowCutawayTunnelMesh.visible = bowTunnelCutaway;
+
+            registerPartObject('tunnel_casing', tunnelFullGroup);
+            registerPartObject('tunnel_casing', tunnelCutawayGroup);
+            registerPartObject('tunnel_casing', neckGroup);
+
+            // ------------------------------------------------------------------------
+            // PART 2: MOUNTING BRACKET & UPPER CASING (Red Frame + Grey Gusset Ribs)
+            // ------------------------------------------------------------------------
+            const bracketAssembly = new THREE.Group();
+            const bFlange = new THREE.Mesh(new THREE.CylinderGeometry(1.52, 1.52, 0.2, 40), mats.terracotta);
+            bFlange.position.set(0, bracketBaseY, bracketCenterZ);
+            bracketAssembly.add(bFlange);
+
+            for (let i = 0; i < 12; i++) {
+                const a = (i / 12) * Math.PI * 2;
+                const bolt = createBolt(0.06, 0.42, mats.darkSteel);
+                bolt.position.set(Math.cos(a) * 1.32, bracketBaseY - 0.12, bracketCenterZ + Math.sin(a) * 1.32);
+                bracketAssembly.add(bolt);
+            }
+
+            const backWall = new THREE.Mesh(new THREE.BoxGeometry(1.75, 1.65, 0.22), mats.terracotta);
+            backWall.position.set(0, bracketBaseY + 0.9, bracketCenterZ - 0.65);
+            bracketAssembly.add(backWall);
+
+            [-0.78, 0.78].forEach(xSide => {
+                const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.28, 1.65, 1.35), mats.terracotta);
+                pillar.position.set(xSide, bracketBaseY + 0.9, bracketCenterZ - 0.05);
+                bracketAssembly.add(pillar);
+
+                const shape = new THREE.Shape();
+                shape.moveTo(0, 0);
+                shape.lineTo(1.75, 0);
+                shape.lineTo(0.85, 1.68);
+                shape.lineTo(0, 1.68);
+                shape.closePath();
+
+                const gussetGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.12, bevelEnabled: false });
+                gussetGeo.rotateY(Math.PI / 2);
+                const gussetMesh = new THREE.Mesh(gussetGeo, mats.machinedGrey);
+                gussetMesh.position.set(xSide + (xSide > 0 ? 0.14 : -0.26), bracketBaseY + 0.08, bracketCenterZ - 0.55);
+                bracketAssembly.add(gussetMesh);
+            });
+
+            const frontFoot = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.22, 0.9), mats.terracotta);
+            frontFoot.position.set(0, bracketBaseY + 0.1, bracketCenterZ + 0.85);
+            bracketAssembly.add(frontFoot);
+
+            const topDeck = new THREE.Mesh(new THREE.BoxGeometry(1.95, 0.18, 1.55), mats.machinedGrey);
+            topDeck.position.set(0, bracketBaseY + 1.75, bracketCenterZ - 0.05);
+            bracketAssembly.add(topDeck);
+
+            registerPartObject('mounting_bracket', bracketAssembly);
+
+            // ------------------------------------------------------------------------
+            // PART 1: SPLINED INPUT SHAFT & FLEXIBLE JAW COUPLING
+            // ------------------------------------------------------------------------
+            const inputSpinGroup = new THREE.Group();
+            inputSpinGroup.position.set(0, bracketBaseY + 1.55, bracketCenterZ);
+
+            const jawHub = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.55, 24), mats.polishedSteel);
+            jawHub.position.y = -0.55;
+            inputSpinGroup.add(jawHub);
+
+            for (let i = 0; i < 8; i++) {
+                const a = (i / 8) * Math.PI * 2;
+                const lug = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.42, 0.18), mats.machinedGrey);
+                lug.position.set(Math.cos(a) * 0.46, -0.55, Math.sin(a) * 0.46);
+                lug.rotation.y = -a;
+                inputSpinGroup.add(lug);
+            }
+
+            const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.42, 0.45, 32), mats.machinedGrey);
+            collar.position.y = 0.35;
+            inputSpinGroup.add(collar);
+
+            const splineCore = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 1.15, 24), mats.polishedSteel);
+            splineCore.position.y = 1.05;
+            inputSpinGroup.add(splineCore);
+
+            for (let i = 0; i < 12; i++) {
+                const a = (i / 12) * Math.PI * 2;
+                const ridge = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.85, 0.06), mats.darkSteel);
+                ridge.position.set(Math.cos(a) * 0.26, 1.12, Math.sin(a) * 0.26);
+                ridge.rotation.y = -a;
+                inputSpinGroup.add(ridge);
+            }
+
+            registerPartObject('splined_shaft', inputSpinGroup);
+            bowRotatingMeshes.vertShaft.push(inputSpinGroup);
+
+            // ------------------------------------------------------------------------
+            // PART 3: VERTICAL DRIVE SHAFT, GASKETS, BEARINGS & BEVEL PINION GEAR
+            // ------------------------------------------------------------------------
+            const vShaftStatic = new THREE.Group();
+            const gasketGeo = new THREE.RingGeometry(0.85, 1.28, 36);
+            const upperGasket = new THREE.Mesh(gasketGeo, mats.darkSteel);
+            upperGasket.rotation.x = -Math.PI / 2;
+            upperGasket.position.set(0, bracketBaseY - 0.15, bracketCenterZ);
+            vShaftStatic.add(upperGasket);
+
+            const sealBlack = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.06, 16, 36), mats.rubberBlack);
+            sealBlack.rotation.x = Math.PI / 2;
+            sealBlack.position.set(0, bracketBaseY - 0.35, bracketCenterZ);
+            vShaftStatic.add(sealBlack);
+
+            const sealCopper = new THREE.Mesh(new THREE.TorusGeometry(0.48, 0.055, 16, 36), mats.copperSeal);
+            sealCopper.rotation.x = Math.PI / 2;
+            sealCopper.position.set(0, bracketBaseY - 0.58, bracketCenterZ);
+            vShaftStatic.add(sealCopper);
+
+            const vBearing1 = createBearingAssembly(0.55, 0.28, 0.32, mats);
+            vBearing1.position.set(0, bracketBaseY - 1.15, bracketCenterZ);
+            vShaftStatic.add(vBearing1);
+
+            const vBearing2 = createBearingAssembly(0.55, 0.28, 0.32, mats);
+            vBearing2.position.set(0, bracketBaseY - 1.52, bracketCenterZ);
+            vShaftStatic.add(vBearing2);
+
+            const lowerGasket = new THREE.Mesh(gasketGeo, mats.machinedGrey);
+            lowerGasket.rotation.x = -Math.PI / 2;
+            lowerGasket.position.set(0, bracketBaseY - 2.35, bracketCenterZ);
+            vShaftStatic.add(lowerGasket);
+            registerPartObject('vertical_drive_shaft', vShaftStatic);
+
+            const vSpinGroup = new THREE.Group();
+            vSpinGroup.position.set(0, 0, bracketCenterZ);
+            const mainVShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 2.9, 32), mats.polishedSteel);
+            mainVShaft.position.y = bracketBaseY - 1.05;
+            vSpinGroup.add(mainVShaft);
+
+            const bevelPinion = createBevelGearMesh(0.32, 0.68, 0.42, 18, mats.darkSteel);
+            bevelPinion.rotation.x = Math.PI;
+            bevelPinion.position.y = 0.68;
+            vSpinGroup.add(bevelPinion);
+
+            registerPartObject('vertical_drive_shaft', vSpinGroup);
+            bowRotatingMeshes.vertShaft.push(vSpinGroup);
+
+            // ------------------------------------------------------------------------
+            // PART 5: RIGHT-ANGLE GEAR POD (Bulbous Housing + Vertical Neck)
+            // ------------------------------------------------------------------------
+            const podAssembly = new THREE.Group();
+            const podBodyGeo = new THREE.CylinderGeometry(1.12, 0.98, 1.85, 40);
+            podBodyGeo.rotateX(Math.PI / 2);
+            const podBody = new THREE.Mesh(podBodyGeo, mats.podTerracotta);
+            podBody.position.set(0, 0, podZ);
+            podAssembly.add(podBody);
+
+            const tailDomeGeo = new THREE.SphereGeometry(0.98, 40, 24, 0, Math.PI * 2, 0, Math.PI / 2);
+            tailDomeGeo.rotateX(-Math.PI / 2);
+            const tailDome = new THREE.Mesh(tailDomeGeo, mats.podTerracotta);
+            tailDome.scale.set(1, 1, 1.15);
+            tailDome.position.set(0, 0, podZ - 0.92);
+            podAssembly.add(tailDome);
+
+            const noseCollarGeo = new THREE.CylinderGeometry(0.78, 1.12, 0.65, 36);
+            noseCollarGeo.rotateX(Math.PI / 2);
+            const noseCollar = new THREE.Mesh(noseCollarGeo, mats.podTerracotta);
+            noseCollar.position.set(0, 0, podZ + 1.22);
+            podAssembly.add(noseCollar);
+
+            for (let i = 0; i < 12; i++) {
+                const a = (i / 12) * Math.PI * 2;
+                const pocket = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.14, 0.35), mats.darkSteel);
+                pocket.position.set(Math.cos(a) * 0.94, Math.sin(a) * 0.94, podZ + 1.18);
+                pocket.rotation.z = a;
+                podAssembly.add(pocket);
+            }
+
+            const podNeck = new THREE.Mesh(new THREE.CylinderGeometry(0.88, 0.98, 1.65, 36), mats.podTerracotta);
+            podNeck.position.set(0, 1.1, podZ);
+            podAssembly.add(podNeck);
+
+            const podFlange = new THREE.Mesh(new THREE.CylinderGeometry(1.32, 1.32, 0.18, 36), mats.podTerracotta);
+            podFlange.position.set(0, 1.92, podZ);
+            podAssembly.add(podFlange);
+
+            const podHole = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.22, 32), mats.innerPrimerGrey);
+            podHole.position.set(0, 1.92, podZ);
+            podAssembly.add(podHole);
+
+            for (let i = 0; i < 4; i++) {
+                const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+                const bolt = createBolt(0.055, 0.38, mats.darkSteel);
+                bolt.rotation.x = Math.PI / 2;
+                bolt.position.set(Math.cos(a) * 0.95, Math.sin(a) * 0.95, podZ + 1.75);
+                podAssembly.add(bolt);
+            }
+
+            registerPartObject('gear_pod', podAssembly);
+
+            // ------------------------------------------------------------------------
+            // PART 6: INTERNAL BEVEL GEARS & HORIZONTAL PROPELLER SHAFT
+            // ------------------------------------------------------------------------
+            const hBearing = createBearingAssembly(0.62, 0.32, 0.36, mats);
+            hBearing.rotation.x = Math.PI / 2;
+            hBearing.position.set(0, 0, podZ - 0.65);
+            registerPartObject('internal_bevel_gears', hBearing);
+
+            const hSpinGroup = new THREE.Group();
+            const hShaftGeo = new THREE.CylinderGeometry(0.28, 0.28, 3.6, 32);
+            hShaftGeo.rotateX(Math.PI / 2);
+            const hShaftMesh = new THREE.Mesh(hShaftGeo, mats.polishedSteel);
+            hShaftMesh.position.set(0, 0, podZ + 0.35);
+            hSpinGroup.add(hShaftMesh);
+
+            const keyMesh = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.95), mats.darkSteel);
+            keyMesh.position.set(0, 0.27, podZ - 1.35);
+            hSpinGroup.add(keyMesh);
+
+            const drivenBevel = createBevelGearMesh(0.34, 0.72, 0.45, 18, mats.darkSteel);
+            drivenBevel.rotation.x = Math.PI / 2;
+            drivenBevel.position.set(0, 0, podZ + 0.48);
+            hSpinGroup.add(drivenBevel);
+
+            registerPartObject('internal_bevel_gears', hSpinGroup);
+            bowRotatingMeshes.prop.push(hSpinGroup);
+
+            // ------------------------------------------------------------------------
+            // PART 7: PROPELLER ASSEMBLY THRUST BEARING
+            // ------------------------------------------------------------------------
+            const thrustBearing = createBearingAssembly(0.76, 0.38, 0.42, mats, true);
+            thrustBearing.rotation.x = Math.PI / 2;
+            thrustBearing.position.set(0, 0, 1.35);
+            registerPartObject('propeller_bearing', thrustBearing);
+
+            // ------------------------------------------------------------------------
+            // PART 9: PROPELLER HUB (Central Bronze Boss)
+            // ------------------------------------------------------------------------
+            const hubSpinGroup = new THREE.Group();
+            hubSpinGroup.position.set(0, 0, 1.95);
+            const mainHubGeo = new THREE.CylinderGeometry(0.58, 0.68, 0.95, 36);
+            mainHubGeo.rotateX(Math.PI / 2);
+            hubSpinGroup.add(new THREE.Mesh(mainHubGeo, mats.bronzeHub));
+
+            const boreHubGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.98, 28);
+            boreHubGeo.rotateX(Math.PI / 2);
+            hubSpinGroup.add(new THREE.Mesh(boreHubGeo, mats.darkSteel));
+
+            for (let i = 0; i < 8; i++) {
+                const a = (i / 8) * Math.PI * 2;
+                const holeGeo = new THREE.CylinderGeometry(0.035, 0.035, 0.97, 12);
+                holeGeo.rotateX(Math.PI / 2);
+                const hole = new THREE.Mesh(holeGeo, mats.darkSteel);
+                hole.position.set(Math.cos(a) * 0.45, Math.sin(a) * 0.45, 0);
+                hubSpinGroup.add(hole);
+            }
+            registerPartObject('propeller_hub', hubSpinGroup);
+            bowRotatingMeshes.prop.push(hubSpinGroup);
+
+            // ------------------------------------------------------------------------
+            // PART 8: 4-BLADE SKEWED KAPLAN PROPELLER (Twisted Bronze Hydrofoils)
+            // ------------------------------------------------------------------------
+            const bladesSpinGroup = new THREE.Group();
+            bladesSpinGroup.position.set(0, 0, 1.95);
+            const singleBladeGeo = createKaplanBladeGeometry();
+            for (let i = 0; i < 4; i++) {
+                const bladeHolder = new THREE.Group();
+                bladeHolder.rotation.z = (i / 4) * Math.PI * 2 + 0.35;
+                bladeHolder.add(new THREE.Mesh(singleBladeGeo, mats.bronzeBlade));
+
+                const rootFillet = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 0.18, 20), mats.bronzeHub);
+                rootFillet.position.y = 0.58;
+                bladeHolder.add(rootFillet);
+                bladesSpinGroup.add(bladeHolder);
+            }
+            registerPartObject('propeller_blades', bladesSpinGroup);
+            bowRotatingMeshes.prop.push(bladesSpinGroup);
+
+            // ------------------------------------------------------------------------
+            // PART 10: CAP, CASTLE NUT, FRONT BEARING & FASTENERS
+            // ------------------------------------------------------------------------
+            const capStatic = new THREE.Group();
+            const fwdBearing = createBearingAssembly(0.38, 0.18, 0.22, mats);
+            fwdBearing.rotation.x = Math.PI / 2;
+            fwdBearing.position.set(0, 0, 2.35);
+            capStatic.add(fwdBearing);
+
+            const castleNut = createBevelGearMesh(0.24, 0.24, 0.18, 10, mats.darkSteel);
+            castleNut.rotation.x = Math.PI / 2;
+            castleNut.position.set(0, 0, 2.58);
+            capStatic.add(castleNut);
+            registerPartObject('cap_fasteners', capStatic);
+
+            const capSpinGroup = new THREE.Group();
+            capSpinGroup.position.set(0, 0, 2.88);
+            const capFlangeGeo = new THREE.CylinderGeometry(0.62, 0.62, 0.12, 36);
+            capFlangeGeo.rotateX(Math.PI / 2);
+            capSpinGroup.add(new THREE.Mesh(capFlangeGeo, mats.machinedGrey));
+
+            const capBossGeo = new THREE.CylinderGeometry(0.42, 0.48, 0.28, 36);
+            capBossGeo.rotateX(Math.PI / 2);
+            const capBoss = new THREE.Mesh(capBossGeo, mats.machinedGrey);
+            capBoss.position.z = 0.18;
+            capSpinGroup.add(capBoss);
+
+            for (let i = 0; i < 6; i++) {
+                const a = (i / 6) * Math.PI * 2;
+                const bolt = createBolt(0.045, 0.34, mats.darkSteel);
+                bolt.rotation.x = -Math.PI / 2;
+                bolt.position.set(Math.cos(a) * 0.52, Math.sin(a) * 0.52, 0.25);
+                capSpinGroup.add(bolt);
+            }
+            registerPartObject('cap_fasteners', capSpinGroup);
+            bowRotatingMeshes.prop.push(capSpinGroup);
+
+            // ------------------------------------------------------------------------
+            // PART 11: FINNED VERTICAL MARINE ELECTRIC DRIVE MOTOR
+            // ------------------------------------------------------------------------
+            const motorAssembly = new THREE.Group();
+            const motorCenterY = bracketBaseY + 3.6;
+
+            const motorBody = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.05, 2.2, 32), mats.motorGreen);
+            motorBody.position.set(0, motorCenterY, bracketCenterZ);
+            motorAssembly.add(motorBody);
+
+            for (let i = 0; i < 24; i++) {
+                const a = (i / 24) * Math.PI * 2;
+                const fin = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.95, 0.22), mats.motorGreen);
+                fin.position.set(Math.cos(a) * 1.08, motorCenterY, bracketCenterZ + Math.sin(a) * 1.08);
+                fin.rotation.y = -a;
+                motorAssembly.add(fin);
+            }
+
+            const cowl = new THREE.Mesh(new THREE.CylinderGeometry(0.92, 1.08, 0.55, 32), mats.motorGreen);
+            cowl.position.set(0, motorCenterY + 1.35, bracketCenterZ);
+            motorAssembly.add(cowl);
+
+            const termBox = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.65, 0.45), mats.motorGreen);
+            termBox.position.set(1.15, motorCenterY + 0.2, bracketCenterZ);
+            motorAssembly.add(termBox);
+
+            registerPartObject('electric_motor', motorAssembly);
+            if (partMeshGroups['electric_motor']) {
+                partMeshGroups['electric_motor'].group.visible = bowShowMotor;
+            }
+
+            // CAD Explosion Trace Lines & Hydrodynamic Water Streamlines
+            bowCadTraceGroup = new THREE.Group();
+            const dashMat = new THREE.LineDashedMaterial({ color: 0x38bdf8, dashSize: 0.22, gapSize: 0.14, transparent: true, opacity: 0.65 });
+            const hLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, -11.5), new THREE.Vector3(0, 0, 12.5)]), dashMat);
+            hLine.computeLineDistances();
+            bowCadTraceGroup.add(hLine);
+
+            const vLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, -0.35), new THREE.Vector3(0, 16.5, -0.35)]), dashMat);
+            vLine.computeLineDistances();
+            bowCadTraceGroup.add(vLine);
+            bowCadTraceGroup.visible = false;
+            assemblyRoot.add(bowCadTraceGroup);
+
+            bowWaterStreamlinesGroup = new THREE.Group();
+            const streamMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.42 });
+            for (let i = 0; i < 65; i++) {
+                const r = 0.75 + Math.random() * 1.55;
+                const angle = Math.random() * Math.PI * 2;
+                const len = 0.35 + Math.random() * 0.55;
+                const sGeo = new THREE.CylinderGeometry(0.022, 0.008, len, 6);
+                sGeo.rotateX(Math.PI / 2);
+                const sMesh = new THREE.Mesh(sGeo, streamMat);
+                sMesh.position.set(Math.cos(angle) * r, Math.sin(angle) * r, (Math.random() - 0.5) * 4.8);
+                sMesh.userData = { radius: r, angle: angle, speedOffset: 0.75 + Math.random() * 0.5 };
+                bowWaterStreamlinesGroup.add(sMesh);
+            }
+            assemblyRoot.add(bowWaterStreamlinesGroup);
 
             buildBOMSidebar(normalizedParts);
             buildCalloutDOMElements(normalizedParts);
@@ -907,61 +1398,145 @@
         }
 
         function createBevelGearMesh(radiusTop, radiusBottom, height, numTeeth, mat) {
-            const geom = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, numTeeth * 2);
-            return new THREE.Mesh(geom, mat);
+            const gearGroup = new THREE.Group();
+            const coreMesh = new THREE.Mesh(new THREE.CylinderGeometry(radiusTop * 0.86, radiusBottom * 0.86, height, 32), mat);
+            gearGroup.add(coreMesh);
+
+            const hubMesh = new THREE.Mesh(new THREE.CylinderGeometry(radiusTop * 0.48, radiusBottom * 0.48, height * 1.08, 24), mat);
+            gearGroup.add(hubMesh);
+
+            const avgR = (radiusTop + radiusBottom) * 0.5;
+            const toothWidth = (2 * Math.PI * avgR) / (numTeeth * 2.1);
+            const toothDepth = Math.abs(radiusBottom - radiusTop) * 0.35 + 0.12;
+            const slopeAngle = Math.atan2(radiusBottom - radiusTop, height);
+            const toothGeo = new THREE.BoxGeometry(toothWidth, height * 0.96, toothDepth);
+
+            for (let i = 0; i < numTeeth; i++) {
+                const angle = (i / numTeeth) * Math.PI * 2;
+                const tooth = new THREE.Mesh(toothGeo, mat);
+                const r = avgR * 0.88;
+                tooth.position.set(Math.sin(angle) * r, 0, Math.cos(angle) * r);
+                tooth.rotation.y = angle;
+                tooth.rotation.x = -slopeAngle;
+                gearGroup.add(tooth);
+            }
+            return gearGroup;
+        }
+
+        function createBearingAssembly(outerR, innerR, width, mats, isBronzeOuter = false) {
+            const bearingGroup = new THREE.Group();
+            const midR = (outerR + innerR) * 0.5;
+            const ringThickness = (outerR - innerR) * 0.28;
+            const outerMat = isBronzeOuter ? mats.bronzeHub : mats.darkSteel;
+
+            bearingGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(outerR, outerR, width, 36, 1, true), outerMat));
+            bearingGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(innerR, innerR, width * 1.05, 36), mats.polishedSteel));
+
+            const capRingGeo = new THREE.RingGeometry(outerR - ringThickness, outerR, 36);
+            const capTop = new THREE.Mesh(capRingGeo, outerMat);
+            capTop.rotation.x = -Math.PI / 2;
+            capTop.position.y = width / 2;
+            bearingGroup.add(capTop);
+
+            const capBot = capTop.clone();
+            capBot.rotation.x = Math.PI / 2;
+            capBot.position.y = -width / 2;
+            bearingGroup.add(capBot);
+
+            const rollerR = (outerR - innerR) * 0.26;
+            const rollerGeo = new THREE.CylinderGeometry(rollerR, rollerR, width * 0.82, 16);
+            for (let i = 0; i < 14; i++) {
+                const a = (i / 14) * Math.PI * 2;
+                const roller = new THREE.Mesh(rollerGeo, mats.polishedSteel);
+                roller.position.set(Math.cos(a) * midR, 0, Math.sin(a) * midR);
+                bearingGroup.add(roller);
+            }
+            return bearingGroup;
+        }
+
+        function createBolt(radius, length, mat) {
+            const bolt = new THREE.Group();
+            const head = new THREE.Mesh(new THREE.CylinderGeometry(radius * 1.6, radius * 1.6, radius * 1.1, 6), mat);
+            head.position.y = length / 2;
+            bolt.add(head);
+            bolt.add(new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, length, 12), mat));
+            return bolt;
         }
 
         function createKaplanBladeGeometry() {
             const shape = new THREE.Shape();
-            shape.moveTo(0.5, -0.2);
-            shape.bezierCurveTo(1.1, -0.4, 1.9, 0.2, 2.15, 0.9);
-            shape.bezierCurveTo(2.1, 1.6, 1.3, 1.8, 0.7, 1.3);
-            shape.bezierCurveTo(0.4, 0.8, 0.35, 0.3, 0.5, -0.2);
-            const extrudeSettings = { depth: 0.1, bevelEnabled: true, bevelSegments: 3, steps: 1, bevelSize: 0.04, bevelThickness: 0.04 };
-            const geom = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-            geom.center();
-            geom.rotateX(0.28);
-            geom.rotateY(0.15);
-            return geom;
+            shape.moveTo(-0.22, 0.45);
+            shape.bezierCurveTo(-0.68, 0.85, -0.88, 1.55, -0.45, 2.05);
+            shape.bezierCurveTo(-0.1, 2.28, 0.48, 2.24, 0.72, 1.92);
+            shape.bezierCurveTo(0.86, 1.45, 0.55, 0.82, 0.22, 0.45);
+            shape.closePath();
+
+            const geo = new THREE.ExtrudeGeometry(shape, {
+                steps: 16,
+                depth: 0.075,
+                bevelEnabled: true,
+                bevelThickness: 0.035,
+                bevelSize: 0.04,
+                bevelSegments: 4
+            });
+            geo.center();
+
+            const pos = geo.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                const x = pos.getX(i);
+                const y = pos.getY(i);
+                const z = pos.getZ(i);
+                const normalizedR = (y + 0.9) / 1.8;
+                const pitchAngle = 0.52 - normalizedR * 0.26;
+                const cosA = Math.cos(pitchAngle);
+                const sinA = Math.sin(pitchAngle);
+                pos.setXYZ(i, x * cosA - z * sinA, y + 1.38, x * sinA + z * cosA);
+            }
+            geo.computeVertexNormals();
+            return geo;
         }
 
         function createBronzeCrosshatchTexture() {
             const canvas = document.createElement('canvas');
             canvas.width = 256; canvas.height = 256;
             const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#caa35f';
+            ctx.fillStyle = '#d1a654';
             ctx.fillRect(0, 0, 256, 256);
-            ctx.strokeStyle = 'rgba(100, 70, 25, 0.18)';
-            ctx.lineWidth = 1.2;
-            for (let i = -256; i < 512; i += 8) {
+            ctx.strokeStyle = 'rgba(120, 80, 20, 0.35)';
+            ctx.lineWidth = 3;
+            const step = 16;
+            for (let i = -256; i < 512; i += step) {
                 ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + 256, 256); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(i, 256); ctx.lineTo(i + 256, 0); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(i + 256, 0); ctx.lineTo(i, 256); ctx.stroke();
+            }
+            ctx.fillStyle = 'rgba(255, 240, 190, 0.25)';
+            for (let x = 0; x < 256; x += step) {
+                for (let y = 0; y < 256; y += step) {
+                    ctx.fillRect(x, y, 4, 4);
+                }
             }
             const texture = new THREE.CanvasTexture(canvas);
             texture.wrapS = THREE.RepeatWrapping;
             texture.wrapT = THREE.RepeatWrapping;
-            texture.repeat.set(4, 4);
+            texture.repeat.set(3, 3);
             return texture;
         }
 
         function createCastIronTexture() {
             const canvas = document.createElement('canvas');
-            canvas.width = 128; canvas.height = 128;
+            canvas.width = 256; canvas.height = 256;
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = '#808080';
-            ctx.fillRect(0, 0, 128, 128);
-            const imgData = ctx.getImageData(0, 0, 128, 128);
-            for (let i = 0; i < imgData.data.length; i += 4) {
-                const noise = (Math.random() - 0.5) * 35;
-                imgData.data[i] += noise;
-                imgData.data[i + 1] += noise;
-                imgData.data[i + 2] += noise;
+            ctx.fillRect(0, 0, 256, 256);
+            for (let i = 0; i < 4500; i++) {
+                const v = 100 + Math.floor(Math.random() * 55);
+                ctx.fillStyle = `rgb(${v},${v},${v})`;
+                ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
             }
-            ctx.putImageData(imgData, 0, 0);
             const texture = new THREE.CanvasTexture(canvas);
             texture.wrapS = THREE.RepeatWrapping;
             texture.wrapT = THREE.RepeatWrapping;
-            texture.repeat.set(6, 6);
+            texture.repeat.set(4, 4);
             return texture;
         }
 
@@ -983,16 +1558,17 @@
                             <span class="w-2 h-2 rounded-full bg-orange-400"></span>
                             Bow Thruster Bridge Helm
                         </span>
-                        <span id="univ-rpm" class="text-xs font-bold text-orange-400 mono">1200 RPM (MAX)</span>
+                        <span id="univ-rpm" class="text-xs font-bold text-orange-400 mono">1200 RPM (STBD)</span>
                     </div>
                     <div class="grid grid-cols-3 gap-1.5 mb-2.5">
                         <button id="btn-bt-port" onclick="setBowThrust(-1)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">PORT</button>
-                        <button id="btn-bt-stop" onclick="setBowThrust(0)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-700 text-white border border-slate-600 transition">NEUTRAL</button>
+                        <button id="btn-bt-stop" onclick="setBowThrust(0)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">NEUTRAL</button>
                         <button id="btn-bt-stbd" onclick="setBowThrust(1)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-orange-500/25 text-orange-300 border border-orange-400/50 transition">STBD</button>
                     </div>
-                    <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-800">
-                        <button onclick="toggleBowTunnelCutaway()" class="text-[11px] font-semibold px-2 py-1 rounded bg-slate-800 text-sky-300 border border-slate-700 hover:bg-slate-700">Toggle Tunnel Cutaway</button>
-                        <span class="text-[11px] text-slate-400">4-Blade Kaplan</span>
+                    <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-800">
+                        <button id="btn-bt-cutaway" onclick="toggleBowTunnelCutaway()" class="text-[10px] font-semibold px-1.5 py-1 rounded bg-sky-500/20 text-sky-300 border border-sky-400/40 hover:bg-sky-500/30 transition">${bowTunnelCutaway ? 'Cutaway: ON' : 'Full Tunnel'}</button>
+                        <button id="btn-bt-xray" onclick="toggleBowXRayPod()" class="text-[10px] font-semibold px-1.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">X-Ray Pod</button>
+                        <button id="btn-bt-motor" onclick="toggleBowMotor()" class="text-[10px] font-semibold px-1.5 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 hover:bg-emerald-500/30 transition">${bowShowMotor ? 'Motor: ON' : 'Motor: OFF'}</button>
                     </div>
                 `;
             } else if (eqId === 'propeller' || eqId === 'prop') {
@@ -1185,6 +1761,47 @@
             bowTunnelCutaway = !bowTunnelCutaway;
             if (bowFullTunnelMesh) bowFullTunnelMesh.visible = !bowTunnelCutaway;
             if (bowCutawayTunnelMesh) bowCutawayTunnelMesh.visible = bowTunnelCutaway;
+            const btn = document.getElementById('btn-bt-cutaway');
+            if (btn) {
+                btn.textContent = bowTunnelCutaway ? 'Cutaway: ON' : 'Full Tunnel';
+                btn.className = bowTunnelCutaway
+                    ? 'text-[10px] font-semibold px-1.5 py-1 rounded bg-sky-500/20 text-sky-300 border border-sky-400/40 hover:bg-sky-500/30 transition'
+                    : 'text-[10px] font-semibold px-1.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition';
+            }
+        };
+
+        window.toggleBowXRayPod = () => {
+            bowXRayPod = !bowXRayPod;
+            const podEntry = partMeshGroups['gear_pod'];
+            if (podEntry && podEntry.meshes) {
+                podEntry.meshes.forEach(m => {
+                    if (m.material) {
+                        m.material.transparent = bowXRayPod;
+                        m.material.opacity = bowXRayPod ? 0.28 : 1.0;
+                        m.material.needsUpdate = true;
+                    }
+                });
+            }
+            const btn = document.getElementById('btn-bt-xray');
+            if (btn) {
+                btn.className = bowXRayPod
+                    ? 'text-[10px] font-semibold px-1.5 py-1 rounded bg-amber-500/20 text-amber-300 border border-amber-400/40 transition'
+                    : 'text-[10px] font-semibold px-1.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition';
+            }
+        };
+
+        window.toggleBowMotor = () => {
+            bowShowMotor = !bowShowMotor;
+            if (partMeshGroups['electric_motor']?.group) {
+                partMeshGroups['electric_motor'].group.visible = bowShowMotor;
+            }
+            const btn = document.getElementById('btn-bt-motor');
+            if (btn) {
+                btn.textContent = bowShowMotor ? 'Motor: ON' : 'Motor: OFF';
+                btn.className = bowShowMotor
+                    ? 'text-[10px] font-semibold px-1.5 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 hover:bg-emerald-500/30 transition'
+                    : 'text-[10px] font-semibold px-1.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 transition';
+            }
         };
 
         window.setUnivRPM = (rpm, dir) => {
@@ -1283,6 +1900,10 @@
                 );
             }
 
+            if (bowCadTraceGroup) {
+                bowCadTraceGroup.visible = factor > 0.03;
+            }
+
             const pct = Math.round(factor * 100);
             const slider = document.getElementById('explode-slider');
             if (slider && Math.abs(slider.value - pct) > 1) slider.value = pct;
@@ -1342,8 +1963,8 @@
                 }
             } else if (preset === 'exploded') {
                 if (isProceduralBowThruster) {
-                    camera.position.set(-13.8, 10.5, 14.2);
-                    controls.target.set(0, 1.5, 0.0);
+                    camera.position.set(-16.8, 12.2, 17.8);
+                    controls.target.set(0, 3.2, 0.0);
                 } else {
                     camera.position.set(c.x - d * 1.5, c.y + d * 1.2, c.z + d * 1.4);
                     controls.target.set(c.x, c.y, c.z);
@@ -1609,24 +2230,40 @@
                 updateExplosionPositions(explodeFactor);
             }
 
-            // Procedural Bow Thruster Kinematics
-            if (isProceduralBowThruster && kinParam1 !== 0) {
-                const deltaAngle = 0.08 * kinParam1;
-                bowRotatingMeshes.prop.forEach(m => { m.rotation.z += deltaAngle; });
-                bowRotatingMeshes.vertShaft.forEach(m => { m.rotation.y += deltaAngle; });
+            // Procedural Bow Thruster Kinematics & Hydrodynamic Streamlines
+            if (isProceduralBowThruster) {
+                if (bowWaterStreamlinesGroup) {
+                    bowWaterStreamlinesGroup.visible = (kinParam1 !== 0 && explodeFactor < 0.25);
+                }
+                if (kinParam1 !== 0) {
+                    const deltaAngle = 0.055 * kinParam1;
+                    bowRotatingMeshes.prop.forEach(m => { m.rotation.z += deltaAngle; });
+                    bowRotatingMeshes.vertShaft.forEach(m => { m.rotation.y += deltaAngle; });
+
+                    if (bowWaterStreamlinesGroup && bowWaterStreamlinesGroup.visible) {
+                        bowWaterStreamlinesGroup.children.forEach(p => {
+                            p.position.z -= deltaAngle * 3.2 * p.userData.speedOffset;
+                            p.userData.angle += deltaAngle * 0.35;
+                            p.position.x = Math.cos(p.userData.angle) * p.userData.radius;
+                            p.position.y = Math.sin(p.userData.angle) * p.userData.radius;
+                            if (p.position.z < -2.6) p.position.z = 2.6;
+                            if (p.position.z > 2.6) p.position.z = -2.6;
+                        });
+                    }
+                }
             }
 
-            // GLB-Based Kinematics
+            // GLB-Based Coaxial World-Pivot Kinematics
             if (!isProceduralBowThruster && isKinematicsRunning && kinParam1 !== 0 && currentKinematics) {
-                const axis = currentKinematics.axis || 'z';
+                const axis = currentKinematics.axis || 'x';
                 const baseRpm = currentKinematics.rpm || 1750;
                 const effectiveRpm = baseRpm * kinParam1;
-                const rotDelta = (effectiveRpm * 2 * Math.PI / 60) * 0.016;
+                // Visual angular step capped so high-RPM shafts/impellers read smoothly at 60 FPS without aliasing
+                const visualRadPerSec = Math.sign(effectiveRpm) * Math.min(Math.abs(effectiveRpm) * 2 * Math.PI / 60, 12.0);
+                const rotDelta = visualRadPerSec * 0.016;
 
-                animatedMeshes.forEach((item) => {
-                    if (item.isRotating && item.mesh) {
-                        item.mesh.rotation[axis] += rotDelta;
-                    }
+                glbRotorPivots.forEach((pivot) => {
+                    pivot.rotation[axis] += rotDelta;
                 });
             }
 

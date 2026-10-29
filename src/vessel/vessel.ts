@@ -232,14 +232,7 @@ export function createVessel(): THREE.Group {
 }
 
 function addCompartmentEnclosures(parent: THREE.Group) {
-  // 1. [A-60 FIRE BULKHEAD] Engine Control Room & Main Switchboard Boundary
-  const a60Group = new THREE.Group();
-  a60Group.renderOrder = 2;
-  outlineBox(a60Group, [5.8, 1.85, 3.6], [-7.5, -0.15, 0], 0xf59e0b, 0.60);
-  box(a60Group, [5.8, 1.85, 3.6], [-7.5, -0.15, 0], 0xd97706, 0.18);
-  parent.add(a60Group);
-
-  // 2. [ARC PRESSURE RELIEF DUCT] → OPEN AIR
+  // 1. [ARC PRESSURE RELIEF DUCT] → OPEN AIR
   const arcDuct = new THREE.Group();
   arcDuct.renderOrder = 2;
   // Vertical duct rising from 6.6 kV switchgear (y = 0.4) to above weather deck (y = 2.45)
@@ -251,7 +244,7 @@ function addCompartmentEnclosures(parent: THREE.Group) {
   box(arcDuct, [0.67, 0.15, 0.67], [-7.75, 2.25, 0], 0xfacc15, 0.95);
   parent.add(arcDuct);
 
-  // 3. [WATERTIGHT BULKHEAD] Bow Thruster Collision Bulkhead (Trimmed & Resized for V7 Hull)
+  // 2. [WATERTIGHT BULKHEAD] Bow Thruster Collision Bulkhead (Trimmed & Resized for V7 Hull)
   const wtBulkhead = new THREE.Group();
   wtBulkhead.renderOrder = 2;
   // Lower tank-top bulkhead plate fitting neatly between keel and lower machinery flat
@@ -268,13 +261,6 @@ function addCompartmentEnclosures(parent: THREE.Group) {
   box(wtBulkhead, [0.08, 0.55, 0.36], [18.6, -2.05, 0], 0x475569, 0.7);
   outlineBox(wtBulkhead, [0.08, 0.55, 0.36], [18.6, -2.05, 0], 0x38bdf8, 0.85);
   parent.add(wtBulkhead);
-
-  // 4. EMERGENCY GENERATOR ROOM (ABOVE BULKHEAD DECK)
-  const esbRoom = new THREE.Group();
-  esbRoom.renderOrder = 2;
-  outlineBox(esbRoom, [3.4, 1.55, 1.7], [-10.85, 2.35, -1.35], 0xf97316, 0.65);
-  box(esbRoom, [3.4, 1.55, 1.7], [-10.85, 2.35, -1.35], 0xea580c, 0.18);
-  parent.add(esbRoom);
 }
 
 

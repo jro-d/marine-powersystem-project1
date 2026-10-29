@@ -5,7 +5,7 @@ Output: public/vent_fan_assembly.glb
 
 Can be run:
   1. From CLI:
-     "D:\\Blender\\blender.exe" --background --python scripts/generate_vent_fan.py
+     blender --background --python scripts/blender/generate_vent_fan.py
   2. Inside Blender GUI:
      Open Blender -> Scripting workspace -> Open this file -> Click "Run Script" (or Alt+P)
 
