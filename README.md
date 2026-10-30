@@ -4,6 +4,7 @@
 [![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?style=flat&logo=vite&logoColor=white)](https://vitejs.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Three.js](https://img.shields.io/badge/Three.js-0.186-black?style=flat&logo=three.js&logoColor=white)](https://threejs.org/)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Classification Standard](https://img.shields.io/badge/Standard-IEC%2060092%20%2F%20SOLAS-orange?style=flat)](https://www.imo.org/)
 
 An interactive, browser-based 3D educational simulator and digital twin modeling electrical power generation, medium-voltage distribution, safety interlocks, and electric propulsion aboard a **generic 3,000 kW electric-propulsion container vessel**.
@@ -299,4 +300,4 @@ The project includes an automated deployment workflow via [GitHub Actions](.gith
 
 * **Owner / Developer**: [jro-d](https://github.com/jro-d)
 * **Repository**: [https://github.com/jro-d/marine-powersystem-project1](https://github.com/jro-d/marine-powersystem-project1)
-* **License**: Educational & Maritime Training License.
+* **License**: [GNU General Public License v3.0 (GPLv3)](LICENSE) — Free and open-source for educational and maritime training use.

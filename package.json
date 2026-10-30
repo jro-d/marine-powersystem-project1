@@ -1,7 +1,7 @@
 {
   "name": "marine-power-system-sim-v1",
   "version": "1.0.0",
-  "private": true,
+  "license": "GPL-3.0-or-later",
   "type": "module",
   "scripts": {
     "build:hull": "blender --background --python scripts/blender/generate_hull.py",
