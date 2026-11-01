@@ -243,24 +243,6 @@ function addCompartmentEnclosures(parent: THREE.Group) {
   // Arc warning plaque (yellow/black band)
   box(arcDuct, [0.67, 0.15, 0.67], [-7.75, 2.25, 0], 0xfacc15, 0.95);
   parent.add(arcDuct);
-
-  // 2. [WATERTIGHT BULKHEAD] Bow Thruster Collision Bulkhead (Trimmed & Resized for V7 Hull)
-  const wtBulkhead = new THREE.Group();
-  wtBulkhead.renderOrder = 2;
-  // Lower tank-top bulkhead plate fitting neatly between keel and lower machinery flat
-  box(wtBulkhead, [0.06, 1.15, 3.0], [18.6, -2.05, 0], 0x334155, 0.45);
-  outlineBox(wtBulkhead, [0.06, 1.15, 3.0], [18.6, -2.05, 0], 0x38bdf8, 0.70);
-  // Horizontal stiffener channels
-  box(wtBulkhead, [0.09, 0.04, 2.9], [18.6, -2.35, 0], 0x1e293b, 0.75);
-  box(wtBulkhead, [0.09, 0.04, 2.9], [18.6, -1.75, 0], 0x1e293b, 0.75);
-  // Vertical structural framing
-  for (const z of [-1.0, 0, 1.0]) {
-    box(wtBulkhead, [0.08, 1.1, 0.04], [18.6, -2.05, z], 0x1e293b, 0.75);
-  }
-  // Watertight access door frame
-  box(wtBulkhead, [0.08, 0.55, 0.36], [18.6, -2.05, 0], 0x475569, 0.7);
-  outlineBox(wtBulkhead, [0.08, 0.55, 0.36], [18.6, -2.05, 0], 0x38bdf8, 0.85);
-  parent.add(wtBulkhead);
 }
 
 
