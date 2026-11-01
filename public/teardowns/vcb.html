@@ -1,0 +1,2800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marine 6.6 kV Switchboard Cubicle & Withdrawable VCB · IEC 62271-200 Form 4b / IEC 60092</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #f8fafc;
+      color: #0f172a;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    #canvas-container {
+      position: absolute;
+      inset: 0;
+      left: 280px;
+      width: calc(100% - 280px);
+      height: 100%;
+      z-index: 1;
+      background: radial-gradient(circle at 50% 45%, #f8fafc 0%, #eaedf1 100%);
+    }
+    @media (max-width: 768px) {
+      #canvas-container {
+        left: 0;
+        width: 100%;
+      }
+    }
+    .inspector-card {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 5px;
+      background: #e2e8f0;
+      border-radius: 9999px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: #c25b2a;
+      cursor: pointer;
+      border: 2px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+      transition: transform 0.15s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+    .subsystem-btn {
+      transition: all 0.16s ease;
+    }
+    .subsystem-btn:hover {
+      background: #f8fafc;
+    }
+    .subsystem-btn.active {
+      background: #fff7ed !important;
+      border-color: #fdba74 !important;
+    }
+    .subsystem-btn.active .sub-badge {
+      background: #ea580c !important;
+      color: #ffffff !important;
+    }
+    .view-pill {
+      transition: all 0.15s ease;
+      background: #f8fafc;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+    }
+    .view-pill.active {
+      background: #faeee7;
+      color: #9a3412;
+      border-color: #f3c6b1;
+      font-weight: 500;
+    }
+    /* Auto Tour Pointer */
+    #tour-pointer {
+      pointer-events: none;
+      position: absolute;
+      z-index: 99;
+      transform: translate(-50%, -50%);
+      transition: top 1.0s cubic-bezier(0.2, 0.8, 0.2, 1), left 1.0s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    /* Floating 3D Callout Pills (Left & Right Divided Columns) */
+    .callout-pill {
+      pointer-events: auto;
+      transition: opacity 0.2s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid rgba(203, 213, 225, 0.95);
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+      color: #334155;
+    }
+    .callout-pill.side-left {
+      transform: translate(-100%, -50%);
+    }
+    .callout-pill.side-right {
+      transform: translate(0%, -50%);
+    }
+    .callout-pill:hover {
+      border-color: #94a3b8;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+      color: #0f172a;
+    }
+    .callout-pill.isolated {
+      border-color: #ea580c;
+      background: #fff7ed;
+      color: #9a3412;
+    }
+    /* Interlock Alert Toast */
+    #interlock-toast {
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  </style>
+</head>
+<body class="w-screen h-screen relative select-none overflow-hidden">
+
+  <!-- 3D WebGL Canvas Host -->
+  <div id="canvas-container"></div>
+
+  <!-- 3D Callout HTML Container -->
+  <div id="callouts-container" class="pointer-events-none fixed inset-0 z-10 overflow-hidden"></div>
+
+  <!-- Auto Tour Cursor Indicator -->
+  <div id="tour-pointer" class="hidden">
+    <div class="relative flex items-center gap-2">
+      <div class="w-5 h-5 rounded-full bg-orange-500/60 border-2 border-white shadow animate-ping absolute"></div>
+      <div class="w-5 h-5 rounded-full bg-orange-600 border-2 border-white shadow-md flex items-center justify-center text-[8px] text-white font-bold">●</div>
+      <div id="tour-tag" class="px-2.5 py-1 rounded-md bg-white/95 border border-slate-300 text-slate-800 text-[11px] font-medium whitespace-nowrap shadow-md">Tour Active</div>
+    </div>
+  </div>
+
+  <!-- Floating Interlock Toast Warning -->
+  <div id="interlock-toast" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 translate-y-[-10px] transition duration-200">
+    <div class="px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-300 shadow-xl flex items-center gap-2.5 text-amber-900 text-xs font-semibold">
+      <svg class="w-4 h-4 text-amber-600 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+      <span id="interlock-msg">Mechanical Interlock Active</span>
+    </div>
+  </div>
+
+  <!-- Left Minimal Equipment Sidebar (280px wide, consistent across Marine Digital Twins) -->
+  <aside class="fixed top-0 left-0 bottom-0 w-[280px] bg-white border-r border-slate-200/90 z-20 flex flex-col justify-between p-4 overflow-y-auto">
+    <div>
+      <!-- Top Category Selector Pill -->
+      <div class="flex items-center justify-between px-2.5 py-2 rounded-lg border border-slate-200/90 bg-slate-50/60 text-xs font-medium text-slate-700 mb-4">
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded bg-orange-100 text-orange-700 flex items-center justify-center text-[10px] font-bold mono">MV</span>
+          <span>Marine Switchgear</span>
+        </div>
+        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+
+      <!-- Title & Spec Subtitle -->
+      <div class="px-1 mb-4">
+        <h1 class="text-base font-semibold text-slate-900 tracking-tight leading-snug">Marine 6.6 kV Switchboard Cubicle &amp; Withdrawable VCB</h1>
+        <p class="text-[11px] text-slate-400 mt-0.5">IEC 62271-200 Form 4b / IEC 60092</p>
+      </div>
+
+      <!-- Equipment Header -->
+      <div class="flex items-center justify-between px-1 mb-2">
+        <span class="text-[11px] font-semibold text-slate-500">Equipment</span>
+        <button id="btn-show-all" class="text-[11px] text-orange-700 hover:text-orange-800 font-medium">Show all</button>
+      </div>
+
+      <!-- 7 Subsystem Isolation Buttons (Ghost-Opacity Isolation) -->
+      <div class="flex flex-col gap-1" id="subsystem-buttons">
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="cubicleFrame">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">CF</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">Form 4b Cubicle</div>
+              <div class="text-[11px] text-slate-400">RAL 7032 · LV mimic &amp; rails</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">↗</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="vcbTruck">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">TR</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">Withdrawable VCB Truck</div>
+              <div class="text-[11px] text-slate-400">Monolithic fascia &amp; carriage</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">↗</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="epoxyPoles">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">EP</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">Embedded Epoxy Poles &amp; Tulips</div>
+              <div class="text-[11px] text-slate-400">3 maroon poles · 6 arms</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">↗</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="vacuumInterrupters">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">VI</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">Vacuum Interrupters</div>
+              <div class="text-[11px] text-slate-400">Alumina bottles · CuCr 12mm</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">↗</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="shutters">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">SS</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">Automatic Shutters</div>
+              <div class="text-[11px] text-slate-400">6.6 kV danger barrier · IP2X</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">↗</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="busbars">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">BB</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">Busbar Chamber</div>
+              <div class="text-[11px] text-slate-400">L1-L2-L3 copper · DMC posts</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">↗</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="cables">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">CB</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">Cable &amp; CT Chamber</div>
+              <div class="text-[11px] text-slate-400">Toroidal CTs · stress cones</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">↗</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Bottom 2x2 Nameplate & Live Telemetry Strip -->
+    <div class="pt-3 border-t border-slate-100">
+      <div class="flex items-center justify-between text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-2 px-1">
+        <span>Nameplate &amp; Live Bus</span>
+        <span id="tel-bus-status" class="flex items-center gap-1 text-emerald-600 font-semibold"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>ENERGIZED</span>
+      </div>
+      <div class="grid grid-cols-2 gap-1.5 text-left">
+        <div class="bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1.5">
+          <span class="text-[10px] text-slate-400 block">Operating Voltage</span>
+          <span id="tel-volt" class="text-xs font-semibold mono text-slate-800">6,600 V AC</span>
+        </div>
+        <div class="bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1.5">
+          <span class="text-[10px] text-slate-400 block">System Frequency</span>
+          <span id="tel-freq" class="text-xs font-semibold mono text-slate-800">60.0 Hz</span>
+        </div>
+        <div class="bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1.5">
+          <span class="text-[10px] text-slate-400 block">Rated Current</span>
+          <span id="tel-curr" class="text-xs font-semibold mono text-slate-800">1,250 A</span>
+        </div>
+        <div class="bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1.5">
+          <span class="text-[10px] text-slate-400 block">Short-Circuit I_sc</span>
+          <span id="tel-isc" class="text-xs font-semibold mono text-orange-700">40 kA RMS</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Top-Left Floating Header & Proof Pill Bar -->
+  <div class="fixed top-4 left-[296px] z-20 flex items-center gap-2">
+    <a href="/" class="px-3 py-1.5 rounded-lg inspector-card hover:bg-white text-slate-600 hover:text-slate-900 text-xs font-medium transition flex items-center gap-1.5">
+      <span>← Back to vessel</span>
+    </a>
+    <button id="btn-math-proof" class="px-3 py-1.5 rounded-lg inspector-card hover:bg-white text-slate-600 hover:text-slate-900 text-xs font-medium transition flex items-center gap-1.5">
+      <span>Kinematic &amp; IEC proof</span>
+    </button>
+  </div>
+
+  <!-- Right Floating Inspector Card (320px wide) -->
+  <aside class="fixed top-4 right-4 z-20 w-[320px] inspector-card rounded-2xl p-4 flex flex-col gap-3 max-h-[calc(100vh-32px)] overflow-y-auto">
+    <!-- Inspector Top Bar -->
+    <div class="flex items-center justify-between text-slate-500 border-b border-slate-100 pb-2">
+      <div class="flex items-center gap-2 text-xs font-medium text-slate-700">
+        <svg class="w-3.5 h-3.5 text-slate-400" fill="currentColor" viewBox="0 0 16 16">
+          <circle cx="3" cy="3" r="1.4"/><circle cx="8" cy="3" r="1.4"/><circle cx="13" cy="3" r="1.4"/>
+          <circle cx="3" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="13" cy="8" r="1.4"/>
+        </svg>
+        <span>Inspector</span>
+        <span id="info-code" class="text-[10px] mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">ASSY-00</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <button id="btn-start-tour" class="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition" title="Auto-Tour">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        </button>
+        <button id="btn-collapse-telemetry" class="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition" title="Toggle Telemetry Drawer">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Component Title & Description -->
+    <div>
+      <span id="info-subsystem" class="text-[10px] font-semibold uppercase tracking-wider text-orange-700 block mb-0.5">Switchboard Overview</span>
+      <h2 id="info-title" class="text-sm font-semibold text-slate-900 leading-snug">Follow the power</h2>
+      <p id="info-desc" class="text-xs text-slate-500 mt-1 leading-relaxed">Monolithic withdrawable 6.6 kV vacuum circuit breaker truck inside a Form 4b metal-enclosed marine switchboard cubicle with automatic safety shutters.</p>
+    </div>
+
+    <!-- View Section (Labels, Cutaway, Telemetry Pills) -->
+    <div>
+      <span class="text-[11px] text-slate-400 font-medium block mb-1.5">View</span>
+      <div class="flex flex-wrap items-center gap-1.5">
+        <button id="btn-labels-toggle" class="view-pill active px-2.5 py-1 rounded-lg text-xs">
+          Labels
+        </button>
+        <button id="btn-cutaway-toggle" class="view-pill px-2.5 py-1 rounded-lg text-xs">
+          Cutaway X-Ray
+        </button>
+        <button id="btn-graphs-toggle" class="view-pill active px-2.5 py-1 rounded-lg text-xs">
+          Telemetry
+        </button>
+      </div>
+    </div>
+
+    <!-- Explore Equipment / Camera Presets Dropdown -->
+    <div>
+      <label for="select-camera-preset" class="text-[11px] text-slate-400 font-medium block mb-1.5">Explore equipment</label>
+      <div class="relative">
+        <select id="select-camera-preset" class="w-full appearance-none bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium rounded-lg border border-slate-200/90 px-3 py-2 pr-8 outline-none cursor-pointer transition">
+          <option value="hero">Hero Studio 3/4</option>
+          <option value="fascia">Front Operating Fascia</option>
+          <option value="tulips">Rear Disconnect Tulips</option>
+          <option value="vacuum">Vacuum Bottle Cutaway</option>
+          <option value="shutters">Automatic Shutters</option>
+        </select>
+        <svg class="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+    </div>
+
+    <!-- Racking, Breaker Controls & Exploded View -->
+    <div class="space-y-2.5 pt-2 border-t border-slate-100">
+      <!-- VCB Racking Slider (0% Service -> 50% Test -> 100% Withdrawn) -->
+      <div>
+        <div class="flex justify-between items-center text-[11px] mb-1">
+          <span class="text-slate-500 font-medium">VCB Truck Racking (s_rack)</span>
+          <span id="val-racking" class="mono text-slate-700 font-semibold">0% (SERVICE)</span>
+        </div>
+        <input id="slider-racking" type="range" min="0" max="100" value="0" step="1">
+        <div class="flex justify-between text-[9px] text-slate-400 mt-0.5 mono">
+          <button id="btn-rack-service" class="hover:text-slate-700">0% SERVICE (0mm)</button>
+          <button id="btn-rack-test" class="hover:text-slate-700">50% TEST (+200mm)</button>
+          <button id="btn-rack-out" class="hover:text-slate-700">100% OUT (+550mm)</button>
+        </div>
+      </div>
+
+      <!-- 3D Exploded Teardown Slider -->
+      <div>
+        <div class="flex justify-between items-center text-[11px] mb-1">
+          <span class="text-slate-500 font-medium">Exploded teardown</span>
+          <span id="val-explode" class="mono text-slate-700 font-semibold">0%</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btn-assemble-all" class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 transition">0%</button>
+          <input id="slider-explode" type="range" min="0" max="100" value="0" step="1">
+          <button id="btn-explode-all" class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 transition">100%</button>
+        </div>
+      </div>
+
+      <!-- Compact 2x2 Breaker Operating Pushbuttons -->
+      <div class="grid grid-cols-2 gap-1.5 pt-0.5">
+        <button id="btn-close-breaker" class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold shadow-sm transition flex items-center justify-center gap-1">
+          <span class="mono">I</span>
+          <span>PUSH ON (Close)</span>
+        </button>
+        <button id="btn-trip-breaker" class="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[11px] font-semibold shadow-sm transition flex items-center justify-center gap-1">
+          <span class="mono">O</span>
+          <span>PUSH OFF (Trip)</span>
+        </button>
+        <button id="btn-charge-spring" class="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-semibold shadow-sm transition flex items-center justify-center gap-1">
+          <span>↻</span>
+          <span>Spring Charge</span>
+        </button>
+        <button id="btn-toggle-door" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-[11px] font-medium shadow-sm transition flex items-center justify-center">
+          <span id="lbl-door-btn">Open Door</span>
+        </button>
+      </div>
+
+      <!-- Compact 2x2 Mechanical Status Badges -->
+      <div class="grid grid-cols-2 gap-1 text-[10px]">
+        <div class="bg-slate-50 rounded-lg px-2 py-1 border border-slate-200/80 flex items-center justify-between">
+          <span class="text-slate-400">Truck</span>
+          <span id="badge-truck-pos" class="font-semibold text-emerald-700 mono">SERVICE</span>
+        </div>
+        <div class="bg-slate-50 rounded-lg px-2 py-1 border border-slate-200/80 flex items-center justify-between">
+          <span class="text-slate-400">Position</span>
+          <span id="badge-contacts" class="font-semibold text-red-600 mono">CLOSED</span>
+        </div>
+        <div class="bg-slate-50 rounded-lg px-2 py-1 border border-slate-200/80 flex items-center justify-between">
+          <span class="text-slate-400">Spring</span>
+          <span id="badge-spring" class="font-semibold text-amber-600 mono">CHARGED</span>
+        </div>
+        <div class="bg-slate-50 rounded-lg px-2 py-1 border border-slate-200/80 flex items-center justify-between">
+          <span class="text-slate-400">Shutters</span>
+          <span id="badge-shutters" class="font-semibold text-amber-700 mono">OPEN</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Collapsible Live 2D Telemetry Drawer -->
+    <div id="telemetry-drawer" class="space-y-2 pt-2 border-t border-slate-100">
+      <!-- Contact Travel Curve Canvas (12 mm stroke with bounce suppression) -->
+      <div class="bg-slate-50/90 rounded-xl p-2 border border-slate-200/80">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Contact Travel (12 mm / ms)</span>
+          <span id="travel-live-state" class="text-[10px] mono font-semibold text-red-600 uppercase">CLOSED · 0.0 mm</span>
+        </div>
+        <canvas id="travel-canvas" width="270" height="96" class="w-full block rounded bg-white border border-slate-200/60"></canvas>
+        <div class="grid grid-cols-3 gap-1 mt-1 text-center">
+          <div class="bg-white px-1 py-0.5 rounded border border-slate-200/60">
+            <span class="text-[8px] text-slate-400 block">Gap Stroke</span>
+            <span id="travel-stroke-val" class="text-[10px] font-semibold mono text-slate-800">0.0 mm</span>
+          </div>
+          <div class="bg-white px-1 py-0.5 rounded border border-slate-200/60">
+            <span class="text-[8px] text-slate-400 block">Opening Time</span>
+            <span id="travel-time-val" class="text-[10px] font-semibold mono text-slate-800">11.2 ms</span>
+          </div>
+          <div class="bg-white px-1 py-0.5 rounded border border-slate-200/60">
+            <span class="text-[8px] text-slate-400 block">Bounce Damping</span>
+            <span id="travel-speed-val" class="text-[10px] font-semibold mono text-emerald-700">&lt; 0.4 mm</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dynamic 3-Phase 60 Hz AC Waveform Canvas -->
+      <div class="bg-slate-50/90 rounded-xl p-2 border border-slate-200/80">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">3-Phase 6.6 kV / 60 Hz</span>
+          <span id="wave-current-indicator" class="text-[10px] mono text-emerald-600 font-semibold">1,250 A RATED</span>
+        </div>
+        <canvas id="ac-canvas" width="270" height="54" class="w-full block rounded bg-white border border-slate-200/60"></canvas>
+      </div>
+    </div>
+
+    <!-- Footer Row: Reset View & Zoom Buttons -->
+    <div class="flex items-center gap-1.5 pt-1 border-t border-slate-100">
+      <button id="btn-reset-cam" class="flex-1 py-1.5 px-3 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium border border-slate-200/90 shadow-sm transition text-center">
+        Reset view
+      </button>
+      <button id="btn-zoom-in" class="w-8 h-8 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium border border-slate-200/90 shadow-sm transition flex items-center justify-center" title="Zoom in">+</button>
+      <button id="btn-zoom-out" class="w-8 h-8 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium border border-slate-200/90 shadow-sm transition flex items-center justify-center" title="Zoom out">−</button>
+    </div>
+  </aside>
+
+  <!-- Mathematical Kinematic & Dielectric Proof Modal -->
+  <div id="modal-proof" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-2xl rounded-2xl p-6 border border-slate-200 shadow-2xl max-h-[85vh] overflow-y-auto text-slate-700">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-orange-600"></span>
+          <h2 class="text-base font-semibold text-slate-900">IEC 62271-200 Form 4b &amp; IEC 60092-503 Kinematic Proof</h2>
+        </div>
+        <button id="btn-close-proof" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="mt-4 space-y-4 text-xs leading-relaxed">
+        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+          <h4 class="font-semibold text-slate-900 text-sm mb-1">1. Monolithic Withdrawable Truck Racking Kinematics (s_rack ∈ [0, 1])</h4>
+          <p class="text-slate-600">The entire VCB truck (`breakerTruckGroup`) translates as a single rigid assembly on 4 flanged steel wheels:</p>
+          <div class="mono bg-white p-2.5 rounded-lg my-2 text-slate-800 border border-slate-200">
+            s_rack = 0.0 (SERVICE): z = 0 mm (45 mm tulip overlap, shutters OPEN)<br>
+            s_rack = 0.5 (TEST):    z = +200 mm (155 mm isolating air gap, shutters CLOSED)<br>
+            s_rack = 1.0 (OUT):     z = +550 mm (withdrawn onto extension rails for 360° inspection)
+          </div>
+        </div>
+
+        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+          <h4 class="font-semibold text-slate-900 text-sm mb-1">2. Fast Tripping (&lt;12 ms) &amp; Vacuum Dielectric Recovery</h4>
+          <p class="text-slate-600">Inside the 3 maroon cycloaliphatic epoxy poles, alumina ceramic vacuum bottles part CuCr contacts across a 12.0 mm stroke:</p>
+          <div class="mono bg-white p-2.5 rounded-lg my-2 text-slate-800 border border-slate-200">
+            v_open = 1.85 m/s  |  t_open = 11.2 ms &lt; 12 ms  |  I_sc = 40 kA RMS  |  V_BIL = 60 kV
+          </div>
+        </div>
+
+        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+          <h4 class="font-semibold text-slate-900 text-sm mb-1">3. Live Kinematic &amp; Interlock Verification Table</h4>
+          <table class="w-full text-left mono text-[11px] mt-2">
+            <thead>
+              <tr class="text-slate-400 border-b border-slate-200">
+                <th class="py-1">Parameter</th>
+                <th>Formula / Standard</th>
+                <th>Current Live Value</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200/70">
+              <tr><td class="py-1.5 text-slate-600">Monolithic Truck Position</td><td>breakerTruckGroup.position.z</td><td id="proof-rack" class="text-orange-600 font-semibold">0.0 mm (SERVICE)</td></tr>
+              <tr><td class="py-1.5 text-slate-600">CuCr Vacuum Contact Gap</td><td>d_gap (0–12.0 mm)</td><td id="proof-gap" class="text-emerald-600 font-semibold">0.00 mm (CLOSED)</td></tr>
+              <tr><td class="py-1.5 text-slate-600">IP2X Safety Shutters</td><td>h_shutter (0–130 mm)</td><td id="proof-shutter" class="text-sky-600 font-semibold">130.0 mm (OPEN)</td></tr>
+              <tr><td class="py-1.5 text-slate-600">Vacuum Dielectric BIL</td><td>V_bd = 72 kV × (d/12)^0.8</td><td id="proof-bil" class="text-indigo-600 font-semibold">0.0 kV (CONDUCTING)</td></tr>
+              <tr><td class="py-1.5 text-slate-600">3-Phase Feeder Load</td><td>6,600 V / 60.0 Hz / 40 kA</td><td id="proof-curr" class="text-rose-600 font-semibold">1,250 A</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Three.js Module Script (three@0.160.0) -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    const container = document.getElementById('canvas-container');
+    const calloutsContainer = document.getElementById('callouts-container');
+
+    function getViewportSize() {
+      const rect = container.getBoundingClientRect();
+      return {
+        width: rect.width || (window.innerWidth - 280),
+        height: rect.height || window.innerHeight,
+        left: rect.left || 280,
+        top: rect.top || 0
+      };
+    }
+
+    /* =====================================================================
+       SCENE, CAMERA, RENDERER & UNLOCKED 360° ORBIT CONTROLS
+       ===================================================================== */
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf1f3f6);
+
+    const vp0 = getViewportSize();
+    const camera = new THREE.PerspectiveCamera(38, vp0.width / vp0.height, 0.05, 100);
+
+    let isCameraTweening = false;
+    const camTargetPos = new THREE.Vector3(2.85, 1.82, 3.25);
+    const camTargetLook = new THREE.Vector3(0, 1.05, 0.15);
+    camera.position.copy(camTargetPos);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
+    renderer.setSize(vp0.width, vp0.height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.copy(camTargetLook);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.enablePan = true;
+    // Disable built-in r160 wheel zoom (which divides by devicePixelRatio|0 and jumps on high-delta mice)
+    // and use a deterministic, gently clamped step per scroll notch instead.
+    controls.enableZoom = false;
+    controls.minDistance = 1.65;
+    controls.maxDistance = 8.5;
+    controls.minAzimuthAngle = -Infinity;
+    controls.maxAzimuthAngle = Infinity;
+    controls.minPolarAngle = 0.05;
+    controls.maxPolarAngle = Math.PI * 0.495;
+    controls.update();
+
+    controls.addEventListener('start', () => {
+      isCameraTweening = false;
+    });
+
+    renderer.domElement.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.deltaY === 0) return;
+      isCameraTweening = false;
+      const offset = new THREE.Vector3().subVectors(camera.position, controls.target);
+      const dist = offset.length();
+      if (dist < 0.001) return;
+      const dir = e.deltaY > 0 ? 1 : -1;
+      const nextDist = Math.max(controls.minDistance, Math.min(controls.maxDistance, dist * (1 + dir * 0.042)));
+      offset.normalize().multiplyScalar(nextDist);
+      camera.position.copy(controls.target).add(offset);
+      controls.update();
+    }, { passive: false });
+
+    const raycaster = new THREE.Raycaster();
+    const mouseVec = new THREE.Vector2();
+
+    /* =====================================================================
+       CLEAN LIGHT-STUDIO LIGHTING & PLINTH (MATCHING DIESEL GENERATOR)
+       ===================================================================== */
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xdbe2ea, 1.25);
+    scene.add(hemiLight);
+
+    const mainLight = new THREE.DirectionalLight(0xfffdf9, 1.35);
+    mainLight.position.set(8, 14, 7);
+    mainLight.castShadow = true;
+    mainLight.shadow.mapSize.width = 2048;
+    mainLight.shadow.mapSize.height = 2048;
+    mainLight.shadow.bias = -0.0003;
+    mainLight.shadow.camera.near = 0.5;
+    mainLight.shadow.camera.far = 25;
+    mainLight.shadow.camera.left = -3.5;
+    mainLight.shadow.camera.right = 3.5;
+    mainLight.shadow.camera.top = 3.5;
+    mainLight.shadow.camera.bottom = -3.5;
+    scene.add(mainLight);
+
+    const fillLight = new THREE.DirectionalLight(0xe2e8f0, 0.85);
+    fillLight.position.set(-8, 7, -6);
+    scene.add(fillLight);
+
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.55);
+    rimLight.position.set(-4, 5, 9);
+    scene.add(rimLight);
+
+    const arcPointLight = new THREE.PointLight(0x38bdf8, 0, 1.2);
+    arcPointLight.position.set(0, 0.95, 0.24);
+    scene.add(arcPointLight);
+
+    // Clean Two-Tier Architectural Concrete Studio Plinth (No Wireframe Grid, matching DG Twin)
+    const plinthGrp = new THREE.Group();
+    const padMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(3.4, 0.08, 4.4),
+      new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.85, metalness: 0.05 })
+    );
+    padMesh.position.set(0, -0.04, 0.20);
+    padMesh.receiveShadow = true;
+    plinthGrp.add(padMesh);
+
+    const curbMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(3.52, 0.05, 4.52),
+      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.8, metalness: 0.08 })
+    );
+    curbMesh.position.set(0, -0.09, 0.20);
+    curbMesh.receiveShadow = true;
+    plinthGrp.add(curbMesh);
+    scene.add(plinthGrp);
+
+    const groundShadow = new THREE.Mesh(
+      new THREE.PlaneGeometry(40, 40),
+      new THREE.ShadowMaterial({ opacity: 0.16 })
+    );
+    groundShadow.rotation.x = -Math.PI / 2;
+    groundShadow.position.y = 0.001;
+    groundShadow.receiveShadow = true;
+    scene.add(groundShadow);
+
+    /* =====================================================================
+       PROCEDURAL TEXTURES (SOFT INDUSTRIAL CAD LABELS & BUMP)
+       ===================================================================== */
+    function createPowderCoatTexture() {
+      const c = document.createElement('canvas');
+      c.width = 128; c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#808080';
+      ctx.fillRect(0, 0, 128, 128);
+      for (let i = 0; i < 1400; i++) {
+        const v = 118 + Math.floor(Math.random() * 28);
+        ctx.fillStyle = `rgb(${v},${v},${v})`;
+        ctx.fillRect(Math.random() * 128, Math.random() * 128, 2, 2);
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(8, 8);
+      return tex;
+    }
+
+    function createShutterDangerTexture() {
+      const c = document.createElement('canvas');
+      c.width = 512; c.height = 192;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#d5dde5';
+      ctx.fillRect(0, 0, 512, 192);
+
+      // Soft warm amber & slate hazard chevron stripes
+      [12, 148].forEach(yStripe => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(16, yStripe, 480, 30);
+        ctx.clip();
+        ctx.fillStyle = '#f3c65f';
+        ctx.fillRect(16, yStripe, 480, 30);
+        ctx.fillStyle = '#526273';
+        for (let x = -40; x < 540; x += 36) {
+          ctx.beginPath();
+          ctx.moveTo(x, yStripe + 30);
+          ctx.lineTo(x + 18, yStripe + 30);
+          ctx.lineTo(x + 36, yStripe);
+          ctx.lineTo(x + 18, yStripe);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+      });
+
+      // Soft clean white/slate warning plaque
+      ctx.fillStyle = '#f4f6f8';
+      ctx.fillRect(42, 54, 428, 82);
+      ctx.strokeStyle = '#9aa8b6';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(42, 54, 428, 82);
+
+      ctx.fillStyle = '#b45309';
+      ctx.font = 'bold 23px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('⚡ DANGER 6.6 kV LIVE BUSBARS', 256, 92);
+      ctx.fillStyle = '#526273';
+      ctx.font = '600 14px JetBrains Mono, monospace';
+      ctx.fillText('AUTOMATIC IP2X SAFETY SHUTTER · ISOLATED', 256, 118);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function createFasciaNameplateTexture() {
+      const c = document.createElement('canvas');
+      c.width = 512; c.height = 384;
+      const ctx = c.getContext('2d');
+      // Soft matte cool-grey operator panel (matching reference cabinet)
+      ctx.fillStyle = '#cfd7df';
+      ctx.fillRect(0, 0, 512, 384);
+
+      // Subtle bevel border
+      ctx.strokeStyle = '#9aa8b6';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(8, 8, 496, 368);
+
+      // Clean white engraved nameplate banner at top (like DS-01 MOTOR OPERATOR reference)
+      ctx.fillStyle = '#f4f6f8';
+      ctx.fillRect(28, 24, 456, 56);
+      ctx.strokeStyle = '#b8c3ce';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(28, 24, 456, 56);
+
+      ctx.fillStyle = '#475569';
+      ctx.font = 'bold 20px Inter, sans-serif';
+      ctx.fillText('VCB-01 · 6.6 kV VACUUM BREAKER', 44, 50);
+      ctx.fillStyle = '#64748b';
+      ctx.font = '600 12px JetBrains Mono, monospace';
+      ctx.fillText('IEC 62271-100 · Ur 7.2 kV · Ir 1250 A · Isc 40 kA', 44, 70);
+
+      // White engraved label strips above pushbuttons
+      const drawLabelStrip = (x, y, w, h, text) => {
+        ctx.fillStyle = '#f4f6f8';
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeStyle = '#b8c3ce';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x, y, w, h);
+        ctx.fillStyle = '#526273';
+        ctx.font = 'bold 12px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(text, x + w / 2, y + h * 0.68);
+        ctx.textAlign = 'left';
+      };
+
+      drawLabelStrip(52, 108, 128, 28, 'PUSH OFF (O)');
+      drawLabelStrip(196, 108, 128, 28, 'PUSH ON (I)');
+      drawLabelStrip(340, 108, 144, 28, 'SPRING CHARGE');
+
+      drawLabelStrip(52, 232, 128, 28, 'BREAKER POS');
+      drawLabelStrip(196, 232, 128, 28, 'SPRING STATE');
+      drawLabelStrip(340, 232, 144, 28, 'OPS COUNTER');
+
+      // Counter digits window
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(348, 274, 128, 36);
+      ctx.strokeStyle = '#8fa0b0';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(348, 274, 128, 36);
+      ctx.fillStyle = '#334155';
+      ctx.font = 'bold 21px JetBrains Mono, monospace';
+      ctx.fillText('0 1 4 8 2', 362, 299);
+
+      // Bottom white engraved interlock strip
+      drawLabelStrip(52, 332, 432, 28, 'INTERLOCKED WITHDRAWABLE CASSETTE · FORM 4B');
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    const powderBump = createPowderCoatTexture();
+    const shutterDangerTex = createShutterDangerTexture();
+    const fasciaTex = createFasciaNameplateTexture();
+
+    /* =====================================================================
+       SOFT, LIGHT-BALANCED MARINE SWITCHGEAR PBR MATERIALS
+       ===================================================================== */
+    const matCubicleGrey = new THREE.MeshStandardMaterial({
+      color: 0xc9d2db, // Soft cool light grey cabinet panels (matches reference image)
+      roughness: 0.42,
+      metalness: 0.16,
+      bumpMap: powderBump,
+      bumpScale: 0.0012
+    });
+    const matCubicleTrim = new THREE.MeshStandardMaterial({
+      color: 0x9aa8b6, // Soft medium slate-grey structural posts & trim
+      roughness: 0.45,
+      metalness: 0.22,
+      bumpMap: powderBump,
+      bumpScale: 0.0015
+    });
+    const matTruckSteel = new THREE.MeshStandardMaterial({
+      color: 0x8796a5, // Soft cool slate steel carriage & mechanism box (no dark charcoal)
+      roughness: 0.44,
+      metalness: 0.28,
+      bumpMap: powderBump,
+      bumpScale: 0.0018
+    });
+    const matWheelSteel = new THREE.MeshStandardMaterial({
+      color: 0x9aa8b8, // Soft satin steel wheels & rails
+      roughness: 0.30,
+      metalness: 0.65
+    });
+    const matEpoxyMaroon = new THREE.MeshStandardMaterial({
+      color: 0xa6534c, // Soft muted terracotta-rose epoxy resin poles
+      roughness: 0.38,
+      metalness: 0.10
+    });
+    const matDmcRed = new THREE.MeshStandardMaterial({
+      color: 0xb35d56, // Soft coral-brick standoff insulators & spouts
+      roughness: 0.36,
+      metalness: 0.10
+    });
+    const matCeramicBottle = new THREE.MeshStandardMaterial({
+      color: 0xf4f6f8, // Crisp off-white alumina ceramic vacuum interrupter bottle
+      roughness: 0.18,
+      metalness: 0.06
+    });
+    const matSilverTulip = new THREE.MeshStandardMaterial({
+      color: 0xe6ecf2, // Bright satin silver tulip contact clusters
+      roughness: 0.18,
+      metalness: 0.88
+    });
+    const matCopper = new THREE.MeshStandardMaterial({
+      color: 0xd47a42, // Soft satin copper busbar & stems
+      roughness: 0.28,
+      metalness: 0.80
+    });
+    const matBusL1 = new THREE.MeshStandardMaterial({ color: 0xd9534f, roughness: 0.34, metalness: 0.20 }); // Soft Coral Red L1
+    const matBusL2 = new THREE.MeshStandardMaterial({ color: 0xe6a23c, roughness: 0.34, metalness: 0.20 }); // Soft Warm Amber L2
+    const matBusL3 = new THREE.MeshStandardMaterial({ color: 0x4a89dc, roughness: 0.34, metalness: 0.20 }); // Soft Cobalt Blue L3
+    const matBrass = new THREE.MeshStandardMaterial({
+      color: 0xd8b25c,
+      roughness: 0.30,
+      metalness: 0.78
+    });
+    const matSteelPolished = new THREE.MeshStandardMaterial({
+      color: 0xe2e8f0,
+      roughness: 0.22,
+      metalness: 0.82
+    });
+    const matAnthracite = new THREE.MeshStandardMaterial({
+      color: 0x738291, // Soft cool medium-slate for bezels, conduits, base & glands (never jet-black!)
+      roughness: 0.46,
+      metalness: 0.26
+    });
+    const matCtAmber = new THREE.MeshStandardMaterial({
+      color: 0xb8804c, // Soft warm ochre/caramel resin CTs
+      roughness: 0.38,
+      metalness: 0.14
+    });
+    const matShutterBanner = new THREE.MeshStandardMaterial({
+      map: shutterDangerTex,
+      roughness: 0.35,
+      metalness: 0.20
+    });
+    const matFasciaPanel = new THREE.MeshStandardMaterial({
+      map: fasciaTex,
+      roughness: 0.38,
+      metalness: 0.22
+    });
+    const matGlassCutaway = new THREE.MeshPhysicalMaterial({
+      color: 0x94a3b8,
+      transparent: true,
+      opacity: 0.25,
+      roughness: 0.10,
+      transmission: 0.82,
+      thickness: 0.25,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+    const matArcGlow = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.0
+    });
+    const matGhost = new THREE.MeshStandardMaterial({
+      color: 0x94a3b8,
+      roughness: 0.35,
+      metalness: 0.15,
+      transparent: true,
+      opacity: 0.12,
+      depthWrite: false
+    });
+
+    /* =====================================================================
+       CRITICAL ARCHITECTURAL REQUIREMENT:
+       SINGLE MONOLITHIC `breakerTruckGroup` + STATIONARY CUBICLE GROUPS
+       ===================================================================== */
+    const breakerTruckGroup = new THREE.Group();
+    breakerTruckGroup.name = 'MonolithicWithdrawableVCBTruck';
+    scene.add(breakerTruckGroup);
+
+    // 7 Logical Subsystems for Isolation & Exploded View
+    // Note: `vcbTruck`, `epoxyPoles`, and `vacuumInterrupters` are ALL direct children of `breakerTruckGroup`!
+    // When racking (`s_rack`), ONLY `breakerTruckGroup.position.z` translates along the rails.
+    const subsystems = {
+      cubicleFrame: new THREE.Group(),
+      vcbTruck: new THREE.Group(),
+      epoxyPoles: new THREE.Group(),
+      vacuumInterrupters: new THREE.Group(),
+      shutters: new THREE.Group(),
+      busbars: new THREE.Group(),
+      cables: new THREE.Group()
+    };
+
+    // Mount Stationary Cubicle Subsystems to Scene
+    scene.add(subsystems.cubicleFrame);
+    scene.add(subsystems.shutters);
+    scene.add(subsystems.busbars);
+    scene.add(subsystems.cables);
+
+    // Mount Mobile Breaker Subsystems INSIDE `breakerTruckGroup` (Monolithic Lock)
+    breakerTruckGroup.add(subsystems.vcbTruck);
+    breakerTruckGroup.add(subsystems.epoxyPoles);
+    breakerTruckGroup.add(subsystems.vacuumInterrupters);
+
+    for (const key in subsystems) {
+      subsystems[key].userData.subsystemKey = key;
+    }
+
+    // Floor-Safe, Unobstructed Explosion Vectors (y >= 0 for all lower subsystems so nothing ever clips below the floor!)
+    const explodeVectors = {
+      cubicleFrame: new THREE.Vector3(0, 0, 0),
+      vcbTruck: new THREE.Vector3(0, 0.0, 0.82),
+      epoxyPoles: new THREE.Vector3(0, 0.36, 0.44),
+      vacuumInterrupters: new THREE.Vector3(0, 0.88, 0.44),
+      shutters: new THREE.Vector3(-0.74, 0.12, 0.08),
+      busbars: new THREE.Vector3(0, 0.65, -0.68),
+      cables: new THREE.Vector3(0, 0.08, -0.74)
+    };
+
+    const subsystemMeta = {
+      cubicleFrame: {
+        code: 'ASSY-01',
+        sub: 'Form 4b Cubicle (800×1400×2200 mm)',
+        title: 'RAL 7032 Metal-Enclosed Cubicle & LV Mimic Chamber',
+        desc: 'Bolted steel enclosure with Form 4b internal segregation partitions, upper LV door with black mimic line, 72×72 mm analog meters, protection relay, and cassette guide rails.'
+      },
+      vcbTruck: {
+        code: 'ASSY-02',
+        sub: 'Monolithic Mobile VCB Carriage & Fascia',
+        title: 'Withdrawable VCB Truck & Stored-Energy Mechanism',
+        desc: 'Heavy #334155 steel carriage on 4 flanged wheels with lead-screw drive, brass earthing shoe, side lifting handles, and front fascia with PUSH OFF (O) / PUSH ON (I) buttons and status flags.'
+      },
+      epoxyPoles: {
+        code: 'ASSY-03',
+        sub: 'Monolithic 3-Phase Cast Epoxy Assembly',
+        title: 'Embedded Maroon Epoxy Poles, 6 Arms & Silver Tulips',
+        desc: '3 vertical cycloaliphatic epoxy resin housings (#6b2118) bolted directly to the back of the mechanism housing, featuring 6 rear-facing horizontal disconnect arms and 18-finger silver tulip clusters.'
+      },
+      vacuumInterrupters: {
+        code: 'ASSY-04',
+        sub: 'Internal Arc-Quenching Interrupters',
+        title: 'Alumina Ceramic Vacuum Bottles & CuCr Contacts',
+        desc: 'Hermetically sealed off-white alumina ceramic bottles inside the epoxy poles housing upper fixed and lower moving CuCr contacts (12 mm stroke) with flexible stainless steel bellows.'
+      },
+      shutters: {
+        code: 'ASSY-05',
+        sub: 'Automatic IP2X Spout Isolation',
+        title: 'Automatic Safety Shutters (⚡ DANGER 6.6 kV)',
+        desc: 'Upper and lower metallic shutters held open by truck guide pins in SERVICE and automatically dropping shut in TEST/WITHDRAWN to isolate live 6.6 kV spouts.'
+      },
+      busbars: {
+        code: 'ASSY-06',
+        sub: 'Top Rear Main Busbar Compartment',
+        title: '6.6 kV Copper Busbars (L1-L2-L3) & DMC Insulators',
+        desc: '3 horizontal rectangular copper busbars color-coded Red (L1), Yellow (L2), Blue (L3) supported on ribbed DMC standoff insulators with copper drop-down stabs into the upper spouts.'
+      },
+      cables: {
+        code: 'ASSY-07',
+        sub: 'Bottom Rear Cable & CT Compartment',
+        title: 'Toroidal CTs, Stress Cones & Copper PE Earth Bar',
+        desc: '3 epoxy-cast toroidal current transformers, 6.6 kV marine power cables with heat-shrink stress cones, lower fixed contact spouts, and solid copper Protective Earth (PE) bar.'
+      }
+    };
+
+    // Kinematic & Cutaway References
+    const epoxyCutawayMeshes = [];
+    const enclosureCutawayMeshes = [];
+    const movingContactNodes = [];
+    const bellowsNodes = [];
+    const pushrodNodes = [];
+    const truckWheelMeshes = [];
+    let lowerDoorPivot = null;
+    let upperShutterPlate = null;
+    let lowerShutterPlate = null;
+    let flagPositionMesh = null;
+    let flagSpringMesh = null;
+    let pushOnBtnMesh = null;
+    let pushOffBtnMesh = null;
+    let chargingHandlePivot = null;
+    let leadScrewShaft = null;
+    let arcMeshGroup = null;
+
+    /* =====================================================================
+       1. BUILD MONOLITHIC WITHDRAWABLE VCB TRUCK (`breakerTruckGroup`)
+          Coordinate System in SERVICE (s_rack = 0.0, breakerTruckGroup.z = 0):
+          - Truck Carriage Base: z = +0.02 m to +0.56 m, y = 0.12 m to 0.20 m
+          - Front Operating Mechanism Box: z = +0.30 m to +0.55 m, y = 0.20 m to 0.78 m
+          - 3 Embedded Maroon Epoxy Poles: z = +0.16 m (bolted directly to rear of mechanism box at z = +0.30 m and resting on carriage deck at y = 0.20 m!)
+          - 6 Rear-Facing Horizontal Arms: z = +0.10 m back to -0.06 m (at y = 1.15 m and y = 0.75 m)
+          - 6 Silver Tulip Contact Clusters: z = -0.06 m to -0.13 m (clamping onto fixed stabs at z = -0.09 m)
+       ===================================================================== */
+    function buildMonolithicVcbTruck() {
+      const truckGrp = subsystems.vcbTruck;
+      const polesGrp = subsystems.epoxyPoles;
+      const viGrp = subsystems.vacuumInterrupters;
+
+      // A1. HEAVY STRUCTURAL STEEL TRUCK CARRIAGE & 4 FLANGED STEEL WHEELS
+      const carriageFrame = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.08, 0.54), matTruckSteel);
+      carriageFrame.position.set(0, 0.16, 0.29);
+      carriageFrame.castShadow = true; carriageFrame.receiveShadow = true;
+      truckGrp.add(carriageFrame);
+
+      // Side C-channel structural rails on truck carriage
+      [-0.30, 0.30].forEach(xSide => {
+        const railChannel = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.105, 0.56), matTruckSteel);
+        railChannel.position.set(xSide, 0.17, 0.29);
+        railChannel.castShadow = true;
+        truckGrp.add(railChannel);
+      });
+
+      // 4 Flanged Steel Wheels (#64748b) rolling inside cubicle guide rails
+      const wheelPositions = [
+        [-0.30, 0.08], [0.30, 0.08],
+        [-0.30, 0.50], [0.30, 0.50]
+      ];
+      wheelPositions.forEach(([wx, wz]) => {
+        const wheelAssy = new THREE.Group();
+        wheelAssy.position.set(wx, 0.14, wz);
+
+        const tread = new THREE.Mesh(new THREE.CylinderGeometry(0.044, 0.044, 0.026, 28), matWheelSteel);
+        tread.rotation.z = Math.PI / 2;
+        tread.castShadow = true;
+        wheelAssy.add(tread);
+
+        const flange = new THREE.Mesh(new THREE.CylinderGeometry(0.054, 0.054, 0.008, 28), matSteelPolished);
+        flange.rotation.z = Math.PI / 2;
+        flange.position.x = wx > 0 ? -0.015 : 0.015;
+        wheelAssy.add(flange);
+
+        // 4 Machined Bolt Holes / Spokes on Wheel Hub so rotation is clearly visible
+        for (let b = 0; b < 4; b++) {
+          const ba = (b / 4) * Math.PI * 2;
+          const lug = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.012, 0.012), matAnthracite);
+          lug.position.set(0, Math.cos(ba) * 0.024, Math.sin(ba) * 0.024);
+          wheelAssy.add(lug);
+        }
+
+        truckGrp.add(wheelAssy);
+        truckWheelMeshes.push(wheelAssy);
+      });
+
+      // Racking Lead-Screw Drive Assembly & Front Hex Socket + Interlock Shutter
+      leadScrewShaft = new THREE.Group();
+      leadScrewShaft.position.set(0, 0.155, 0.29);
+      truckGrp.add(leadScrewShaft);
+
+      const screwCore = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.56, 20), matSteelPolished);
+      screwCore.rotation.x = Math.PI / 2;
+      leadScrewShaft.add(screwCore);
+
+      for (let zt = -0.24; zt <= 0.24; zt += 0.024) {
+        const thread = new THREE.Mesh(new THREE.TorusGeometry(0.017, 0.0025, 6, 16), matWheelSteel);
+        thread.position.z = zt;
+        leadScrewShaft.add(thread);
+      }
+
+      // Front Racking Cross-Beam & Hex Drive Aperture
+      const rackFrontBeam = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.07, 0.04), matAnthracite);
+      rackFrontBeam.position.set(0, 0.16, 0.565);
+      truckGrp.add(rackFrontBeam);
+
+      const hexCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.03, 20), matSteelPolished);
+      hexCollar.rotation.x = Math.PI / 2;
+      hexCollar.position.set(0, 0.16, 0.585);
+      truckGrp.add(hexCollar);
+
+      const hexSocket = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.036, 6), matBrass);
+      hexSocket.rotation.x = Math.PI / 2;
+      hexSocket.position.set(0, 0.16, 0.588);
+      truckGrp.add(hexSocket);
+
+      // Sliding Brass Grounding Shoe Underneath Truck Carriage
+      const brassGroundShoe = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.018, 0.28), matBrass);
+      brassGroundShoe.position.set(-0.22, 0.108, 0.26);
+      truckGrp.add(brassGroundShoe);
+
+      // Shutter-Actuating Guide Pins on Sides of Truck Carriage
+      [-0.318, 0.318].forEach(xp => {
+        const guidePin = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.04, 14), matBrass);
+        guidePin.rotation.z = Math.PI / 2;
+        guidePin.position.set(xp, 0.20, 0.06);
+        truckGrp.add(guidePin);
+      });
+
+      // A2. FRONT OPERATING MECHANISM HOUSING (Mounted solidly on front half of truck carriage)
+      const mechBox = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.58, 0.25), matTruckSteel);
+      mechBox.position.set(0, 0.49, 0.425);
+      mechBox.castShadow = true; mechBox.receiveShadow = true;
+      truckGrp.add(mechBox);
+
+      // Front Printed Operator Fascia Plate
+      const fasciaMesh = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.55, 0.012), matFasciaPanel);
+      fasciaMesh.position.set(0, 0.49, 0.552);
+      truckGrp.add(fasciaMesh);
+
+      // Heavy-Duty Side Lifting Handles on Front Mechanism Enclosure
+      [-0.305, 0.305].forEach(xh => {
+        const handleCurve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(xh, 0.58, 0.36),
+          new THREE.Vector3(xh + (xh > 0 ? 0.035 : -0.035), 0.58, 0.40),
+          new THREE.Vector3(xh + (xh > 0 ? 0.035 : -0.035), 0.58, 0.51),
+          new THREE.Vector3(xh, 0.58, 0.54)
+        ]);
+        const liftHandle = new THREE.Mesh(new THREE.TubeGeometry(handleCurve, 16, 0.009, 10, false), matSteelPolished);
+        truckGrp.add(liftHandle);
+      });
+
+      // Red Mechanical Pushbutton: PUSH OFF (O)
+      const btnEscutcheonGeo = new THREE.CylinderGeometry(0.028, 0.030, 0.012, 24);
+      btnEscutcheonGeo.rotateX(Math.PI / 2);
+      const btnPlungerGeo = new THREE.CylinderGeometry(0.021, 0.021, 0.024, 24);
+      btnPlungerGeo.rotateX(Math.PI / 2);
+
+      const offBezel = new THREE.Mesh(btnEscutcheonGeo, matSteelPolished);
+      offBezel.position.set(-0.14, 0.51, 0.560);
+      truckGrp.add(offBezel);
+
+      pushOffBtnMesh = new THREE.Mesh(btnPlungerGeo, matBusL1);
+      pushOffBtnMesh.position.set(-0.14, 0.51, 0.568);
+      truckGrp.add(pushOffBtnMesh);
+
+      // Green Mechanical Pushbutton: PUSH ON (I)
+      const onBezel = new THREE.Mesh(btnEscutcheonGeo, matSteelPolished);
+      onBezel.position.set(0.0, 0.51, 0.560);
+      truckGrp.add(onBezel);
+
+      pushOnBtnMesh = new THREE.Mesh(
+        btnPlungerGeo,
+        new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.28, metalness: 0.2 })
+      );
+      pushOnBtnMesh.position.set(0.0, 0.51, 0.568);
+      truckGrp.add(pushOnBtnMesh);
+
+      // Mechanical Position Flag Indicator: [OPEN (Green) / CLOSED (Red)]
+      const flagBezelGeo = new THREE.BoxGeometry(0.095, 0.050, 0.010);
+      const posBezel = new THREE.Mesh(flagBezelGeo, matAnthracite);
+      posBezel.position.set(-0.14, 0.34, 0.560);
+      truckGrp.add(posBezel);
+
+      flagPositionMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.082, 0.038, 0.008),
+        new THREE.MeshBasicMaterial({ color: 0xdc2626 }) // Red CLOSED initially
+      );
+      flagPositionMesh.position.set(-0.14, 0.34, 0.564);
+      truckGrp.add(flagPositionMesh);
+
+      // Spring Status Indicator: [CHARGED (Yellow) / DISCHARGED (White)]
+      const sprBezel = new THREE.Mesh(flagBezelGeo, matAnthracite);
+      sprBezel.position.set(0.0, 0.34, 0.560);
+      truckGrp.add(sprBezel);
+
+      flagSpringMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.082, 0.038, 0.008),
+        new THREE.MeshBasicMaterial({ color: 0xfacc15 }) // Yellow CHARGED initially
+      );
+      flagSpringMesh.position.set(0.0, 0.34, 0.564);
+      truckGrp.add(flagSpringMesh);
+
+      // Front Mechanical Charging Handle Ratchet Slot & Telescopic Lever
+      const ratchetSlot = new THREE.Mesh(new THREE.BoxGeometry(0.038, 0.14, 0.016), matAnthracite);
+      ratchetSlot.position.set(0.18, 0.52, 0.560);
+      truckGrp.add(ratchetSlot);
+
+      chargingHandlePivot = new THREE.Group();
+      chargingHandlePivot.position.set(0.18, 0.56, 0.566);
+      truckGrp.add(chargingHandlePivot);
+
+      const handleArm = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.18, 0.018), matSteelPolished);
+      handleArm.position.set(0, -0.07, 0.012);
+      chargingHandlePivot.add(handleArm);
+
+      const handleGrip = new THREE.Mesh(new THREE.BoxGeometry(0.030, 0.07, 0.026), matAnthracite);
+      handleGrip.position.set(0, -0.14, 0.016);
+      chargingHandlePivot.add(handleGrip);
+
+      // Multi-Pin Secondary Control Plug & Flexible Umbilical Conduit on Top-Right of Truck
+      const secPlug = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.055, 0.065), matAnthracite);
+      secPlug.position.set(0.22, 0.80, 0.46);
+      truckGrp.add(secPlug);
+
+      // A3. REAR 3-PHASE EMBEDDED POLE ASSEMBLY (`subsystems.epoxyPoles`, Monolithic Maroon Castings)
+      // Mounted at z = 0.16 m, bolted directly to rear of mechanism housing (z = 0.30 m)
+      // and resting solidly on the rear half of the steel truck carriage deck (y = 0.20 m) — ZERO floating parts!
+      const poleXCoords = [-0.22, 0.0, 0.22];
+
+      // Upper and lower steel cross-beams bolting the 3 epoxy poles rigidly to the back of `mechBox`
+      [0.32, 0.72].forEach(yBrk => {
+        const tieBeam = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.055, 0.08), matTruckSteel);
+        tieBeam.position.set(0, yBrk, 0.265);
+        tieBeam.castShadow = true;
+        polesGrp.add(tieBeam);
+      });
+
+      // Lower cast insulating support pedestals resting directly on carriage deck (y = 0.20 m to 0.58 m)
+      poleXCoords.forEach((xPole) => {
+        // Solid lower epoxy base column connecting carriage deck (y = 0.20 m) to upper pole barrel (y = 0.58 m)
+        const basePedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.074, 0.082, 0.38, 28), matEpoxyMaroon);
+        basePedestal.position.set(xPole, 0.39, 0.16);
+        basePedestal.castShadow = true;
+        polesGrp.add(basePedestal);
+
+        // Cast integral mounting bosses bolting each pole to the front mechanism housing (z = 0.16 to 0.30 m)
+        [0.32, 0.72].forEach(yBoss => {
+          const bossWeb = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.075, 0.14), matEpoxyMaroon);
+          bossWeb.position.set(xPole, yBoss, 0.23);
+          bossWeb.castShadow = true;
+          polesGrp.add(bossWeb);
+        });
+
+        // Main Upper Embedded Pole Cylinder Housing the Vacuum Interrupter (y = 0.58 m to 1.32 m)
+        const poleCylinder = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.086, 0.086, 0.74, 32),
+          matEpoxyMaroon
+        );
+        poleCylinder.position.set(xPole, 0.95, 0.16);
+        poleCylinder.castShadow = true;
+        polesGrp.add(poleCylinder);
+        epoxyCutawayMeshes.push(poleCylinder);
+
+        // 9 Subtle Cast Cooling / Creepage Shed Ribs around each Maroon Epoxy Pole
+        for (let r = -0.30; r <= 0.30; r += 0.075) {
+          const rib = new THREE.Mesh(new THREE.TorusGeometry(0.089, 0.0065, 10, 32), matEpoxyMaroon);
+          rib.rotation.x = Math.PI / 2;
+          rib.position.set(xPole, 0.95 + r, 0.16);
+          polesGrp.add(rib);
+          epoxyCutawayMeshes.push(rib);
+        }
+
+        // Top domed epoxy cap with 4 hex bolts
+        const topCap = new THREE.Mesh(new THREE.CylinderGeometry(0.076, 0.086, 0.035, 28), matEpoxyMaroon);
+        topCap.position.set(xPole, 1.335, 0.16);
+        polesGrp.add(topCap);
+
+        // 2 Horizontal Rear-Facing Primary Disconnect Arms per Pole (6 Total: 3 Upper @ y=1.15m, 3 Lower @ y=0.75m)
+        [1.15, 0.75].forEach(yArm => {
+          // Cast maroon epoxy horizontal arm bushing projecting backwards from pole (z = +0.16 m to +0.01 m)
+          const epoxyArmSleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.058, 0.16, 24), matEpoxyMaroon);
+          epoxyArmSleeve.rotation.x = Math.PI / 2;
+          epoxyArmSleeve.position.set(xPole, yArm, 0.08);
+          epoxyArmSleeve.castShadow = true;
+          polesGrp.add(epoxyArmSleeve);
+
+          // Heavy copper conductor bar extending from inside the arm to the tulip cluster (z = +0.01 m to -0.06 m)
+          const copperArmConductor = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.034, 0.09, 24), matCopper);
+          copperArmConductor.rotation.x = Math.PI / 2;
+          copperArmConductor.position.set(xPole, yArm, -0.025);
+          polesGrp.add(copperArmConductor);
+
+          // Silver-Plated Copper Tulip Contact Cluster at Rear Tip (z = -0.06 m to -0.13 m)
+          const tulipCluster = new THREE.Group();
+          tulipCluster.position.set(xPole, yArm, -0.095);
+          polesGrp.add(tulipCluster);
+
+          // Tulip base collar
+          const tulipCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.036, 0.024, 24), matSilverTulip);
+          tulipCollar.rotation.x = Math.PI / 2;
+          tulipCollar.position.z = 0.026;
+          tulipCluster.add(tulipCollar);
+
+          // 18 Radially Arranged Silver-Plated Contact Fingers
+          for (let f = 0; f < 18; f++) {
+            const fa = (f / 18) * Math.PI * 2;
+            const finger = new THREE.Mesh(new THREE.BoxGeometry(0.0075, 0.011, 0.068), matSilverTulip);
+            finger.position.set(Math.cos(fa) * 0.029, Math.sin(fa) * 0.029, -0.005);
+            finger.rotation.z = fa;
+            tulipCluster.add(finger);
+          }
+
+          // Twin Circular Stainless Steel Garter Retention Springs clamping the tulip fingers
+          [-0.020, 0.008].forEach(zg => {
+            const garterSpring = new THREE.Mesh(new THREE.TorusGeometry(0.036, 0.0042, 10, 28), matSteelPolished);
+            garterSpring.position.z = zg;
+            tulipCluster.add(garterSpring);
+          });
+        });
+      });
+
+      // A4. INTERNAL ALUMINA CERAMIC VACUUM INTERRUPTER BOTTLES & CuCr CONTACTS (`subsystems.vacuumInterrupters`)
+      // Positioned coaxially inside the 3 maroon epoxy poles at (xPole, y = 0.95 m, z = 0.16 m)
+      movingContactNodes.length = 0;
+      bellowsNodes.length = 0;
+      pushrodNodes.length = 0;
+
+      poleXCoords.forEach((xPole) => {
+        const bottleAssy = new THREE.Group();
+        bottleAssy.position.set(xPole, 0.95, 0.16);
+        viGrp.add(bottleAssy);
+
+        // Off-White Alumina Ceramic Vacuum Interrupter Outer Cylinder (#f1f5f9) with Ribbed Skirts
+        const ceramicShell = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.062, 0.062, 0.36, 28, 1, true),
+          matCeramicBottle
+        );
+        bottleAssy.add(ceramicShell);
+        epoxyCutawayMeshes.push(ceramicShell);
+
+        [-0.12, -0.06, 0.0, 0.06, 0.12].forEach(ySkirt => {
+          const skirt = new THREE.Mesh(new THREE.TorusGeometry(0.064, 0.005, 8, 28), matCeramicBottle);
+          skirt.rotation.x = Math.PI / 2;
+          skirt.position.y = ySkirt;
+          bottleAssy.add(skirt);
+          epoxyCutawayMeshes.push(skirt);
+        });
+
+        // Upper & Lower Metallized Stainless Steel Brazed End Caps
+        [0.185, -0.185].forEach(yCap => {
+          const endCap = new THREE.Mesh(new THREE.CylinderGeometry(0.064, 0.064, 0.024, 28), matSteelPolished);
+          endCap.position.y = yCap;
+          bottleAssy.add(endCap);
+        });
+
+        // Upper Fixed Copper Stem & Spiral-Grooved CuCr Contact Disc
+        const upperStem = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.16, 20), matCopper);
+        upperStem.position.y = 0.12;
+        bottleAssy.add(upperStem);
+
+        const fixedCuCrCup = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.036, 0.022, 24), matCopper);
+        fixedCuCrCup.position.y = 0.038;
+        bottleAssy.add(fixedCuCrCup);
+
+        const fixedCuCrFace = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.008, 24), matSilverTulip);
+        fixedCuCrFace.position.y = 0.024;
+        bottleAssy.add(fixedCuCrFace);
+
+        // Lower Moving CuCr Contact Disc & Copper Stem (12 mm axial stroke)
+        const movingNode = new THREE.Group();
+        movingNode.position.y = 0.016; // Touches fixedCuCrFace when CLOSED (contactFactor = 1.0)
+        bottleAssy.add(movingNode);
+        movingContactNodes.push(movingNode);
+
+        const movingCuCrFace = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.008, 24), matSilverTulip);
+        movingNode.add(movingCuCrFace);
+
+        const movingCuCrCup = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.038, 0.022, 24), matCopper);
+        movingCuCrCup.position.y = -0.014;
+        movingNode.add(movingCuCrCup);
+
+        const movingStem = new THREE.Mesh(new THREE.CylinderGeometry(0.020, 0.020, 0.22, 20), matCopper);
+        movingStem.position.y = -0.12;
+        movingNode.add(movingStem);
+
+        // Flexible Stainless Steel Accordion Bellows (8 Convolutions)
+        const bellowsGrp = new THREE.Group();
+        bellowsGrp.position.y = -0.115;
+        bottleAssy.add(bellowsGrp);
+        bellowsNodes.push(bellowsGrp);
+
+        for (let b = 0; b < 8; b++) {
+          const conv = new THREE.Mesh(new THREE.TorusGeometry(0.028, 0.0045, 8, 24), matSteelPolished);
+          conv.rotation.x = Math.PI / 2;
+          conv.position.y = (b - 3.5) * 0.012;
+          bellowsGrp.add(conv);
+        }
+
+        // Insulating Operating Pushrod & Contact Pressure Overtravel Spring in Lower Pedestal
+        const pushrod = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.34, 16), matDmcRed);
+        pushrod.position.set(xPole, 0.42, 0.16);
+        viGrp.add(pushrod);
+        pushrodNodes.push(pushrod);
+      });
+
+      // Electric Arc Plasma Glow between Parting Contacts
+      arcMeshGroup = new THREE.Group();
+      poleXCoords.forEach(xPole => {
+        const arcCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.030, 0.030, 0.016, 20), matArcGlow);
+        arcCyl.position.set(xPole, 0.95 + 0.018, 0.16);
+        arcMeshGroup.add(arcCyl);
+      });
+      viGrp.add(arcMeshGroup);
+    }
+
+    /* =====================================================================
+       2. BUILD THE SWITCHBOARD CUBICLE (Height 2200 mm, Width 800 mm, Depth 1400 mm)
+       ===================================================================== */
+    function buildSwitchboardCubicle() {
+      const cubGrp = subsystems.cubicleFrame;
+      const busGrp = subsystems.busbars;
+      const shutGrp = subsystems.shutters;
+      const cabGrp = subsystems.cables;
+
+      // B1. OUTER ENCLOSURE & FORM 4b SEGREGATION (`subsystems.cubicleFrame`)
+      // Base Plinth Channel (800 mm wide × 1400 mm deep)
+      const baseFrame = new THREE.Mesh(new THREE.BoxGeometry(0.80, 0.10, 1.40), matAnthracite);
+      baseFrame.position.set(0, 0.05, 0);
+      baseFrame.castShadow = true; baseFrame.receiveShadow = true;
+      cubGrp.add(baseFrame);
+
+      // 4 Vertical Structural Corner Posts (Height 2200 mm)
+      const postGeo = new THREE.BoxGeometry(0.044, 2.10, 0.044);
+      [[-0.378, -0.678], [0.378, -0.678], [-0.378, 0.678], [0.378, 0.678]].forEach(([px, pz]) => {
+        const post = new THREE.Mesh(postGeo, matCubicleTrim);
+        post.position.set(px, 1.15, pz);
+        post.castShadow = true;
+        cubGrp.add(post);
+      });
+
+      // Rooftop Canopy & Arc-Fault Pressure Relief Flaps (Height 2200 mm)
+      const roofPlate = new THREE.Mesh(new THREE.BoxGeometry(0.80, 0.035, 1.40), matCubicleGrey);
+      roofPlate.position.set(0, 2.20, 0);
+      roofPlate.castShadow = true;
+      cubGrp.add(roofPlate);
+
+      [-0.32, 0.25].forEach(zFlap => {
+        const flap = new THREE.Mesh(new THREE.BoxGeometry(0.60, 0.02, 0.42), matCubicleTrim);
+        flap.position.set(0, 2.23, zFlap);
+        flap.rotation.x = -0.05;
+        cubGrp.add(flap);
+      });
+
+      // Rear Bolted Enclosure Wall
+      const rearWall = new THREE.Mesh(new THREE.BoxGeometry(0.76, 2.08, 0.02), matCubicleGrey);
+      rearWall.position.set(0, 1.14, -0.69);
+      rearWall.castShadow = true;
+      cubGrp.add(rearWall);
+
+      // Left & Right Side Sheet-Steel Panels (Registered for Cutaway X-Ray Mode)
+      const sideWallGeo = new THREE.BoxGeometry(0.016, 2.08, 1.36);
+      [-0.392, 0.392].forEach(xSide => {
+        const sideWall = new THREE.Mesh(sideWallGeo, matCubicleGrey);
+        sideWall.position.set(xSide, 1.14, 0);
+        sideWall.castShadow = true;
+        cubGrp.add(sideWall);
+        enclosureCutawayMeshes.push(sideWall);
+      });
+
+      // Internal Form 4b Metallic Segregation Partitions
+      // Horizontal floor separating upper Busbar Chamber from lower Cable/CT Chamber
+      const rearHorizDeck = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.02, 0.66), matCubicleTrim);
+      rearHorizDeck.position.set(0, 0.96, -0.35);
+      cubGrp.add(rearHorizDeck);
+
+      // Vertical Spout Bulkhead Wall separating VCB Cassette (front) from Busbar & Cable Chambers (rear)
+      const spoutBulkhead = new THREE.Mesh(new THREE.BoxGeometry(0.76, 1.38, 0.022), matCubicleTrim);
+      spoutBulkhead.position.set(0, 0.94, -0.02);
+      cubGrp.add(spoutBulkhead);
+
+      // Horizontal Ceiling separating VCB Cassette from Upper LV Instrument Chamber
+      const lvFloorDeck = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.022, 0.72), matCubicleTrim);
+      lvFloorDeck.position.set(0, 1.46, 0.34);
+      cubGrp.add(lvFloorDeck);
+
+      // Cassette Racking Guide Rails on Floor of Breaker Compartment + Extension Service Rails (out to z = +1.18 m)
+      [-0.30, 0.30].forEach(xRail => {
+        const innerRail = new THREE.Mesh(new THREE.BoxGeometry(0.048, 0.022, 0.74), matSteelPolished);
+        innerRail.position.set(xRail, 0.11, 0.33);
+        cubGrp.add(innerRail);
+
+        // Telescopic maintenance extension rails supporting the VCB truck at 100% Withdrawn (+550 mm)
+        const extRail = new THREE.Mesh(new THREE.BoxGeometry(0.042, 0.018, 0.56), matWheelSteel);
+        extRail.position.set(xRail, 0.105, 0.94);
+        cubGrp.add(extRail);
+
+        const extSupportLeg = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.10, 0.032), matTruckSteel);
+        extSupportLeg.position.set(xRail, 0.05, 1.18);
+        cubGrp.add(extSupportLeg);
+      });
+
+      // Upper Low-Voltage Instrument Chamber Door (y = 1.47 m to 2.18 m)
+      const lvDoor = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.70, 0.024), matCubicleGrey);
+      lvDoor.position.set(0, 1.82, 0.69);
+      lvDoor.castShadow = true;
+      cubGrp.add(lvDoor);
+
+      // Black Mimic Bus Line on Upper LV Door
+      const mimicHoriz = new THREE.Mesh(new THREE.BoxGeometry(0.60, 0.016, 0.008), matAnthracite);
+      mimicHoriz.position.set(0, 2.04, 0.704);
+      cubGrp.add(mimicHoriz);
+
+      const mimicVert = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.38, 0.008), matAnthracite);
+      mimicVert.position.set(0, 1.85, 0.704);
+      cubGrp.add(mimicVert);
+
+      const mimicBreakerSymbol = new THREE.Mesh(new THREE.BoxGeometry(0.038, 0.038, 0.012), matBusL1);
+      mimicBreakerSymbol.position.set(0, 1.86, 0.706);
+      cubGrp.add(mimicBreakerSymbol);
+
+      // Two 72×72 mm Analog Meters (Voltmeter & Ammeter)
+      [-0.22, -0.09].forEach(xm => {
+        const meterBezel = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.095, 0.016), matAnthracite);
+        meterBezel.position.set(xm, 1.66, 0.706);
+        cubGrp.add(meterBezel);
+
+        const meterDial = new THREE.Mesh(new THREE.BoxGeometry(0.078, 0.078, 0.006), matCeramicBottle);
+        meterDial.position.set(xm, 1.66, 0.715);
+        cubGrp.add(meterDial);
+
+        const needle = new THREE.Mesh(new THREE.BoxGeometry(0.003, 0.048, 0.004), matBusL1);
+        needle.position.set(xm - 0.008, 1.65, 0.720);
+        needle.rotation.z = -0.42;
+        cubGrp.add(needle);
+      });
+
+      // Digital Protection Relay Display (IEC 61850 Marine Feeder Protection)
+      const relayCase = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.18, 0.022), matAnthracite);
+      relayCase.position.set(0.18, 1.68, 0.708);
+      cubGrp.add(relayCase);
+
+      const relayLcd = new THREE.Mesh(
+        new THREE.BoxGeometry(0.14, 0.085, 0.006),
+        new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
+      );
+      relayLcd.position.set(0.16, 1.70, 0.720);
+      cubGrp.add(relayLcd);
+
+      // Lower Hinged VCB Compartment Door (Extruded with a Real Window Cutout Hole so zero Z-fighting occurs on back face!)
+      lowerDoorPivot = new THREE.Group();
+      lowerDoorPivot.position.set(-0.38, 0.76, 0.69);
+      cubGrp.add(lowerDoorPivot);
+
+      const doorW = 0.76, doorH = 1.32, doorD = 0.024;
+      const doorOuterShape = new THREE.Shape();
+      doorOuterShape.moveTo(-doorW / 2, -doorH / 2);
+      doorOuterShape.lineTo(doorW / 2, -doorH / 2);
+      doorOuterShape.lineTo(doorW / 2, doorH / 2);
+      doorOuterShape.lineTo(-doorW / 2, doorH / 2);
+      doorOuterShape.closePath();
+
+      // Cut rectangular aperture for viewing window centered at (x = 0, y = +0.08)
+      const winHalfW = 0.16, winHalfH = 0.20, winCenterY = 0.08;
+      const winHolePath = new THREE.Path();
+      winHolePath.moveTo(-winHalfW, winCenterY - winHalfH);
+      winHolePath.lineTo(winHalfW, winCenterY - winHalfH);
+      winHolePath.lineTo(winHalfW, winCenterY + winHalfH);
+      winHolePath.lineTo(-winHalfW, winCenterY + winHalfH);
+      winHolePath.closePath();
+      doorOuterShape.holes.push(winHolePath);
+
+      const lowerDoorGeo = new THREE.ExtrudeGeometry(doorOuterShape, {
+        depth: doorD,
+        bevelEnabled: false
+      });
+      lowerDoorGeo.translate(0, 0, -doorD / 2);
+      const lowerDoorPanel = new THREE.Mesh(lowerDoorGeo, matCubicleGrey);
+      lowerDoorPanel.position.set(0.38, 0, 0);
+      lowerDoorPanel.castShadow = true;
+      lowerDoorPivot.add(lowerDoorPanel);
+      enclosureCutawayMeshes.push(lowerDoorPanel);
+
+      // Hollow Window Bezel Frame wrapping cleanly around the cutout aperture (protruding 5mm front & back with zero coplanar overlap)
+      const bezelShape = new THREE.Shape();
+      const bOutW = 0.19, bOutH = 0.23;
+      bezelShape.moveTo(-bOutW, winCenterY - bOutH);
+      bezelShape.lineTo(bOutW, winCenterY - bOutH);
+      bezelShape.lineTo(bOutW, winCenterY + bOutH);
+      bezelShape.lineTo(-bOutW, winCenterY + bOutH);
+      bezelShape.closePath();
+      bezelShape.holes.push(winHolePath);
+
+      const bezelGeo = new THREE.ExtrudeGeometry(bezelShape, {
+        depth: 0.034,
+        bevelEnabled: false
+      });
+      bezelGeo.translate(0, 0, -0.017);
+      const doorWindowFrame = new THREE.Mesh(bezelGeo, matCubicleTrim);
+      doorWindowFrame.position.set(0.38, 0, 0);
+      lowerDoorPivot.add(doorWindowFrame);
+
+      // Clear Inspection Glass Pane sitting inside the cutout opening
+      const doorWindowGlass = new THREE.Mesh(new THREE.BoxGeometry(winHalfW * 2, winHalfH * 2, 0.008), matGlassCutaway);
+      doorWindowGlass.position.set(0.38, winCenterY, 0);
+      lowerDoorPivot.add(doorWindowGlass);
+
+      // Quarter-Turn Slotted Latches & Handle (matching reference cabinet style)
+      [-0.42, 0.42].forEach(yLatch => {
+        const latchBoss = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.016, 20), matCubicleTrim);
+        latchBoss.rotation.x = Math.PI / 2;
+        latchBoss.position.set(0.69, yLatch, 0.018);
+        lowerDoorPivot.add(latchBoss);
+      });
+
+      const doorHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.16, 16), matSteelPolished);
+      doorHandle.position.set(0.69, 0.0, 0.030);
+      lowerDoorPivot.add(doorHandle);
+
+      // B2. BUSBAR COMPARTMENT (Top Rear, `subsystems.busbars`)
+      const busbarPhases = [
+        { y: 1.96, mat: matBusL1, xTap: -0.22 },
+        { y: 1.75, mat: matBusL2, xTap: 0.0 },
+        { y: 1.54, mat: matBusL3, xTap: 0.22 }
+      ];
+
+      busbarPhases.forEach((b) => {
+        // Horizontal Rectangular Copper Busbars (Red L1, Yellow L2, Blue L3)
+        [-0.41, -0.43].forEach(zBar => {
+          const copperBar = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.06, 0.012), matCopper);
+          copperBar.position.set(0, b.y, zBar);
+          copperBar.castShadow = true;
+          busGrp.add(copperBar);
+
+          const phaseSleeve = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.064, 0.014), b.mat);
+          phaseSleeve.position.set(0, b.y, zBar);
+          busGrp.add(phaseSleeve);
+        });
+
+        // Ribbed DMC/Epoxy Standoff Insulators supporting each busbar
+        [-0.25, 0.25].forEach(xIns => {
+          const standoff = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.052, 0.20, 24), matDmcRed);
+          standoff.rotation.x = Math.PI / 2;
+          standoff.position.set(xIns, b.y, -0.54);
+          standoff.castShadow = true;
+          busGrp.add(standoff);
+
+          for (let s = 0; s < 4; s++) {
+            const shed = new THREE.Mesh(new THREE.TorusGeometry(0.052, 0.008, 10, 24), matDmcRed);
+            shed.position.set(xIns, b.y, -0.47 - s * 0.04);
+            busGrp.add(shed);
+          }
+        });
+
+        // Copper Drop-Down Stabs leading into Upper Fixed Contact Spouts (y = 1.15 m)
+        const stabCurve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(b.xTap, b.y, -0.41),
+          new THREE.Vector3(b.xTap, b.y - 0.10, -0.26),
+          new THREE.Vector3(b.xTap, 1.15, -0.22),
+          new THREE.Vector3(b.xTap, 1.15, -0.06)
+        ]);
+        const dropStab = new THREE.Mesh(new THREE.TubeGeometry(stabCurve, 20, 0.016, 12, false), matCopper);
+        dropStab.castShadow = true;
+        busGrp.add(dropStab);
+      });
+
+      // 3 Upper Fixed Contact Spouts & Stationary Silver Contact Pins (at y = 1.15 m, z = -0.02 m)
+      [-0.22, 0.0, 0.22].forEach(xSpout => {
+        const spoutBushing = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.076, 0.22, 28, 1, true), matDmcRed);
+        spoutBushing.rotation.x = Math.PI / 2;
+        spoutBushing.position.set(xSpout, 1.15, -0.02);
+        busGrp.add(spoutBushing);
+
+        const spoutFlange = new THREE.Mesh(new THREE.BoxGeometry(0.165, 0.165, 0.024), matDmcRed);
+        spoutFlange.position.set(xSpout, 1.15, -0.02);
+        busGrp.add(spoutFlange);
+
+        const fixedStabPin = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.16, 24), matSilverTulip);
+        fixedStabPin.rotation.x = Math.PI / 2;
+        fixedStabPin.position.set(xSpout, 1.15, -0.08);
+        busGrp.add(fixedStabPin);
+      });
+
+      // B3. AUTOMATIC SAFETY SHUTTERS (`subsystems.shutters`)
+      // Positioned at z = +0.015 m immediately in front of the 6 fixed spouts
+      upperShutterPlate = new THREE.Group();
+      upperShutterPlate.position.set(0, 1.15, 0.015);
+      shutGrp.add(upperShutterPlate);
+
+      const uBanner = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.21, 0.014), matShutterBanner);
+      uBanner.castShadow = true;
+      upperShutterPlate.add(uBanner);
+
+      lowerShutterPlate = new THREE.Group();
+      lowerShutterPlate.position.set(0, 0.75, 0.015);
+      shutGrp.add(lowerShutterPlate);
+
+      const lBanner = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.21, 0.014), matShutterBanner);
+      lBanner.castShadow = true;
+      lowerShutterPlate.add(lBanner);
+
+      // Vertical Shutter Guide Tracks & Return Springs
+      [-0.35, 0.35].forEach(xTrack => {
+        const trackRod = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.86, 14), matSteelPolished);
+        trackRod.position.set(xTrack, 0.95, 0.015);
+        shutGrp.add(trackRod);
+      });
+
+      // B4. CABLE & CT COMPARTMENT (Bottom Rear, `subsystems.cables`)
+      // 3 Lower Fixed Contact Spouts & Stationary Silver Contact Pins (at y = 0.75 m, z = -0.02 m)
+      const phaseMats = [matBusL1, matBusL2, matBusL3];
+      [-0.22, 0.0, 0.22].forEach((xc, idx) => {
+        const spoutBushing = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.076, 0.22, 28, 1, true), matDmcRed);
+        spoutBushing.rotation.x = Math.PI / 2;
+        spoutBushing.position.set(xc, 0.75, -0.02);
+        cabGrp.add(spoutBushing);
+
+        const spoutFlange = new THREE.Mesh(new THREE.BoxGeometry(0.165, 0.165, 0.024), matDmcRed);
+        spoutFlange.position.set(xc, 0.75, -0.02);
+        cabGrp.add(spoutFlange);
+
+        const fixedStabPin = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.16, 24), matSilverTulip);
+        fixedStabPin.rotation.x = Math.PI / 2;
+        fixedStabPin.position.set(xc, 0.75, -0.08);
+        cabGrp.add(fixedStabPin);
+
+        // Horizontal Copper Feeder Bar from Lower Spout to CT Riser
+        const feederBar = new THREE.Mesh(new THREE.BoxGeometry(0.042, 0.012, 0.32), matCopper);
+        feederBar.position.set(xc, 0.75, -0.22);
+        cabGrp.add(feederBar);
+
+        // Vertical Copper Riser passing through Toroidal CT
+        const ctRiser = new THREE.Mesh(new THREE.CylinderGeometry(0.020, 0.020, 0.36, 18), matCopper);
+        ctRiser.position.set(xc, 0.57, -0.36);
+        cabGrp.add(ctRiser);
+
+        // Epoxy-Cast Toroidal Current Transformer (CT)
+        const ctToroid = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.082, 0.11, 28), matCtAmber);
+        ctToroid.position.set(xc, 0.57, -0.36);
+        ctToroid.castShadow = true;
+        cabGrp.add(ctToroid);
+
+        // Heat-Shrink Stress Cone & 6.6 kV Marine Power Cable
+        const stressCone = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.038, 0.11, 20), phaseMats[idx]);
+        stressCone.position.set(xc, 0.33, -0.36);
+        cabGrp.add(stressCone);
+
+        const powerCable = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.28, 20), matAnthracite);
+        powerCable.position.set(xc, 0.16, -0.36);
+        powerCable.castShadow = true;
+        cabGrp.add(powerCable);
+
+        const brassGland = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.042, 0.06, 6), matBrass);
+        brassGland.position.set(xc, 0.12, -0.36);
+        cabGrp.add(brassGland);
+      });
+
+      // Solid Copper Protective Earth (PE) Bar & Earth Bonding Straps
+      const peBusbar = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.04, 0.012), matCopper);
+      peBusbar.position.set(0, 0.20, -0.58);
+      cabGrp.add(peBusbar);
+    }
+
+    buildMonolithicVcbTruck();
+    buildSwitchboardCubicle();
+
+    /* =====================================================================
+       GHOST-OPACITY SUBSYSTEM ISOLATION & EXPLODE CENTERLINE GUIDES
+       ===================================================================== */
+    const explodeGuideLines = [];
+
+    function prepareSubsystemMaterials() {
+      for (const key in subsystems) {
+        const grp = subsystems[key];
+        const clonedMap = new Map();
+        const ghostMap = new Map();
+        grp.traverse((obj) => {
+          if (obj.isMesh && obj.material) {
+            if (!clonedMap.has(obj.material)) {
+              const origClone = obj.material.clone();
+              const ghostClone = origClone.clone();
+              ghostClone.transparent = true;
+              ghostClone.opacity = 0.14;
+              ghostClone.depthWrite = false;
+              clonedMap.set(obj.material, origClone);
+              ghostMap.set(obj.material, ghostClone);
+            }
+            obj.material = clonedMap.get(obj.material);
+            obj.userData.origMaterial = obj.material;
+            obj.userData.ghostMaterial = ghostMap.get(obj.userData.origMaterial) || (() => {
+              const g = obj.userData.origMaterial.clone();
+              g.transparent = true;
+              g.opacity = 0.14;
+              g.depthWrite = false;
+              return g;
+            })();
+            obj.userData.origTransparent = obj.material.transparent;
+            obj.userData.origOpacity = obj.material.opacity;
+            obj.userData.origDepthWrite = obj.material.depthWrite;
+            obj.userData.subsystemKey = key;
+          }
+        });
+      }
+    }
+
+    function buildExplodeGuidelines() {
+      const lineMat = new THREE.LineDashedMaterial({
+        color: 0xc25b2a,
+        dashSize: 0.08,
+        gapSize: 0.05,
+        transparent: true,
+        opacity: 0.0
+      });
+      const anchors = {
+        vcbTruck: new THREE.Vector3(0, 0.42, 0.40),
+        epoxyPoles: new THREE.Vector3(0, 0.95, 0.16),
+        vacuumInterrupters: new THREE.Vector3(0, 0.95, 0.16),
+        shutters: new THREE.Vector3(0, 0.95, 0.015),
+        busbars: new THREE.Vector3(0, 1.75, -0.42),
+        cables: new THREE.Vector3(0, 0.57, -0.36)
+      };
+      for (const key in anchors) {
+        const pts = [anchors[key].clone(), anchors[key].clone()];
+        const geo = new THREE.BufferGeometry().setFromPoints(pts);
+        const line = new THREE.Line(geo, lineMat.clone());
+        line.computeLineDistances();
+        scene.add(line);
+        explodeGuideLines.push({ key, line, base: anchors[key], vec: explodeVectors[key] });
+      }
+    }
+
+    prepareSubsystemMaterials();
+    buildExplodeGuidelines();
+
+    function warmShaders() {
+      try {
+        renderer.compile(scene, camera);
+        epoxyCutawayMeshes.forEach(m => { m.material = matGlassCutaway; });
+        renderer.compile(scene, camera);
+        epoxyCutawayMeshes.forEach(m => { m.material = m.userData.ghostMaterial || matGhost; });
+        renderer.compile(scene, camera);
+        epoxyCutawayMeshes.forEach(m => { m.material = m.userData.origMaterial; });
+      } catch (e) {
+        console.warn('Shader warmup notice:', e);
+      }
+    }
+    warmShaders();
+
+    /* =====================================================================
+       STATE MACHINE, RACKING KINEMATICS & SAFETY INTERLOCKS
+       ===================================================================== */
+    const state = {
+      rackingFactor: 0.0,       // s_rack in [0.0, 1.0]
+      targetRackingFactor: 0.0,
+      contactFactor: 1.0,       // s_contact in [0.0, 1.0] (1.0 = CLOSED, 0.0 = OPEN)
+      isSpringCharged: true,
+      isDoorOpen: true,         // Open initially so the monolithic VCB truck & fascia are clearly visible
+      doorAngle: (105 * Math.PI) / 180,
+      explodeFactor: 0.0,
+      targetExplodeFactor: 0.0,
+      cutawayGlass: false,
+      labelsVisible: true,
+      showGraphs: true,
+      activeSubsystem: null,
+      time: 0,
+      autoTourActive: false,
+      idleTimer: 0,
+      tourStep: 0,
+      tourStepTimer: 0
+    };
+
+    let contactAnimActive = false;
+    let contactAnimStart = 0;
+    let targetContactState = 1.0;
+
+    function getMonolithicTruckZ(sRack) {
+      // s_rack = 0.0 -> 0.00 m (SERVICE / CONNECTED)
+      // s_rack = 0.5 -> +0.20 m (+200 mm TEST / ISOLATED)
+      // s_rack = 1.0 -> +0.55 m (+550 mm WITHDRAWN / MAINTENANCE)
+      return sRack <= 0.5
+        ? (sRack / 0.5) * 0.20
+        : 0.20 + ((sRack - 0.5) / 0.5) * 0.35;
+    }
+
+    function showInterlockToast(msg) {
+      const toast = document.getElementById('interlock-toast');
+      const txt = document.getElementById('interlock-msg');
+      txt.textContent = msg;
+      toast.classList.remove('opacity-0', 'translate-y-[-10px]');
+      toast.classList.add('opacity-100', 'translate-y-0');
+      clearTimeout(toast._timeout);
+      toast._timeout = setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-[-10px]');
+      }, 2400);
+    }
+
+    function applyIsolationAndCutaway() {
+      for (const key in subsystems) {
+        const grp = subsystems[key];
+        grp.visible = true;
+        const isIsolatedTarget = (state.activeSubsystem === null || state.activeSubsystem === key);
+
+        grp.traverse((obj) => {
+          if (!obj.isMesh || !obj.userData.origMaterial) return;
+          if (obj.material === matArcGlow) return;
+
+          if (isIsolatedTarget) {
+            const isEpoxyOrBottle = epoxyCutawayMeshes.includes(obj);
+            const isSideOrDoor = enclosureCutawayMeshes.includes(obj);
+            if (state.cutawayGlass && (isEpoxyOrBottle || isSideOrDoor)) {
+              obj.material = matGlassCutaway;
+            } else {
+              obj.material = obj.userData.origMaterial;
+            }
+          } else {
+            obj.material = obj.userData.ghostMaterial || matGhost;
+          }
+        });
+      }
+    }
+
+    function selectSubsystem(subKey) {
+      if (state.activeSubsystem === subKey) {
+        state.activeSubsystem = null;
+      } else {
+        state.activeSubsystem = subKey;
+      }
+
+      document.querySelectorAll('.subsystem-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.sub === state.activeSubsystem);
+      });
+
+      calloutItems.forEach((item) => {
+        item.el.classList.toggle('isolated', item.sub === state.activeSubsystem);
+      });
+
+      if (state.activeSubsystem && subsystemMeta[state.activeSubsystem]) {
+        const m = subsystemMeta[state.activeSubsystem];
+        document.getElementById('info-code').textContent = m.code;
+        document.getElementById('info-subsystem').textContent = m.sub;
+        document.getElementById('info-title').textContent = m.title;
+        document.getElementById('info-desc').textContent = m.desc;
+      } else {
+        document.getElementById('info-code').textContent = 'ASSY-00';
+        document.getElementById('info-subsystem').textContent = 'Switchboard Overview';
+        document.getElementById('info-title').textContent = 'Follow the power';
+        document.getElementById('info-desc').textContent = 'Monolithic withdrawable 6.6 kV vacuum circuit breaker truck inside a Form 4b metal-enclosed marine switchboard cubicle with automatic safety shutters.';
+      }
+
+      applyIsolationAndCutaway();
+    }
+
+    /* =====================================================================
+       LEFT & RIGHT DIVIDED 3D CALLOUT PILLS WITH LONG SVG LEADER LINES
+       ===================================================================== */
+    const calloutSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    calloutSvg.setAttribute('class', 'w-full h-full absolute inset-0 pointer-events-none');
+    calloutsContainer.appendChild(calloutSvg);
+
+    const calloutAnchors = [
+      // Left Column (4 labels)
+      { code: 'CF', label: 'Form 4b Cubicle', pos: new THREE.Vector3(-0.34, 1.85, 0.45), sub: 'cubicleFrame', onTruck: false, side: 'left' },
+      { code: 'SS', label: 'Automatic Shutters', pos: new THREE.Vector3(-0.22, 1.22, 0.02), sub: 'shutters', onTruck: false, side: 'left' },
+      { code: 'VI', label: 'Ceramic Vacuum Bottles', pos: new THREE.Vector3(-0.22, 0.95, 0.16), sub: 'vacuumInterrupters', onTruck: true, side: 'left' },
+      { code: 'TR', label: 'Monolithic VCB Truck', pos: new THREE.Vector3(-0.18, 0.42, 0.56), sub: 'vcbTruck', onTruck: true, side: 'left' },
+      // Right Column (3 labels)
+      { code: 'BB', label: '6.6 kV Copper Busbars', pos: new THREE.Vector3(0.22, 1.92, -0.42), sub: 'busbars', onTruck: false, side: 'right' },
+      { code: 'EP', label: 'Maroon Epoxy Poles & Tulips', pos: new THREE.Vector3(0.22, 1.08, 0.08), sub: 'epoxyPoles', onTruck: true, side: 'right' },
+      { code: 'CB', label: 'Toroidal CTs & Stress Cones', pos: new THREE.Vector3(0.22, 0.55, -0.36), sub: 'cables', onTruck: false, side: 'right' }
+    ];
+
+    const calloutItems = [];
+    calloutAnchors.forEach((a) => {
+      const el = document.createElement('div');
+      el.className = `callout-pill side-${a.side} absolute px-2.5 py-1 rounded-lg text-[11px] font-medium whitespace-nowrap flex items-center gap-1.5 cursor-pointer`;
+      el.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-orange-600/80 shrink-0"></span><span class="px-1 py-0.5 rounded bg-slate-100 text-slate-500 mono text-[9px] font-semibold">${a.code}</span><span>${a.label}</span>`;
+
+      const lineEl = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      lineEl.setAttribute('fill', 'none');
+      lineEl.setAttribute('stroke', '#94a3b8');
+      lineEl.setAttribute('stroke-width', '1.15');
+      calloutSvg.appendChild(lineEl);
+
+      const dotEl = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dotEl.setAttribute('r', '2.6');
+      dotEl.setAttribute('fill', '#64748b');
+      calloutSvg.appendChild(dotEl);
+
+      el.addEventListener('click', () => {
+        selectSubsystem(a.sub);
+        resetIdleTimer();
+      });
+      calloutsContainer.appendChild(el);
+      calloutItems.push({ el, lineEl, dotEl, pos: a.pos, sub: a.sub, onTruck: a.onTruck, side: a.side });
+    });
+
+    function resolveVerticalSpacing(items, minY, maxY, minGap) {
+      if (items.length === 0) return;
+      items.sort((a, b) => a.anchorY - b.anchorY);
+      items.forEach(item => {
+        item.labelY = Math.max(minY, Math.min(maxY, item.anchorY));
+      });
+      // Forward pass (push down)
+      for (let i = 1; i < items.length; i++) {
+        if (items[i].labelY - items[i - 1].labelY < minGap) {
+          items[i].labelY = items[i - 1].labelY + minGap;
+        }
+      }
+      // Backward pass (pull up if overflowed maxY)
+      if (items[items.length - 1].labelY > maxY) {
+        items[items.length - 1].labelY = maxY;
+        for (let i = items.length - 2; i >= 0; i--) {
+          if (items[i + 1].labelY - items[i].labelY < minGap) {
+            items[i].labelY = Math.max(minY, items[i + 1].labelY - minGap);
+          }
+        }
+      }
+    }
+
+    function updateCallouts() {
+      if (!state.labelsVisible) {
+        calloutItems.forEach(c => {
+          c.el.style.display = 'none';
+          c.lineEl.style.display = 'none';
+          c.dotEl.style.display = 'none';
+        });
+        return;
+      }
+      const vp = getViewportSize();
+      const truckZ = getMonolithicTruckZ(state.rackingFactor);
+      const tempV = new THREE.Vector3();
+
+      // Compute clean left & right label columns outside the 3D equipment footprint
+      const rightPanelWidth = window.innerWidth >= 1024 ? 344 : 16;
+      const activeLeft = vp.left;
+      const activeRight = window.innerWidth - rightPanelWidth;
+      const usableW = Math.max(320, activeRight - activeLeft);
+      const centerX = activeLeft + usableW * 0.5;
+      const colSpread = Math.max(195, Math.min(340, usableW * 0.28));
+      const baseLeftColX = Math.max(activeLeft + 210, centerX - colSpread);
+      const baseRightColX = Math.min(activeRight - 220, centerX + colSpread);
+
+      const leftVisible = [];
+      const rightVisible = [];
+
+      calloutItems.forEach((c) => {
+        tempV.copy(c.pos);
+        if (c.sub && explodeVectors[c.sub]) {
+          tempV.addScaledVector(explodeVectors[c.sub], state.explodeFactor);
+        }
+        if (c.onTruck) {
+          tempV.z += truckZ;
+        }
+        tempV.project(camera);
+        if (tempV.z > 1.0) {
+          c.el.style.display = 'none';
+          c.lineEl.style.display = 'none';
+          c.dotEl.style.display = 'none';
+        } else {
+          const ax = vp.left + (tempV.x * 0.5 + 0.5) * vp.width;
+          const ay = vp.top + (-(tempV.y * 0.5) + 0.5) * vp.height;
+          if (ax < vp.left + 10 || ax > window.innerWidth - 10 || ay < 20 || ay > window.innerHeight - 20) {
+            c.el.style.display = 'none';
+            c.lineEl.style.display = 'none';
+            c.dotEl.style.display = 'none';
+          } else {
+            c.anchorX = ax;
+            c.anchorY = ay;
+            if (c.side === 'left') leftVisible.push(c);
+            else rightVisible.push(c);
+          }
+        }
+      });
+
+      const minY = 92;
+      const maxY = window.innerHeight - 76;
+      resolveVerticalSpacing(leftVisible, minY, maxY, 48);
+      resolveVerticalSpacing(rightVisible, minY, maxY, 48);
+
+      const renderSide = (list, isLeft) => {
+        list.forEach((c) => {
+          const isIsolated = (state.activeSubsystem === c.sub);
+          const colX = isLeft
+            ? Math.max(activeLeft + 205, Math.min(baseLeftColX, c.anchorX - 80))
+            : Math.min(activeRight - 215, Math.max(baseRightColX, c.anchorX + 80));
+
+          c.el.style.display = 'flex';
+          c.el.style.left = `${colX}px`;
+          c.el.style.top = `${c.labelY}px`;
+
+          const dy = Math.abs(c.labelY - c.anchorY);
+          const elbowX = isLeft
+            ? colX + Math.max(24, (c.anchorX - colX) * 0.72)
+            : colX - Math.max(24, (colX - c.anchorX) * 0.72);
+
+          const pts = dy < 3
+            ? `${colX},${c.labelY} ${c.anchorX},${c.anchorY}`
+            : `${colX},${c.labelY} ${elbowX},${c.labelY} ${c.anchorX},${c.anchorY}`;
+
+          c.lineEl.style.display = 'block';
+          c.lineEl.setAttribute('points', pts);
+          c.lineEl.setAttribute('stroke', isIsolated ? '#ea580c' : 'rgba(148, 163, 184, 0.85)');
+          c.lineEl.setAttribute('stroke-width', isIsolated ? '1.6' : '1.15');
+
+          c.dotEl.style.display = 'block';
+          c.dotEl.setAttribute('cx', `${c.anchorX}`);
+          c.dotEl.setAttribute('cy', `${c.anchorY}`);
+          c.dotEl.setAttribute('fill', isIsolated ? '#ea580c' : '#64748b');
+        });
+      };
+
+      renderSide(leftVisible, true);
+      renderSide(rightVisible, false);
+    }
+
+    /* =====================================================================
+       KINEMATIC UPDATE LOOP (MONOLITHIC RACKING, SHUTTERS & 12MM STROKE)
+       ===================================================================== */
+    function updateKinematics(deltaSec) {
+      state.time += deltaSec;
+
+      state.explodeFactor += (state.targetExplodeFactor - state.explodeFactor) * 0.12;
+      state.rackingFactor += (state.targetRackingFactor - state.rackingFactor) * 0.14;
+
+      // Fast Tripping / Closing Contact Animation (<12 ms opening curve with bounce suppression)
+      if (contactAnimActive) {
+        const elapsed = (performance.now() - contactAnimStart) / 1000;
+        if (targetContactState === 0) {
+          const p = Math.min(1.0, elapsed / 0.08);
+          state.contactFactor = 1.0 - p;
+          if (p >= 1.0) contactAnimActive = false;
+        } else {
+          const p = Math.min(1.0, elapsed / 0.11);
+          state.contactFactor = p;
+          if (p >= 1.0) contactAnimActive = false;
+        }
+      }
+
+      // 1. MONOLITHIC VCB TRUCK RACKING TRANSLATION
+      // ONLY `breakerTruckGroup.position.z` translates along the cassette rails!
+      const truckZ = getMonolithicTruckZ(state.rackingFactor);
+      breakerTruckGroup.position.z = truckZ;
+
+      // Rotate the 4 flanged steel wheels concentrically with truck translation
+      const wheelRotAngle = truckZ / 0.044;
+      truckWheelMeshes.forEach(w => {
+        w.rotation.x = wheelRotAngle;
+      });
+
+      // Rotate lead screw spindle
+      if (leadScrewShaft) {
+        leadScrewShaft.rotation.z = state.rackingFactor * 22 * Math.PI * 2;
+      }
+
+      // 2. AUTOMATIC IP2X SAFETY SHUTTERS
+      // Open (+0.13 m lift) when truck is in SERVICE (s_rack < 0.22); drop CLOSED (0.0 m) in TEST or WITHDRAWN
+      const shutterLiftNorm = Math.max(0, Math.min(1, 1.0 - (state.rackingFactor / 0.22)));
+      const shutterLiftMeters = shutterLiftNorm * 0.13;
+      if (upperShutterPlate && lowerShutterPlate) {
+        upperShutterPlate.position.y = 1.15 + shutterLiftMeters;
+        lowerShutterPlate.position.y = 0.75 + shutterLiftMeters;
+      }
+
+      // 3. INTERNAL VACUUM BOTTLE 12 mm CONTACT STROKE & BELLOWS
+      const gapMeters = (1.0 - state.contactFactor) * 0.012; // 12 mm axial stroke
+      movingContactNodes.forEach(node => {
+        node.position.y = 0.016 - gapMeters;
+      });
+      bellowsNodes.forEach(bNode => {
+        bNode.scale.y = 1.0 - (gapMeters / 0.012) * 0.24;
+      });
+      pushrodNodes.forEach(pNode => {
+        pNode.position.y = 0.42 - gapMeters;
+      });
+
+      // Electric Arc Flash during Tripping
+      if (contactAnimActive && targetContactState === 0) {
+        matArcGlow.opacity = Math.sin(Math.min(Math.PI, ((performance.now() - contactAnimStart) / 1000) * Math.PI * 11)) * 0.88;
+        arcPointLight.intensity = matArcGlow.opacity * 2.5;
+      } else {
+        matArcGlow.opacity = 0;
+        arcPointLight.intensity = 0;
+      }
+
+      // 4. HINGED CUBICLE DOOR SWING
+      const targetDoorRad = state.isDoorOpen ? (105 * Math.PI) / 180 : 0;
+      state.doorAngle += (targetDoorRad - state.doorAngle) * Math.min(1, deltaSec * 8);
+      if (lowerDoorPivot) {
+        lowerDoorPivot.rotation.y = -state.doorAngle;
+      }
+
+      // 5. SUBSYSTEM EXPLODED VIEW VECTORS (Local to parent group)
+      for (const key in subsystems) {
+        const vec = explodeVectors[key];
+        subsystems[key].position.set(
+          vec.x * state.explodeFactor,
+          vec.y * state.explodeFactor,
+          vec.z * state.explodeFactor
+        );
+      }
+
+      // Update Dashed Explode Centerlines
+      explodeGuideLines.forEach((g) => {
+        if (state.explodeFactor > 0.02) {
+          const isOnTruck = (g.key === 'vcbTruck' || g.key === 'epoxyPoles' || g.key === 'vacuumInterrupters');
+          const zStart = g.base.z + (isOnTruck ? truckZ : 0);
+          const posArr = g.line.geometry.attributes.position.array;
+          posArr[0] = g.base.x;
+          posArr[1] = g.base.y;
+          posArr[2] = zStart;
+          posArr[3] = g.base.x + g.vec.x * state.explodeFactor;
+          posArr[4] = g.base.y + g.vec.y * state.explodeFactor;
+          posArr[5] = zStart + g.vec.z * state.explodeFactor;
+          g.line.geometry.attributes.position.needsUpdate = true;
+          g.line.computeLineDistances();
+          g.line.material.opacity = Math.min(0.65, state.explodeFactor * 0.85);
+        } else {
+          g.line.material.opacity = 0.0;
+        }
+      });
+
+      // Update 3D Fascia Status Flags (OPEN Green / CLOSED Red, CHARGED Yellow / DISCHARGED White)
+      // Always mutate origMaterial/ghostMaterial on the flag mesh itself, never a shared material!
+      if (flagPositionMesh && flagPositionMesh.userData.origMaterial) {
+        const posHex = state.contactFactor > 0.5 ? 0xdc2626 : 0x16a34a;
+        flagPositionMesh.userData.origMaterial.color.setHex(posHex);
+        if (flagPositionMesh.userData.ghostMaterial) flagPositionMesh.userData.ghostMaterial.color.setHex(posHex);
+      }
+      if (flagSpringMesh && flagSpringMesh.userData.origMaterial) {
+        const sprHex = state.isSpringCharged ? 0xfacc15 : 0xf8fafc;
+        flagSpringMesh.userData.origMaterial.color.setHex(sprHex);
+        if (flagSpringMesh.userData.ghostMaterial) flagSpringMesh.userData.ghostMaterial.color.setHex(sprHex);
+      }
+
+      updateHUD();
+      updateProofValues();
+      renderGraphs();
+    }
+
+    /* =====================================================================
+       HUD & LIVE PROOF TABLE UPDATES
+       ===================================================================== */
+    function updateHUD() {
+      const truckBadge = document.getElementById('badge-truck-pos');
+      if (state.rackingFactor < 0.15) {
+        truckBadge.textContent = 'SERVICE';
+        truckBadge.className = 'font-semibold text-emerald-700 mono';
+      } else if (state.rackingFactor < 0.75) {
+        truckBadge.textContent = 'TEST (+200mm)';
+        truckBadge.className = 'font-semibold text-amber-700 mono';
+      } else {
+        truckBadge.textContent = 'OUT (+550mm)';
+        truckBadge.className = 'font-semibold text-blue-700 mono';
+      }
+
+      const contactBadge = document.getElementById('badge-contacts');
+      if (state.contactFactor > 0.5) {
+        contactBadge.textContent = 'CLOSED (RED)';
+        contactBadge.className = 'font-semibold text-red-600 mono';
+      } else {
+        contactBadge.textContent = 'OPEN (GREEN)';
+        contactBadge.className = 'font-semibold text-emerald-600 mono';
+      }
+
+      const springBadge = document.getElementById('badge-spring');
+      if (state.isSpringCharged) {
+        springBadge.textContent = 'CHARGED';
+        springBadge.className = 'font-semibold text-amber-600 mono';
+      } else {
+        springBadge.textContent = 'DISCHARGED';
+        springBadge.className = 'font-semibold text-slate-400 mono';
+      }
+
+      const shutterBadge = document.getElementById('badge-shutters');
+      if (state.rackingFactor < 0.22) {
+        shutterBadge.textContent = 'OPEN';
+        shutterBadge.className = 'font-semibold text-amber-700 mono';
+      } else {
+        shutterBadge.textContent = 'CLOSED (SAFE)';
+        shutterBadge.className = 'font-semibold text-emerald-700 mono';
+      }
+
+      const isConducting = (state.rackingFactor < 0.15) && (state.contactFactor > 0.5);
+      document.getElementById('tel-curr').textContent = isConducting ? '1,250 A' : '0 A';
+      document.getElementById('wave-current-indicator').textContent = isConducting ? '1,250 A RATED' : '0 A (ISOLATED)';
+      document.getElementById('wave-current-indicator').className = isConducting
+        ? 'text-[10px] mono text-emerald-600 font-semibold'
+        : 'text-[10px] mono text-slate-400 font-semibold';
+
+      document.getElementById('lbl-door-btn').textContent = state.isDoorOpen ? 'Close Door' : 'Open Door';
+    }
+
+    function updateProofValues() {
+      const elRack = document.getElementById('proof-rack');
+      if (!elRack) return;
+
+      const rackMm = getMonolithicTruckZ(state.rackingFactor) * 1000;
+      const posLabel = state.rackingFactor < 0.15 ? 'SERVICE' : state.rackingFactor < 0.75 ? 'TEST' : 'WITHDRAWN';
+      elRack.textContent = `+${rackMm.toFixed(0)} mm (${posLabel})`;
+
+      const gapMm = (1.0 - state.contactFactor) * 12.0;
+      document.getElementById('proof-gap').textContent = `${gapMm.toFixed(2)} mm (${state.contactFactor > 0.5 ? 'CLOSED' : 'OPEN'})`;
+
+      const shutterOpenP = Math.max(0, Math.min(1, 1.0 - (state.rackingFactor / 0.22)));
+      const shutterMm = shutterOpenP * 130.0;
+      document.getElementById('proof-shutter').textContent = `${shutterMm.toFixed(1)} mm (${shutterOpenP > 0.1 ? 'OPEN' : 'LOCKED SHUT'})`;
+
+      const bilKv = gapMm < 0.1 ? 0.0 : 72.0 * Math.pow(gapMm / 12.0, 0.8);
+      document.getElementById('proof-bil').textContent = gapMm < 0.1 ? '0.0 kV (CONDUCTING)' : `${bilKv.toFixed(1)} kV BIL`;
+
+      const isConducting = (state.rackingFactor < 0.15) && (state.contactFactor > 0.5);
+      document.getElementById('proof-curr').textContent = isConducting ? '1,250 A (40 kA Isc)' : '0.0 A';
+    }
+
+    /* =====================================================================
+       2D TELEMETRY CANVASES: CONTACT TRAVEL CURVE & 3-PHASE AC WAVEFORMS
+       ===================================================================== */
+    const travelCanvas = document.getElementById('travel-canvas');
+    const travelCtx = travelCanvas.getContext('2d');
+    const acCanvas = document.getElementById('ac-canvas');
+    const acCtx = acCanvas.getContext('2d');
+
+    function computeDampedTravelMm(tMs) {
+      // Underdamped / dashpot-suppressed 12.0 mm opening curve reaching 12 mm in ~11.2 ms with <0.4 mm bounce suppression
+      if (tMs <= 1.2) return 0;
+      const tau = tMs - 1.2;
+      const base = 12.0 * (1.0 - Math.exp(-0.34 * tau) * (Math.cos(0.42 * tau) + 0.18 * Math.sin(0.42 * tau)));
+      return Math.max(0, Math.min(12.35, base));
+    }
+
+    function renderGraphs() {
+      if (!state.showGraphs) return;
+
+      // 1. Contact Travel Curve (x vs t with bounce suppression)
+      const tw = travelCanvas.width;
+      const th = travelCanvas.height;
+      travelCtx.clearRect(0, 0, tw, th);
+
+      const padL = 28, padR = 10, padT = 10, padB = 16;
+      const plotW = tw - padL - padR;
+      const plotH = th - padT - padB;
+
+      travelCtx.strokeStyle = 'rgba(203, 213, 225, 0.65)';
+      travelCtx.lineWidth = 1;
+      [0, 6, 12].forEach((mm) => {
+        const y = padT + plotH - (mm / 12.5) * plotH;
+        travelCtx.beginPath();
+        travelCtx.moveTo(padL, y);
+        travelCtx.lineTo(tw - padR, y);
+        travelCtx.stroke();
+        travelCtx.fillStyle = '#94a3b8';
+        travelCtx.font = '8px JetBrains Mono';
+        travelCtx.fillText(`${mm}m`, 3, y + 3);
+      });
+
+      travelCtx.strokeStyle = '#c25b2a';
+      travelCtx.lineWidth = 1.8;
+      travelCtx.beginPath();
+      for (let x = 0; x <= plotW; x++) {
+        const tMs = (x / plotW) * 20.0;
+        const strokeMm = computeDampedTravelMm(tMs);
+        const px = padL + x;
+        const py = padT + plotH - (strokeMm / 12.5) * plotH;
+        if (x === 0) travelCtx.moveTo(px, py); else travelCtx.lineTo(px, py);
+      }
+      travelCtx.stroke();
+
+      const currentGapMm = (1.0 - state.contactFactor) * 12.0;
+      const activeTms = (1.0 - state.contactFactor) * 11.2;
+      const dotX = padL + (activeTms / 20.0) * plotW;
+      const dotY = padT + plotH - (currentGapMm / 12.5) * plotH;
+
+      travelCtx.fillStyle = state.contactFactor > 0.5 ? '#dc2626' : '#16a34a';
+      travelCtx.beginPath();
+      travelCtx.arc(dotX, dotY, 4.2, 0, Math.PI * 2);
+      travelCtx.fill();
+
+      const elLiveState = document.getElementById('travel-live-state');
+      elLiveState.textContent = `${state.contactFactor > 0.5 ? 'CLOSED · ' : 'OPEN · '}${currentGapMm.toFixed(1)} mm`;
+      elLiveState.className = state.contactFactor > 0.5
+        ? 'text-[10px] mono font-semibold text-red-600 uppercase'
+        : 'text-[10px] mono font-semibold text-emerald-600 uppercase';
+      document.getElementById('travel-stroke-val').textContent = `${currentGapMm.toFixed(1)} mm`;
+
+      // 2. Dynamic 3-Phase 60 Hz Sinusoidal Waveforms (Phase A Red, Phase B Yellow, Phase C Blue)
+      const aw = acCanvas.width;
+      const ah = acCanvas.height;
+      acCtx.clearRect(0, 0, aw, ah);
+
+      const midY = ah / 2;
+      acCtx.strokeStyle = 'rgba(203, 213, 225, 0.7)';
+      acCtx.lineWidth = 1;
+      acCtx.beginPath();
+      acCtx.moveTo(0, midY);
+      acCtx.lineTo(aw, midY);
+      acCtx.stroke();
+
+      const isConducting = (state.rackingFactor < 0.15) && (state.contactFactor > 0.5);
+      const colors = ['#dc2626', '#eab308', '#2563eb'];
+
+      [0, (2 * Math.PI) / 3, (4 * Math.PI) / 3].forEach((phaseOffset, idx) => {
+        acCtx.strokeStyle = colors[idx];
+        acCtx.lineWidth = isConducting ? 1.7 : 1.0;
+        acCtx.beginPath();
+        for (let x = 0; x < aw; x++) {
+          const rad = (x / aw) * Math.PI * 5 + state.time * 7.5 - phaseOffset;
+          const amp = isConducting ? (ah * 0.38) : (ah * 0.10);
+          const y = midY - Math.sin(rad) * amp;
+          if (x === 0) acCtx.moveTo(x, y); else acCtx.lineTo(x, y);
+        }
+        acCtx.stroke();
+      });
+    }
+
+    /* =====================================================================
+       CAMERA PRESETS & NON-LOCKING TRANSITIONS
+       ===================================================================== */
+    function getCameraPresetTargets(presetKey) {
+      const truckZ = getMonolithicTruckZ(state.targetRackingFactor);
+      const presets = {
+        hero: { pos: new THREE.Vector3(2.85, 1.82, 3.25), target: new THREE.Vector3(0, 1.05, 0.15) },
+        fascia: { pos: new THREE.Vector3(0.0, 0.58, 1.48 + truckZ), target: new THREE.Vector3(0, 0.49, 0.55 + truckZ) },
+        tulips: { pos: new THREE.Vector3(0.95, 1.02, 0.45 + truckZ), target: new THREE.Vector3(0, 0.95, -0.05 + truckZ) },
+        vacuum: { pos: new THREE.Vector3(0.62, 1.02, 0.78 + truckZ), target: new THREE.Vector3(0, 0.95, 0.16 + truckZ) },
+        shutters: { pos: new THREE.Vector3(0.75, 1.05, 1.15), target: new THREE.Vector3(0, 0.95, 0.015) }
+      };
+      return presets[presetKey] || presets.hero;
+    }
+
+    function moveCameraTo(presetKey) {
+      if (presetKey === 'vacuum' && !state.cutawayGlass) {
+        toggleCutaway();
+      }
+      if (presetKey === 'shutters' && state.targetRackingFactor < 0.4) {
+        if (state.contactFactor > 0.5) {
+          contactAnimActive = true;
+          contactAnimStart = performance.now();
+          targetContactState = 0.0;
+        }
+        state.targetRackingFactor = 0.5;
+        document.getElementById('slider-racking').value = 50;
+        document.getElementById('val-racking').textContent = '50% (TEST)';
+      }
+
+      const p = getCameraPresetTargets(presetKey);
+      camTargetPos.copy(p.pos);
+      camTargetLook.copy(p.target);
+      isCameraTweening = true;
+
+      const sel = document.getElementById('select-camera-preset');
+      if (sel && sel.value !== presetKey) sel.value = presetKey;
+    }
+
+    function updateCameraTween() {
+      if (isCameraTweening) {
+        camera.position.lerp(camTargetPos, 0.10);
+        controls.target.lerp(camTargetLook, 0.10);
+        if (camera.position.distanceTo(camTargetPos) < 0.03 && controls.target.distanceTo(camTargetLook) < 0.03) {
+          isCameraTweening = false;
+        }
+      }
+      controls.update();
+    }
+
+    function toggleCutaway() {
+      state.cutawayGlass = !state.cutawayGlass;
+      document.getElementById('btn-cutaway-toggle').classList.toggle('active', state.cutawayGlass);
+      applyIsolationAndCutaway();
+    }
+
+    /* =====================================================================
+       UI INTERACTIVITY, SAFETY INTERLOCKS & 3D RAYCASTER
+       ===================================================================== */
+    document.querySelectorAll('.subsystem-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        selectSubsystem(btn.dataset.sub);
+        resetIdleTimer();
+      });
+    });
+
+    document.getElementById('btn-show-all').addEventListener('click', () => {
+      state.activeSubsystem = null;
+      selectSubsystem(null);
+      resetIdleTimer();
+    });
+
+    document.getElementById('select-camera-preset').addEventListener('change', (e) => {
+      moveCameraTo(e.target.value);
+      resetIdleTimer();
+    });
+
+    document.getElementById('btn-cutaway-toggle').addEventListener('click', () => {
+      toggleCutaway();
+      resetIdleTimer();
+    });
+
+    document.getElementById('btn-labels-toggle').addEventListener('click', () => {
+      state.labelsVisible = !state.labelsVisible;
+      document.getElementById('btn-labels-toggle').classList.toggle('active', state.labelsVisible);
+      resetIdleTimer();
+    });
+
+    function toggleTelemetryDrawer() {
+      state.showGraphs = !state.showGraphs;
+      document.getElementById('btn-graphs-toggle').classList.toggle('active', state.showGraphs);
+      document.getElementById('telemetry-drawer').classList.toggle('hidden', !state.showGraphs);
+    }
+    document.getElementById('btn-graphs-toggle').addEventListener('click', toggleTelemetryDrawer);
+    document.getElementById('btn-collapse-telemetry').addEventListener('click', toggleTelemetryDrawer);
+
+    // Racking Slider & Quick Position Buttons (with IEC Safety Interlock)
+    const sliderRacking = document.getElementById('slider-racking');
+    function setRackingTarget(pctValue) {
+      if (state.contactFactor > 0.5) {
+        sliderRacking.value = Math.round(state.targetRackingFactor * 100);
+        showInterlockToast('Safety Interlock: Racking is locked while VCB is CLOSED! Press PUSH OFF (O) first.');
+        return;
+      }
+      if (pctValue > 55 && !state.isDoorOpen) {
+        state.isDoorOpen = true;
+      }
+      state.targetRackingFactor = pctValue / 100;
+      sliderRacking.value = pctValue;
+      const tag = pctValue < 15 ? ' (SERVICE)' : pctValue < 75 ? ' (TEST)' : ' (WITHDRAWN)';
+      document.getElementById('val-racking').textContent = `${pctValue}%${tag}`;
+      resetIdleTimer();
+    }
+
+    sliderRacking.addEventListener('input', (e) => {
+      setRackingTarget(parseFloat(e.target.value));
+    });
+    document.getElementById('btn-rack-service').addEventListener('click', () => setRackingTarget(0));
+    document.getElementById('btn-rack-test').addEventListener('click', () => setRackingTarget(50));
+    document.getElementById('btn-rack-out').addEventListener('click', () => setRackingTarget(100));
+
+    // Exploded View Slider
+    const sliderExplode = document.getElementById('slider-explode');
+    sliderExplode.addEventListener('input', (e) => {
+      state.targetExplodeFactor = parseFloat(e.target.value) / 100;
+      document.getElementById('val-explode').textContent = `${Math.round(state.targetExplodeFactor * 100)}%`;
+      resetIdleTimer();
+    });
+
+    document.getElementById('btn-assemble-all').addEventListener('click', () => {
+      state.targetExplodeFactor = 0.0;
+      sliderExplode.value = 0;
+      document.getElementById('val-explode').textContent = '0%';
+      resetIdleTimer();
+    });
+
+    document.getElementById('btn-explode-all').addEventListener('click', () => {
+      state.targetExplodeFactor = 1.0;
+      sliderExplode.value = 100;
+      document.getElementById('val-explode').textContent = '100%';
+      resetIdleTimer();
+    });
+
+    // PUSH ON (I) / PUSH OFF (O) / Spring Charge / Door Controls
+    document.getElementById('btn-close-breaker').addEventListener('click', () => {
+      if (!state.isSpringCharged) {
+        showInterlockToast('Spring Discharged: Click Spring Charge before closing VCB!');
+        return;
+      }
+      if (state.targetRackingFactor > 0.06 && Math.abs(state.targetRackingFactor - 0.5) > 0.06 && state.targetRackingFactor < 0.95) {
+        showInterlockToast('Interlock: VCB can only close at SERVICE (0%), TEST (50%), or WITHDRAWN (100%)!');
+        return;
+      }
+      state.isSpringCharged = false;
+      contactAnimActive = true;
+      contactAnimStart = performance.now();
+      targetContactState = 1.0;
+      resetIdleTimer();
+    });
+
+    document.getElementById('btn-trip-breaker').addEventListener('click', () => {
+      if (state.contactFactor < 0.1) return;
+      contactAnimActive = true;
+      contactAnimStart = performance.now();
+      targetContactState = 0.0;
+      resetIdleTimer();
+    });
+
+    document.getElementById('btn-charge-spring').addEventListener('click', () => {
+      state.isSpringCharged = !state.isSpringCharged;
+      if (chargingHandlePivot) {
+        chargingHandlePivot.rotation.x = state.isSpringCharged ? -0.35 : 0.0;
+      }
+      resetIdleTimer();
+    });
+
+    document.getElementById('btn-toggle-door').addEventListener('click', () => {
+      if (state.isDoorOpen && state.targetRackingFactor > 0.55) {
+        showInterlockToast('Cannot close cubicle door while VCB truck is withdrawn on extension rails!');
+        return;
+      }
+      state.isDoorOpen = !state.isDoorOpen;
+      resetIdleTimer();
+    });
+
+    // Reset View & Zoom
+    document.getElementById('btn-reset-cam').addEventListener('click', () => {
+      moveCameraTo('hero');
+      state.targetExplodeFactor = 0.0;
+      sliderExplode.value = 0;
+      document.getElementById('val-explode').textContent = '0%';
+      state.activeSubsystem = null;
+      selectSubsystem(null);
+      resetIdleTimer();
+    });
+
+    document.getElementById('btn-zoom-in').addEventListener('click', () => {
+      isCameraTweening = false;
+      const dir = new THREE.Vector3().subVectors(controls.target, camera.position).normalize();
+      if (camera.position.distanceTo(controls.target) > controls.minDistance + 0.15) {
+        camera.position.addScaledVector(dir, 0.25);
+        controls.update();
+      }
+    });
+
+    document.getElementById('btn-zoom-out').addEventListener('click', () => {
+      isCameraTweening = false;
+      const dir = new THREE.Vector3().subVectors(controls.target, camera.position).normalize();
+      if (camera.position.distanceTo(controls.target) < controls.maxDistance - 0.15) {
+        camera.position.addScaledVector(dir, -0.25);
+        controls.update();
+      }
+    });
+
+    // Proof Modal
+    const modalProof = document.getElementById('modal-proof');
+    document.getElementById('btn-math-proof').addEventListener('click', () => {
+      modalProof.classList.remove('hidden');
+      resetIdleTimer();
+    });
+    document.getElementById('btn-close-proof').addEventListener('click', () => {
+      modalProof.classList.add('hidden');
+    });
+
+    // 3D Raycaster Click Inspection
+    const downPos = { x: 0, y: 0 };
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      downPos.x = e.clientX;
+      downPos.y = e.clientY;
+    });
+    renderer.domElement.addEventListener('pointerup', (e) => {
+      if (Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y) > 5) return;
+      const vp = getViewportSize();
+      mouseVec.x = ((e.clientX - vp.left) / vp.width) * 2 - 1;
+      mouseVec.y = -((e.clientY - vp.top) / vp.height) * 2 + 1;
+      raycaster.setFromCamera(mouseVec, camera);
+      const meshes = [];
+      for (const k in subsystems) {
+        subsystems[k].traverse((o) => { if (o.isMesh && o.material !== matArcGlow) meshes.push(o); });
+      }
+      const hits = raycaster.intersectObjects(meshes, false);
+      if (hits.length > 0) {
+        const hitObj = hits[0].object;
+        if (hitObj === pushOffBtnMesh) {
+          document.getElementById('btn-trip-breaker').click();
+          return;
+        }
+        if (hitObj === pushOnBtnMesh) {
+          document.getElementById('btn-close-breaker').click();
+          return;
+        }
+        const subKey = hitObj.userData.subsystemKey;
+        if (subKey && subsystemMeta[subKey]) {
+          selectSubsystem(subKey);
+        }
+      }
+    });
+
+    /* =====================================================================
+       AUTO-TOUR SYSTEM
+       ===================================================================== */
+    function resetIdleTimer() {
+      state.idleTimer = 0;
+    }
+
+    function startAutoTour() {
+      state.autoTourActive = true;
+      state.tourStep = 0;
+      state.tourStepTimer = 0;
+      document.getElementById('tour-pointer').classList.remove('hidden');
+    }
+
+    function stopAutoTour() {
+      state.autoTourActive = false;
+      document.getElementById('tour-pointer').classList.add('hidden');
+      state.activeSubsystem = null;
+      selectSubsystem(null);
+    }
+
+    document.getElementById('btn-start-tour').addEventListener('click', () => {
+      if (state.autoTourActive) stopAutoTour(); else startAutoTour();
+    });
+
+    ['pointerdown', 'wheel', 'keydown', 'touchstart'].forEach((evt) => {
+      window.addEventListener(evt, () => {
+        if (state.autoTourActive) stopAutoTour();
+        resetIdleTimer();
+      }, { passive: true });
+    });
+
+    function updateAutoTour(deltaSec) {
+      if (!state.autoTourActive) {
+        state.idleTimer += deltaSec;
+        if (state.idleTimer >= 28.0) {
+          startAutoTour();
+        }
+        return;
+      }
+
+      state.tourStepTimer += deltaSec;
+      const tourKeys = ['cubicleFrame', 'vcbTruck', 'epoxyPoles', 'vacuumInterrupters', 'shutters', 'busbars', 'cables'];
+      const tourCams = ['hero', 'fascia', 'tulips', 'vacuum', 'shutters', 'hero', 'hero'];
+
+      if (state.tourStepTimer >= 4.2) {
+        state.tourStepTimer = 0;
+        state.tourStep = (state.tourStep + 1) % (tourKeys.length + 1);
+
+        if (state.tourStep < tourKeys.length) {
+          const key = tourKeys[state.tourStep];
+          state.activeSubsystem = null;
+          selectSubsystem(key);
+          moveCameraTo(tourCams[state.tourStep]);
+
+          const btn = document.querySelector(`.subsystem-btn[data-sub="${key}"]`);
+          const ptr = document.getElementById('tour-pointer');
+          if (btn && ptr) {
+            const rect = btn.getBoundingClientRect();
+            ptr.style.left = `${rect.right + 16}px`;
+            ptr.style.top = `${rect.top + rect.height / 2}px`;
+            document.getElementById('tour-tag').textContent = subsystemMeta[key].title;
+          }
+        } else {
+          state.activeSubsystem = null;
+          selectSubsystem(null);
+          moveCameraTo('hero');
+          state.targetExplodeFactor = 0.65;
+          sliderExplode.value = 65;
+          document.getElementById('val-explode').textContent = '65%';
+          setTimeout(() => {
+            state.targetExplodeFactor = 0.0;
+            sliderExplode.value = 0;
+            document.getElementById('val-explode').textContent = '0%';
+          }, 2600);
+        }
+      }
+    }
+
+    /* =====================================================================
+       MAIN ANIMATION LOOP & RESPONSIVE RESIZE
+       ===================================================================== */
+    let lastTimestamp = performance.now();
+
+    function animate(timestamp) {
+      requestAnimationFrame(animate);
+      const deltaSec = Math.min((timestamp - lastTimestamp) / 1000, 0.1);
+      lastTimestamp = timestamp;
+
+      updateKinematics(deltaSec);
+      updateCameraTween();
+      updateCallouts();
+      updateAutoTour(deltaSec);
+
+      renderer.render(scene, camera);
+    }
+
+    function onWindowResize() {
+      const vp = getViewportSize();
+      camera.aspect = vp.width / vp.height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(vp.width, vp.height);
+    }
+    window.addEventListener('resize', onWindowResize);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialSub = urlParams.get('sub');
+    if (initialSub && subsystemMeta[initialSub]) {
+      selectSubsystem(initialSub);
+    }
+
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

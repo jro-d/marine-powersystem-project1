@@ -2683,6 +2683,7 @@
       "title": "440 V Emergency Switchboard (ESB) Cubicle",
       "subtitle": "SOLAS Chapter II-1 Reg 42/43 · Automatic Bus Transfer · Tie Breaker to Main 440 V Board",
       "glb": "/models/esb_cubicle.glb",
+      "teardownUrl": "/teardowns/vcb.html",
       "electrical": {
         "voltage": "440 V",
         "ratedKw": 250,

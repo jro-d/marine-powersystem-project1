@@ -105,20 +105,30 @@
       transform: translate(-50%, -50%);
       transition: top 1.0s cubic-bezier(0.2, 0.8, 0.2, 1), left 1.0s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
-    /* Floating 3D Callout Pills */
+    /* Floating 3D Callout Pills (Left & Right Divided Columns) */
     .callout-pill {
       pointer-events: auto;
-      transform: translate(-50%, -50%);
-      transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.15s ease;
-      background: rgba(255, 255, 255, 0.95);
-      border: 1px solid rgba(203, 213, 225, 0.9);
+      transition: opacity 0.2s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid rgba(203, 213, 225, 0.95);
       box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
       color: #334155;
+    }
+    .callout-pill.side-left {
+      transform: translate(-100%, -50%);
+    }
+    .callout-pill.side-right {
+      transform: translate(0%, -50%);
     }
     .callout-pill:hover {
       border-color: #94a3b8;
       box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
       color: #0f172a;
+    }
+    .callout-pill.isolated {
+      border-color: #ea580c;
+      background: #fff7ed;
+      color: #9a3412;
     }
     ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -129,6 +139,9 @@
 
   <!-- 3D WebGL Canvas Host -->
   <div id="canvas-container"></div>
+
+  <!-- 3D Callout HTML & SVG Leader Container -->
+  <div id="callouts-container" class="pointer-events-none fixed inset-0 z-10 overflow-hidden"></div>
 
   <!-- Auto Tour Cursor Indicator -->
   <div id="tour-pointer" class="hidden">
@@ -2062,47 +2075,109 @@
     }
 
     /* =====================================================================
-       3D ANNOTATION CALLOUTS (Minimal Light Pills matching Reference Image)
+       LEFT & RIGHT DIVIDED 3D ANNOTATION CALLOUTS WITH LONG SVG LEADER LINES
        ===================================================================== */
+    let calloutSvg = null;
+
+    function resolveVerticalSpacing(items, minY, maxY, minGap) {
+      if (items.length === 0) return;
+      items.sort((a, b) => a.anchorY - b.anchorY);
+      items.forEach(item => {
+        item.labelY = Math.max(minY, Math.min(maxY, item.anchorY));
+      });
+      for (let i = 1; i < items.length; i++) {
+        if (items[i].labelY - items[i - 1].labelY < minGap) {
+          items[i].labelY = items[i - 1].labelY + minGap;
+        }
+      }
+      if (items[items.length - 1].labelY > maxY) {
+        items[items.length - 1].labelY = maxY;
+        for (let i = items.length - 2; i >= 0; i--) {
+          if (items[i + 1].labelY - items[i].labelY < minGap) {
+            items[i].labelY = Math.max(minY, items[i + 1].labelY - minGap);
+          }
+        }
+      }
+    }
+
     function setupCallouts() {
+      const calloutsHost = document.getElementById('callouts-container') || document.body;
+      calloutSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      calloutSvg.setAttribute('class', 'w-full h-full absolute inset-0 pointer-events-none');
+      calloutsHost.appendChild(calloutSvg);
+
       const anchors = [
-        { id: 'lbl-sump', code: 'BP', pos: new THREE.Vector3(0.85, 0.18, -1.2), text: 'I-beam bedplate', sub: 'bedplate' },
-        { id: 'lbl-liner', code: 'CC', pos: new THREE.Vector3(0.75, 0.85, -0.3), text: 'Relief valves', sub: 'crankcase' },
-        { id: 'lbl-crank', code: 'RG', pos: new THREE.Vector3(-0.6, 0.75, 0.3), text: 'Crankshaft', sub: 'runningGear' },
-        { id: 'lbl-head', code: 'CH', pos: new THREE.Vector3(0, 2.70, 0.3), text: 'Cylinder heads', sub: 'cylinderHeads' },
-        { id: 'lbl-turbo', code: 'TC', pos: new THREE.Vector3(-0.45, 2.55, -2.35), text: 'Turbocharger', sub: 'turbocharger' },
-        { id: 'lbl-cooler', code: 'IC', pos: new THREE.Vector3(-0.95, 1.25, -2.25), text: 'Intercooler', sub: 'turbocharger' },
-        { id: 'lbl-stator', code: 'AS', pos: new THREE.Vector3(0.92, 0.95, 3.35), text: '6.6 kV Stator', sub: 'alternatorStator' },
-        { id: 'lbl-terminal', code: 'TB', pos: new THREE.Vector3(0, 2.65, 3.25), text: 'HV Terminal box', sub: 'alternatorStator' }
+        // Left Column (4 labels: Alternator & Engine Front/Left)
+        { id: 'lbl-terminal', code: 'TB', pos: new THREE.Vector3(0, 2.65, 3.25), text: 'HV Terminal box', sub: 'alternatorStator', side: 'left' },
+        { id: 'lbl-head', code: 'CH', pos: new THREE.Vector3(0, 2.70, 0.3), text: 'Cylinder heads', sub: 'cylinderHeads', side: 'left' },
+        { id: 'lbl-crank', code: 'RG', pos: new THREE.Vector3(-0.6, 0.75, 0.3), text: 'Crankshaft', sub: 'runningGear', side: 'left' },
+        { id: 'lbl-stator', code: 'AS', pos: new THREE.Vector3(0.92, 0.95, 3.35), text: '6.6 kV Stator', sub: 'alternatorStator', side: 'left' },
+        // Right Column (4 labels: Turbocharger, Intercooler, Crankcase & Bedplate)
+        { id: 'lbl-turbo', code: 'TC', pos: new THREE.Vector3(-0.45, 2.55, -2.35), text: 'Turbocharger', sub: 'turbocharger', side: 'right' },
+        { id: 'lbl-cooler', code: 'IC', pos: new THREE.Vector3(-0.95, 1.25, -2.25), text: 'Intercooler', sub: 'turbocharger', side: 'right' },
+        { id: 'lbl-liner', code: 'CC', pos: new THREE.Vector3(0.75, 0.85, -0.3), text: 'Relief valves', sub: 'crankcase', side: 'right' },
+        { id: 'lbl-sump', code: 'BP', pos: new THREE.Vector3(0.85, 0.18, -1.2), text: 'I-beam bedplate', sub: 'bedplate', side: 'right' }
       ];
 
       anchors.forEach(a => {
         const el = document.createElement('div');
-        el.className = 'callout-pill absolute z-10 px-2.5 py-1 rounded-lg text-[11px] font-medium whitespace-nowrap flex items-center gap-1.5 cursor-pointer';
-        el.innerHTML = `<span class="mono text-[9px] font-semibold text-slate-400 bg-slate-100 px-1 py-0.5 rounded">${a.code}</span><span>${a.text}</span><span class="text-slate-300 text-[10px]">↗</span>`;
+        el.className = `callout-pill side-${a.side} absolute z-10 px-2.5 py-1 rounded-lg text-[11px] font-medium whitespace-nowrap flex items-center gap-1.5 cursor-pointer`;
+        el.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-orange-600/80 shrink-0"></span><span class="mono text-[9px] font-semibold text-slate-500 bg-slate-100 px-1 py-0.5 rounded">${a.code}</span><span>${a.text}</span>`;
+
+        const lineEl = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+        lineEl.setAttribute('fill', 'none');
+        lineEl.setAttribute('stroke', '#94a3b8');
+        lineEl.setAttribute('stroke-width', '1.15');
+        calloutSvg.appendChild(lineEl);
+
+        const dotEl = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        dotEl.setAttribute('r', '2.6');
+        dotEl.setAttribute('fill', '#64748b');
+        calloutSvg.appendChild(dotEl);
+
         el.onclick = () => {
           const meta = subsystemMeta[a.sub];
           if (meta) {
-            activeSubsystem = a.sub;
+            activeSubsystem = (activeSubsystem === a.sub) ? null : a.sub;
             document.querySelectorAll('.subsystem-btn').forEach(b => {
-              b.classList.toggle('active', b.dataset.sub === a.sub);
+              b.classList.toggle('active', b.dataset.sub === activeSubsystem);
             });
-            showPartInfo(meta.title, meta.desc, meta.code);
+            if (activeSubsystem) {
+              showPartInfo(meta.title, meta.desc, meta.code);
+            }
           }
         };
-        document.body.appendChild(el);
-        callouts.push({ el, pos: a.pos, sub: a.sub });
+        calloutsHost.appendChild(el);
+        callouts.push({ el, lineEl, dotEl, pos: a.pos, sub: a.sub, side: a.side });
       });
     }
 
     function updateCallouts() {
       if (!labelsVisible) {
-        callouts.forEach(c => c.el.style.display = 'none');
+        callouts.forEach(c => {
+          c.el.style.display = 'none';
+          if (c.lineEl) c.lineEl.style.display = 'none';
+          if (c.dotEl) c.dotEl.style.display = 'none';
+        });
         return;
       }
       const vp = getViewportSize();
       const tempV = new THREE.Vector3();
+
+      const rightPanelWidth = window.innerWidth >= 1024 ? 344 : 16;
+      const activeLeft = vp.left;
+      const activeRight = window.innerWidth - rightPanelWidth;
+      const usableW = Math.max(320, activeRight - activeLeft);
+      const centerX = activeLeft + usableW * 0.5;
+      const colSpread = Math.max(210, Math.min(360, usableW * 0.31));
+      const baseLeftColX = Math.max(activeLeft + 185, centerX - colSpread);
+      const baseRightColX = Math.min(activeRight - 195, centerX + colSpread);
+
+      const leftVisible = [];
+      const rightVisible = [];
+
       callouts.forEach(c => {
+        c.el.classList.toggle('isolated', activeSubsystem === c.sub);
         tempV.copy(c.pos);
         if (c.sub && explodeVectors[c.sub]) {
           tempV.addScaledVector(explodeVectors[c.sub], explodeFactor);
@@ -2110,18 +2185,63 @@
         tempV.project(camera);
         if (tempV.z > 1) {
           c.el.style.display = 'none';
+          c.lineEl.style.display = 'none';
+          c.dotEl.style.display = 'none';
         } else {
-          const x = vp.left + (tempV.x * 0.5 + 0.5) * vp.width;
-          const y = (-(tempV.y * 0.5) + 0.5) * vp.height;
-          if (x < vp.left + 20 || x > window.innerWidth - 20) {
+          const ax = vp.left + (tempV.x * 0.5 + 0.5) * vp.width;
+          const ay = (-(tempV.y * 0.5) + 0.5) * vp.height;
+          if (ax < vp.left + 10 || ax > window.innerWidth - 10 || ay < 20 || ay > window.innerHeight - 20) {
             c.el.style.display = 'none';
+            c.lineEl.style.display = 'none';
+            c.dotEl.style.display = 'none';
           } else {
-            c.el.style.display = 'flex';
-            c.el.style.left = x + 'px';
-            c.el.style.top = y + 'px';
+            c.anchorX = ax;
+            c.anchorY = ay;
+            if (c.side === 'left') leftVisible.push(c);
+            else rightVisible.push(c);
           }
         }
       });
+
+      const minY = 92;
+      const maxY = window.innerHeight - 76;
+      resolveVerticalSpacing(leftVisible, minY, maxY, 48);
+      resolveVerticalSpacing(rightVisible, minY, maxY, 48);
+
+      const renderSide = (list, isLeft) => {
+        list.forEach(c => {
+          const isIsolated = (activeSubsystem === c.sub);
+          const colX = isLeft
+            ? Math.max(activeLeft + 180, Math.min(baseLeftColX, c.anchorX - 80))
+            : Math.min(activeRight - 190, Math.max(baseRightColX, c.anchorX + 80));
+
+          c.el.style.display = 'flex';
+          c.el.style.left = `${colX}px`;
+          c.el.style.top = `${c.labelY}px`;
+
+          const dy = Math.abs(c.labelY - c.anchorY);
+          const elbowX = isLeft
+            ? colX + Math.max(24, (c.anchorX - colX) * 0.72)
+            : colX - Math.max(24, (colX - c.anchorX) * 0.72);
+
+          const pts = dy < 3
+            ? `${colX},${c.labelY} ${c.anchorX},${c.anchorY}`
+            : `${colX},${c.labelY} ${elbowX},${c.labelY} ${c.anchorX},${c.anchorY}`;
+
+          c.lineEl.style.display = 'block';
+          c.lineEl.setAttribute('points', pts);
+          c.lineEl.setAttribute('stroke', isIsolated ? '#ea580c' : 'rgba(148, 163, 184, 0.85)');
+          c.lineEl.setAttribute('stroke-width', isIsolated ? '1.6' : '1.15');
+
+          c.dotEl.style.display = 'block';
+          c.dotEl.setAttribute('cx', `${c.anchorX}`);
+          c.dotEl.setAttribute('cy', `${c.anchorY}`);
+          c.dotEl.setAttribute('fill', isIsolated ? '#ea580c' : '#64748b');
+        });
+      };
+
+      renderSide(leftVisible, true);
+      renderSide(rightVisible, false);
     }
 
     /* =====================================================================

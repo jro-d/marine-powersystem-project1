@@ -1450,6 +1450,14 @@ interface AssemblyPageInfo {
 
 
 function getAssemblyPage(selectedId: string, model: ModelType | undefined): AssemblyPageInfo | null {
+  if (['gb1', 'gb2', 'gb3', 'gb4', 'tie', 'shoreBreaker', 'propFeed', 'bowFeed', 'txAFeed', 'txBFeed', 'reeferAFeed', 'reeferBFeed', 'busA', 'busB', 'lvBusA', 'lvBusB', 'consumerA', 'consumerB', 'eBus', 'esb', 'lvTie', 'txAOut', 'txBOut', 'cooling1Feed', 'fire1Feed', 'airCompFeed', 'craneFeed', 'conAAcb', 'conBAcb', 'fire2Feed', 'cooling2Feed', 'ventFanFeed', 'ballastFeed', 'bilgeFeed', 'consumerTie', 'lightAFeed', 'galleySmallFeed', 'navFeed', 'esbTieFeed', 'egBreaker', 'eSteerFeed', 'eFireFeed', 'eLightFeed', 'eRadioFeed', 'navEmFeed'].includes(selectedId) || model === 'breaker' || model === 'hv-board' || model === 'lv-board') {
+    return {
+      url: resolveTeardownUrl('vcb.html'),
+      title: '6.6 kV MV Switchboard Cubicle & Withdrawable VCB',
+      subtitle: 'IEC 62271-200 Form 4b · 1250 A / 25 kA · Vacuum Interrupter & Auto Safety Shutters',
+      tag: 'IEC 62271-200 MARINE SWITCHGEAR'
+    };
+  }
   if (['dg1', 'dg2', 'dg3', 'dg4', 'eg', 'generator'].includes(selectedId) || model === 'generator') {
     return {
       url: resolveTeardownUrl('dg.html'),
@@ -1464,14 +1472,6 @@ function getAssemblyPage(selectedId: string, model: ModelType | undefined): Asse
       title: 'HI-SEA Marine Bow Thruster — 3D Explodable CAD Assembly',
       subtitle: 'Right-Angle Spiral Bevel Drive · 4-Blade Kaplan Bronze Propeller · Bridge Joystick · Hydrodynamic Flow · Bill of Materials',
       tag: 'HI-SEA CAD ASSEMBLY & SPECS'
-    };
-  }
-  if (model === 'hv-board' || model === 'lv-board' || selectedId === 'busA' || selectedId === 'busB' || selectedId === 'tie') {
-    return {
-      url: resolveAssemblyUrl('universal_viewer.html?eq=eBus'),
-      title: 'IEC 60092-302 Marine Main Switchboard & Bus-Tie Assembly',
-      subtitle: 'Cubicle 1 Open 115° · Center Withdrawable Bus-Tie ACB · Three-Phase Copper Busbars · IP22 Canopy · Engineering BOM',
-      tag: 'IEC 60092-302 CAD ASSEMBLY & SPECS'
     };
   }
   if (selectedId === 'prop' || model === 'propeller') {
@@ -1858,6 +1858,18 @@ function renderInspector(){
   lastInspectorSelected = selected;
   const e=byId[selected],c=edgeById[selected];
   const model=modelForSelection();
+  const isDgTeardown = ['dg1', 'dg2', 'dg3', 'dg4', 'eg', 'generator'].includes(selected) || model === 'generator';
+  const isVcbTeardown = !isDgTeardown && (
+    ['gb1', 'gb2', 'gb3', 'gb4', 'tie', 'shoreBreaker', 'propFeed', 'bowFeed', 'txAFeed', 'txBFeed', 'reeferAFeed', 'reeferBFeed', 'busA', 'busB', 'lvBusA', 'lvBusB', 'consumerA', 'consumerB', 'eBus', 'esb', 'lvTie', 'txAOut', 'txBOut', 'cooling1Feed', 'fire1Feed', 'airCompFeed', 'craneFeed', 'conAAcb', 'conBAcb', 'fire2Feed', 'cooling2Feed', 'ventFanFeed', 'ballastFeed', 'bilgeFeed', 'consumerTie', 'lightAFeed', 'galleySmallFeed', 'navFeed', 'esbTieFeed', 'egBreaker', 'eSteerFeed', 'eFireFeed', 'eLightFeed', 'eRadioFeed', 'navEmFeed'].includes(selected) ||
+    model === 'breaker' ||
+    model === 'hv-board' ||
+    model === 'lv-board' ||
+    e?.kind === 'bus' ||
+    e?.kind === 'emergency-bus' ||
+    Boolean(c?.breaker)
+  );
+  const isTeardownEligible = isDgTeardown || isVcbTeardown;
+  const activeTeardownUrl = isVcbTeardown ? resolveTeardownUrl('vcb.html') : resolveTeardownUrl('dg.html');
   const assemblyInfo=getAssemblyPage(selected, model);
   const title=e?.name||c?.name||'Select equipment';
   const sub=e?.zone||'Switchgear / feeder';
@@ -2095,23 +2107,7 @@ function renderInspector(){
     ${e&&allSupplyIds.includes(e.id)?`<div class="inspector-actions"><button class="button button-primary" data-source="${e.id}" type="button">${state.running[e.id]?'Stop':'Start'} ${e.id==='shore'?'shore supply':'generator'}</button></div>`:''}
     ${c?.breaker?`<div class="inspector-actions"><button class="button button-primary" data-breaker="${c.id}" type="button">${state.closed[c.id]?'Open':'Close'} breaker</button></div>`:''}
     ${e?relatedControls(e.id):''}
-    ${['dg1', 'dg2', 'dg3', 'dg4', 'eg', 'generator'].includes(selected) || model === 'generator' ? `<div class="inspector-actions" style="margin-top: 6px;"><button id="openLiveTeardown" type="button" class="button button-primary" style="background:#059669; border-color:#047857; color:white; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px;">${icon('external')}Inspect Live 3D Teardown</button></div>` : ''}
-    ${selected === 'prop' || e?.kind === 'propeller' ? renderAssemblyControlsCard('Propeller and stern tube', 'Nickel-aluminium bronze hub, four blades, thrust washer, retaining nut, seals, aft gland and stern tube cutaway.', propellerAssembly.targetExplosionFactor, 'propeller') : ''}
-    ${['txA', 'txB', 'txReeferA', 'txReeferB', 'txConA', 'txConB'].includes(selected) || e?.kind === 'transformer' || model === 'transformer' ? renderAssemblyControlsCard('6.6 kV / 440 V distribution transformer', 'CRGO laminated core, concentric LV and HV resin coils, Nomex barriers, bushings and radiator banks.', transformerAssembly.targetExplosionFactor, 'transformer', true) : ''}
-    ${selected === 'drive' || e?.kind === 'drive' || model === 'drive' ? renderAssemblyControlsCard('Propulsion frequency converter', 'MV input switchgear, DC-link capacitor bank, water-cooled IGBT stacks, cooling loop and control rack.', driveAssembly.targetExplosionFactor, 'drive', true) : ''}
-    ${selected === 'motor' || e?.kind === 'motor' || model === 'motor' ? renderAssemblyControlsCard('Propulsion motor', 'Ribbed stator frame, form-wound 6.6 kV coils, squirrel-cage rotor, shaft, bearings and cooling fan.', motorAssembly.targetExplosionFactor, 'motor', true) : ''}
-    ${selected === 'steering' || selected === 'eSteer' || e?.id === 'steering' || e?.id === 'eSteer' ? renderAssemblyControlsCard('Electro-hydraulic steering gear', 'Bedplate, rudder stock, crosshead tiller, port and starboard rams, pistons and hydraulic power pack.', steeringAssembly.targetExplosionFactor, 'steering') : ''}
-    ${['reefer', 'reeferA', 'reeferB', 'reeferAFeed', 'reeferBFeed', 'reeferUnitA', 'reeferUnitB'].includes(selected) || e?.id === 'reefer' || model === 'reefer' ? renderAssemblyControlsCard('Reefer distribution panel', 'Steel cabinet, 440 V incomer, MCCB panel, four 32 A container sockets, cable transit and earth bar.', reeferAssembly.targetExplosionFactor, 'reefer') : ''}
-    ${['cooling', 'cooling1', 'cooling2', 'fire', 'fire1', 'fire2', 'bilge', 'eFire'].includes(selected) || (selected !== 'ballast' && (e?.kind === 'pump' || model === 'pump')) ? renderAssemblyControlsCard('Centrifugal pump set', 'Bedplate, 440 V induction motor, flexible coupling, volute casing, impeller, flanges and mechanical seal.', pumpAssembly.targetExplosionFactor, 'pump') : ''}
-    ${selected === 'eBus' || selected === 'esb' ? renderAssemblyControlsCard('Emergency switchboard cubicle', 'IP44 steel frame, 440 V draw-out ACB, three-phase busbars, ABT contactor, protection relay, earth meter and gland plate.', esbCubicleAssembly.targetExplosionFactor, 'esb') : ''}
-    ${selected === 'eRadio' || selected === 'battery' ? renderAssemblyControlsCard('24 V DC battery bank and charger', 'Battery rack, 24 V VRLA cells, charger door, float/boost rectifier, DC busbars and centre-zero ammeter.', batterySystemAssembly.targetExplosionFactor, 'battery') : ''}
-    ${selected === 'airCompressor' ? renderAssemblyControlsCard('Starting air compressor skid', 'I-beam skid, two-stage crankcase, 30 kW motor, V-belt drive, intercooler, 30 bar receiver and unloader valve.', airCompressorAssembly.targetExplosionFactor, 'aircomp') : ''}
-    ${selected === 'ventFan' ? renderAssemblyControlsCard('Engine room ventilation fan', 'Steel casing, aerofoil impeller, 45 kW motor, inlet bellmouth, fire damper and local starter.', ventFanAssembly.targetExplosionFactor, 'ventfan') : ''}
-    ${selected === 'ballast' ? renderAssemblyControlsCard('Ballast pump and OWS skid', 'Drip-tray baseplate, bronze volute, impeller, coalescing vessel, 15 ppm oil monitor, three-way valve and 110 kW motor.', ballastOwsAssembly.targetExplosionFactor, 'ballastows') : ''}
-    ${selected === 'galley440' || selected === 'galley' ? renderAssemblyControlsCard('440 V galley board', 'Stainless panel, 400 A incomer MCCB with shunt-trip coil, remote trip station, latching pushbutton and range sub-MCCBs.', galleyBoardAssembly.targetExplosionFactor, 'galleyboard') : ''}
-    ${selected === 'shore' ? renderAssemblyControlsCard('6.6 kV shore power reel', 'Reel chassis, motorised drum, 6.6 kV flexible cable, slip-ring collector, terminal box and key-interlocked earthing switch.', shorePowerAssembly.targetExplosionFactor, 'shorereel', true) : ''}
-    ${selected === 'nav' ? renderAssemblyControlsCard('Bridge navigation console', 'Console desk, navigation-light panel, radar and ECDIS displays, GMDSS station, mast and S-band scanner.', bridgeNavComAssembly.targetExplosionFactor, 'bridgenav') : ''}
-    ${model?`<div class="exploded-section"><div class="section-heading"><div><div class="eyebrow">${assemblyInfo?'3D model':'Generic 3D model'}</div><h3>${assemblyInfo?assemblyInfo.title.split('—')[0].trim():model==='generator'?'Marine diesel generator':model==='breaker'?'Vacuum circuit breaker':model==='hv-board'?'6.6 kV main switchboard':model==='lv-board'?'Low-voltage switchboard':'Inside the equipment'}</h3></div><div class="heading-tools"><span class="generic-tag ${assemblyInfo?'cad-badge':''}">${assemblyInfo?'CAD MODEL':'GENERIC'}</span></div></div><p class="micro-copy">${assemblyInfo?`${assemblyInfo.subtitle.split('·')[0].trim()}.`:`Simplified teaching model with ${modelParts[model].length} parts.`}</p><div class="exploded-host" id="explodedHost"></div><div class="exploded-actions"><button id="explodeToggle" type="button" class="button button-secondary">Explode</button><button id="resetModelView" type="button" class="button button-secondary">Fit all</button><span>Drag to rotate, scroll to zoom</span></div></div>`:''}
+    ${isTeardownEligible ? `<div class="inspector-actions" style="margin-top: 6px;"><button id="openLiveTeardown" type="button" class="button button-primary" style="background:#059669; border-color:#047857; color:white; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px;">${icon('external')}Inspect Live 3D Teardown</button></div>` : (e || c) ? `<div class="inspector-actions" style="margin-top: 6px;"><div style="background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px; padding:10px 14px; text-align:center; color:#64748b; font-size:12px; font-weight:500; display:flex; align-items:center; justify-content:center; gap:8px;"><span>🛠️</span> <span>New Teardown model coming soon</span></div></div>` : ''}
     </div>`;
 
   pane.querySelectorAll<HTMLButtonElement>('[data-source]').forEach(b=>b.onclick=()=>toggleSource(b.dataset.source!));
@@ -2184,7 +2180,7 @@ function renderInspector(){
   });
 
   pane.querySelector<HTMLButtonElement>('#openLiveTeardown')?.addEventListener('click', () => {
-    window.open(resolveTeardownUrl('dg.html'), '_blank');
+    window.location.href = activeTeardownUrl;
   });
 
   wireAssemblyControls(pane, 'propeller', propellerAssembly);
@@ -2203,22 +2199,9 @@ function renderInspector(){
   wireAssemblyControls(pane, 'shorereel', shorePowerAssembly, true, selected);
   wireAssemblyControls(pane, 'bridgenav', bridgeNavComAssembly);
 
-  if(model){
-    const host=pane.querySelector<HTMLElement>('#explodedHost')!;
-    host.appendChild(explodedElement());
-    exploded.setModel(model);
-    const button=pane.querySelector<HTMLButtonElement>('#explodeToggle')!;
-    button.onclick=()=>{
-      if(!exploded.isExploded() && needsLoto && !verifyHvIsolationOrWarn(selected))return;
-      exploded.setExploded(!exploded.isExploded());
-      button.textContent=exploded.isExploded()?'Assemble':'Explode';
-    };
-    pane.querySelector<HTMLButtonElement>('#resetModelView')!.onclick=()=>exploded.resetView();
-  } else {
-    exploded.setModel(undefined);
-    explodedExpanded=false;
-    document.body.classList.remove('has-expanded-viewer');
-  }
+  exploded.setModel(undefined);
+  explodedExpanded = false;
+  document.body.classList.remove('has-expanded-viewer');
 
   if (prevScroll > 0) {
     const newScrollEl = pane.querySelector<HTMLElement>('.inspector-scroll');
