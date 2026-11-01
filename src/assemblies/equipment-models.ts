@@ -6,9 +6,9 @@ import type { PartSpec } from './models';
 // Reference-inspired teaching assemblies. Dimensions are illustrative; each group
 // has a deliberate disassembly direction and one shared selectable part identity.
 type V = [number, number, number];
-const green=0x527b69, lightGreen=0x86a494, iron=0x3e4c50, steel=0xb6c2c5,
-  copper=0xc88743, gold=0xb49a56, white=0xe5e7df, black=0x243039,
-  red=0xba443a, blue=0x417fad, yellow=0xe4bd54,
+const green=0x2c4c40, lightGreen=0x3b6254, iron=0x272e38, steel=0xb6c2c5,
+  copper=0xd97736, gold=0xb49a56, white=0xf1f5f9, black=0x243039,
+  red=0xd93829, blue=0x417fad, yellow=0xe4bd54,
   terracotta=0xb54328, darkTerracotta=0x8b321c, bronze=0xd4a857,
   goldBronze=0xe0b869, darkBronze=0xc89d51, polishedSteel=0xdbe4ee,
   copperSeal=0xc26d38, motorGreen=0x3b5e4c, pebbleGrey=0xa5ad9e,
@@ -142,46 +142,192 @@ const stations=[-1.12,-.67,-.22,.22,.67,1.12];
 function generatorGeometry(id:string,g:THREE.Group){
   switch(id){
     case 'base':
-      for(const z of [-.7,.7])box(g,[5.7,.2,.18],[0,0,z],iron);
-      for(const x of [-2.45,-1.2,.4,1.65,2.5]){box(g,[.16,.18,1.6],[x,0,0],iron);for(const z of [-.67,.67]){cyl(g,.13,.13,[x,-.16,z],black,'y');cyl(g,.045,.06,[x,.13,z],steel,'y');}}break;
+      // Heavy Welded I-Beam Bedplate with Resilient Chocks
+      for(const z of [-.7,.7]){
+        box(g,[5.8,.045,.26],[0,-.09,z],iron);
+        box(g,[5.8,.18,.05],[0,.02,z],green);
+        box(g,[5.8,.045,.24],[0,.13,z],iron);
+      }
+      for(const x of [-2.45,-1.6,-.8,0,.8,1.6,2.5]){
+        box(g,[.12,.18,1.4],[x,.02,0],green);
+        for(const z of [-.7,.7]){
+          cyl(g,.11,.10,[x,-.14,z],black,'y');
+          cyl(g,.035,.07,[x,.14,z],steel,'y');
+        }
+      }
+      break;
     case 'sump':
-      box(g,[2.9,.1,1.05],[0,-.18,0],iron);for(const z of [-.52,.52])box(g,[2.9,.38,.065],[0,0,z],green);for(const x of [-1.42,1.42])box(g,[.065,.38,1.1],[x,0,0],green);
-      for(const x of stations){box(g,[.07,.41,1.16],[x,0,0],iron);for(const z of [-.56,.56])cyl(g,.028,.045,[x,.23,z],steel,'y');}break;
+      // Deep oil sump pan with drain plugs
+      box(g,[2.9,.12,1.05],[0,-.18,0],iron);
+      for(const z of [-.52,.52])box(g,[2.9,.38,.065],[0,0,z],green);
+      for(const x of [-1.42,1.42])box(g,[.065,.38,1.1],[x,0,0],green);
+      for(const x of stations){
+        box(g,[.07,.41,1.16],[x,0,0],green);
+        for(const z of [-.56,.56])cyl(g,.028,.045,[x,.23,z],steel,'y');
+      }
+      break;
     case 'engine':
-      for(const z of [-.57,.57]){box(g,[2.95,.62,.09],[0,-.13,z],green);for(const x of stations){box(g,[.34,.36,.045],[x,-.14,z*1.09],lightGreen);for(const dx of [-.12,.12])cyl(g,.018,.04,[x+dx,-.14,z*1.14],steel,'z');}}
+      // Monobloc 6-cylinder diesel crankcase casting in machinery green
+      for(const z of [-.57,.57]){
+        box(g,[2.95,.62,.09],[0,-.13,z],green);
+        for(const x of stations){
+          box(g,[.34,.36,.045],[x,-.14,z*1.09],lightGreen);
+          cyl(g,.07,.04,[x,-.14,z*1.15],gold,'z');
+          for(const dx of [-.13,.13])cyl(g,.018,.04,[x+dx,-.14,z*1.14],steel,'z');
+        }
+      }
       for(const x of [-1.47,1.47])box(g,[.09,.8,1.15],[x,0,0],green);
-      bank(g,b=>{for(const x of stations){hollow(b,.215,.42,[x,.32,0],green,'y');ring(b,.24,.025,[x,.55,0],steel,'y');}});break;
+      bank(g,b=>{for(const x of stations){hollow(b,.215,.42,[x,.32,0],green,'y');ring(b,.24,.025,[x,.55,0],steel,'y');}});
+      break;
     case 'crankshaft':
-      cyl(g,.1,3.18,[0,0,0],steel);for(let i=0;i<stations.length;i++){const x=stations[i],s=i%2?1:-1;for(const dx of [-.12,.12]){cyl(g,.21,.07,[x+dx,s*.07,0],iron);box(g,[.07,.32,.16],[x+dx,s*.13,0],steel);}cyl(g,.085,.23,[x,s*.25,0],steel);}for(const x of [-1.4,0,1.4])ring(g,.14,.065,[x,0,0],gold);break;
-    case 'pistons':bank(g,b=>{for(const x of stations){cyl(b,.16,.24,[x,.26,0],steel,'y');for(const y of [.3,.35])ring(b,.162,.012,[x,y,0],iron,'y');box(b,[.065,.44,.07],[x,-.04,0],steel);ring(b,.085,.025,[x,-.28,0],steel);}});break;
-    case 'liners':bank(g,b=>{for(const x of stations)hollow(b,.18,.43,[x,0,0],steel,'y');});break;
-    case 'heads':bank(g,b=>{for(const x of stations){box(b,[.42,.18,.44],[x,0,0],green);for(const z of [-.17,.17])for(const dx of [-.15,.15])cyl(b,.018,.06,[x+dx,.12,z],steel,'y');}});break;
-    case 'valves':bank(g,b=>{for(const x of stations){cyl(b,.035,.24,[x,.025,0],copper,'y');for(const z of [-.13,.13]){cyl(b,.015,.25,[x,-.04,z],steel,'y');cyl(b,.055,.025,[x,-.17,z],steel,'y');spring(b,.035,.11,[x,.025,z]);}}});break;
-    case 'rockers':bank(g,b=>{for(const x of stations){box(b,[.38,.16,.43],[x,0,0],green);box(b,[.3,.025,.34],[x,.095,0],lightGreen);cyl(b,.027,.025,[x,.12,0],steel,'y');box(b,[.06,.06,.28],[x,-.12,0],steel);}});break;
+      cyl(g,.1,3.18,[0,0,0],steel);
+      for(let i=0;i<stations.length;i++){
+        const x=stations[i],s=i%2?1:-1;
+        for(const dx of [-.12,.12]){
+          cyl(g,.21,.07,[x+dx,s*.07,0],iron);
+          box(g,[.07,.32,.16],[x+dx,s*.13,0],steel);
+        }
+        cyl(g,.085,.23,[x,s*.25,0],steel);
+      }
+      for(const x of [-1.4,0,1.4])ring(g,.14,.065,[x,0,0],gold);
+      break;
+    case 'pistons':
+      bank(g,b=>{for(const x of stations){
+        cyl(b,.16,.24,[x,.26,0],steel,'y');
+        for(const y of [.3,.35])ring(b,.162,.012,[x,y,0],iron,'y');
+        box(b,[.065,.44,.07],[x,-.04,0],steel);
+        ring(b,.085,.025,[x,-.28,0],steel);
+      }});
+      break;
+    case 'liners':
+      bank(g,b=>{for(const x of stations)hollow(b,.18,.43,[x,0,0],steel,'y');});
+      break;
+    case 'heads':
+      bank(g,b=>{for(const x of stations){
+        box(b,[.42,.18,.44],[x,0,0],green);
+        for(const z of [-.17,.17])for(const dx of [-.15,.15])cyl(b,.018,.06,[x+dx,.12,z],steel,'y');
+      }});
+      break;
+    case 'valves':
+      bank(g,b=>{for(const x of stations){
+        cyl(b,.035,.24,[x,.025,0],copper,'y');
+        for(const z of [-.13,.13]){
+          cyl(b,.015,.25,[x,-.04,z],steel,'y');
+          cyl(b,.055,.025,[x,-.17,z],steel,'y');
+          spring(b,.035,.11,[x,.025,z]);
+        }
+      }});
+      break;
+    case 'rockers':
+      bank(g,b=>{for(const x of stations){
+        box(b,[.38,.16,.43],[x,0,0],lightGreen);
+        box(b,[.3,.025,.34],[x,.095,0],green);
+        cyl(b,.027,.025,[x,.12,0],steel,'y');
+        box(b,[.06,.06,.28],[x,-.12,0],steel);
+      }});
+      break;
     case 'exhaust':
-      for(const z of [0,1.64]){cyl(g,.13,2.9,[0,0,z],steel);for(const x of stations){pipe(g,[[x,-.15,z*.85],[x,0,z],[x+.07,.03,z]],.065,iron);ring(g,.14,.018,[x,0,z],iron);}}break;
+      for(const z of [0,1.64]){
+        cyl(g,.13,2.9,[0,0,z],steel);
+        for(const x of stations){
+          pipe(g,[[x,-.15,z*.85],[x,0,z],[x+.07,.03,z]],.065,iron);
+          ring(g,.14,.018,[x,0,z],iron);
+        }
+      }
+      break;
     case 'turbo':
-      for(const x of [-.2,.2]){ring(g,.23,.12,[x,0,0],x<0?iron:steel);cyl(g,.13,.18,[x,0,0],steel);bolts(g,.23,x+.13);}cyl(g,.06,.7,[0,0,0],steel);
-      pipe(g,[[-.2,.2,0],[-.2,.43,0],[-.2,.52,-.22]],.1,iron);pipe(g,[[.2,.2,0],[.3,.4,.15],[.55,.35,.4]],.12,steel);break;
+      // Turbocharger: turbine casing + compressor volute + intake air filter
+      for(const x of [-.2,.2]){
+        ring(g,.24,.12,[x,0,0],x<0?iron:steel);
+        cyl(g,.15,.22,[x,0,0],steel);
+        bolts(g,.23,x+.13);
+      }
+      cyl(g,.06,.7,[0,0,0],steel);
+      pipe(g,[[-.2,.2,0],[-.2,.45,0],[-.2,.55,-.25]],.11,iron);
+      pipe(g,[[.2,.2,0],[.35,.4,.15],[.65,.35,.4]],.12,white);
+      cyl(g,.22,.28,[-.42,0,0],white);
+      break;
     case 'cooler':
-      box(g,[2.25,.42,.23],[0,0,0],green);for(let x=-1.05;x<1.1;x+=.07)box(g,[.025,.34,.05],[x,0,.15],steel);
-      pipe(g,[[-1.2,.05,0],[-1.4,.15,0],[-1.5,.37,-.3]],.1,steel);cyl(g,.08,2.8,[0,-.28,-.16],green);break;
-    case 'fuel':cyl(g,.035,2.9,[0,0,0],copper);for(const x of stations)pipe(g,[[x,0,0],[x,.19,-.1],[x,.24,-.3]],.016,copper);break;
+      // Charge-air cooler with plate-fin bundle & white insulated manifold
+      box(g,[2.25,.42,.24],[0,0,0],green);
+      for(let x=-1.05;x<1.1;x+=.07)box(g,[.025,.34,.05],[x,0,.15],steel);
+      pipe(g,[[-1.2,.05,0],[-1.4,.15,0],[-1.5,.37,-.3]],.1,white);
+      cyl(g,.11,2.85,[0,-.28,-.16],white);
+      break;
+    case 'fuel':
+      cyl(g,.035,2.9,[0,0,0],copper);
+      for(const x of stations)pipe(g,[[x,0,0],[x,.19,-.1],[x,.24,-.3]],.016,copper);
+      break;
     case 'lube':
-      cyl(g,.18,.24,[-.38,0,0],green,'z');for(const x of [0,.25]){cyl(g,.09,.36,[x,.02,.05],white,'y');box(g,[.16,.05,.18],[x,.22,.05],iron);}pipe(g,[[-.4,0,0],[-.4,-.2,.1],[.3,-.2,.1]],.035,copper);break;
-    case 'cooling':cyl(g,.18,.2,[-.25,0,0],green,'z');cyl(g,.14,.65,[.25,0,0],steel);for(const x of [-.1,.58])ring(g,.17,.025,[x,0,0],iron);pipe(g,[[-.25,.1,0],[-.25,.35,0],[.4,.35,0]],.045,blue);break;
+      cyl(g,.18,.24,[-.38,0,0],green,'z');
+      for(const x of [0,.25]){cyl(g,.09,.36,[x,.02,.05],white,'y');box(g,[.16,.05,.18],[x,.22,.05],iron);}
+      pipe(g,[[-.4,0,0],[-.4,-.2,.1],[.3,-.2,.1]],.035,copper);
+      break;
+    case 'cooling':
+      cyl(g,.18,.2,[-.25,0,0],green,'z');
+      cyl(g,.14,.65,[.25,0,0],steel);
+      for(const x of [-.1,.58])ring(g,.17,.025,[x,0,0],iron);
+      pipe(g,[[-.25,.1,0],[-.25,.35,0],[.4,.35,0]],.045,blue);
+      break;
     case 'flywheel':
-      cyl(g,.49,.16,[0,0,0],iron);ring(g,.44,.04,[.1,0,0],steel);cyl(g,.16,.25,[0,0,0],steel);bolts(g,.3,.1);
-      for(let i=0;i<48;i++){const a=i*Math.PI/24;const t=box(g,[.16,.055,.04],[0,Math.sin(a)*.5,Math.cos(a)*.5],steel);t.rotation.x=-a;}break;
-    case 'coupling':cyl(g,.22,.4,[0,0,0],black);for(const x of [-.15,.15]){cyl(g,.26,.07,[x,0,0],steel);bolts(g,.2,x+.04);}break;
+      cyl(g,.50,.18,[0,0,0],iron);
+      ring(g,.45,.04,[.1,0,0],steel);
+      cyl(g,.16,.26,[0,0,0],steel);
+      bolts(g,.3,.1);
+      for(let i=0;i<48;i++){
+        const a=i*Math.PI/24;
+        const t=box(g,[.18,.055,.04],[0,Math.sin(a)*.51,Math.cos(a)*.51],steel);
+        t.rotation.x=-a;
+      }
+      break;
+    case 'coupling':
+      cyl(g,.24,.42,[0,0,0],black);
+      for(const x of [-.15,.15]){cyl(g,.28,.08,[x,0,0],steel);bolts(g,.22,x+.04);}
+      break;
     case 'stator':
-      hollow(g,.56,1.36,[0,0,0],green);hollow(g,.43,1.24,[0,0,0],iron);
-      for(let i=0;i<24;i++){const a=i*Math.PI/12;box(g,[1.23,.04,.05],[0,Math.sin(a)*.4,Math.cos(a)*.4],copper);box(g,[1.22,.04,.04],[0,Math.sin(a)*.57,Math.cos(a)*.57],lightGreen);}
-      for(const x of [-.58,.58]){ring(g,.42,.055,[x,0,0],copper);bolts(g,.5,x);for(const z of [-.4,.4])box(g,[.25,.23,.22],[x,-.53,z],green);}break;
-    case 'rotor':cyl(g,.08,1.95,[0,0,0],steel);cyl(g,.27,1.04,[0,0,0],iron);for(let i=0;i<8;i++){const a=i*Math.PI/4;box(g,[.95,.11,.1],[0,Math.sin(a)*.26,Math.cos(a)*.26],copper);}break;
-    case 'exciter':cyl(g,.43,.23,[0,0,0],green);ring(g,.19,.065,[.14,0,0],gold);cyl(g,.15,.17,[.21,0,0],iron);bolts(g,.34,.14);break;
-    case 'terminal':box(g,[.75,.36,.55],[0,0,0],green);box(g,[.69,.035,.5],[0,.2,0],lightGreen);for(const x of [-.22,0,.22])cyl(g,.05,.12,[x,-.05,.32],black,'z');break;
-    case 'control':box(g,[.42,.6,.17],[0,0,0],green);screen(g,0,.11,.11);for(const x of [-.1,.1])cyl(g,.035,.035,[x,-.18,.12],x<0?red:green,'z');break;
+      // Alternator cylindrical stator with ventilation slots & copper end turns
+      hollow(g,.58,1.40,[0,0,0],green);
+      hollow(g,.44,1.26,[0,0,0],iron);
+      for(let i=0;i<24;i++){
+        const a=i*Math.PI/12;
+        box(g,[1.25,.045,.055],[0,Math.sin(a)*.41,Math.cos(a)*.41],copper);
+        box(g,[1.24,.04,.04],[0,Math.sin(a)*.58,Math.cos(a)*.58],lightGreen);
+      }
+      for(const x of [-.60,.60]){
+        ring(g,.43,.06,[x,0,0],copper);
+        bolts(g,.52,x);
+        for(const z of [-.42,.42])box(g,[.28,.25,.22],[x,-.53,z],green);
+      }
+      break;
+    case 'rotor':
+      cyl(g,.09,2.05,[0,0,0],steel);
+      cyl(g,.28,1.06,[0,0,0],iron);
+      for(let i=0;i<8;i++){
+        const a=i*Math.PI/4;
+        box(g,[.96,.12,.11],[0,Math.sin(a)*.27,Math.cos(a)*.27],copper);
+      }
+      break;
+    case 'exciter':
+      cyl(g,.45,.25,[0,0,0],green);
+      ring(g,.20,.07,[.14,0,0],gold);
+      cyl(g,.16,.18,[.21,0,0],iron);
+      bolts(g,.36,.14);
+      break;
+    case 'terminal':
+      // 6.6 kV Terminal box with 3 red porcelain standoff bushings
+      box(g,[.82,.38,.58],[0,0,0],green);
+      box(g,[.76,.04,.54],[0,.21,0],lightGreen);
+      for(const x of [-.24,0,.24]){
+        cyl(g,.045,.16,[x,.29,0],red,'y');
+        cyl(g,.018,.06,[x,.40,0],gold,'y');
+      }
+      for(const x of [-.22,0,.22])cyl(g,.05,.12,[x,-.05,.34],black,'z');
+      break;
+    case 'control':
+      box(g,[.44,.62,.18],[0,0,0],green);
+      screen(g,0,.11,.11);
+      for(const x of [-.1,.1])cyl(g,.035,.035,[x,-.18,.12],x<0?red:green,'z');
+      break;
   }
 }
 

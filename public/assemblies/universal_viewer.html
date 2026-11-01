@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,22 +8,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --cad-accent: #f97316;
-            --cad-blue: #38bdf8;
-            --cad-teal: #2dd4bf;
-        }
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             margin: 0;
             padding: 0;
             overflow: hidden;
-            background: #0b111e;
-            color: #f1f5f9;
+            background: #f8fafc;
+            color: #0f172a;
             user-select: none;
-            transition: background 0.3s ease;
+            -webkit-font-smoothing: antialiased;
         }
         .mono {
             font-family: 'JetBrains Mono', monospace;
@@ -34,111 +29,94 @@
             width: 100%;
             height: 100%;
             z-index: 1;
-            background: radial-gradient(circle at 50% 45%, #1e293b 0%, #0f172a 65%, #070b14 100%);
-            transition: background 0.3s ease;
+            background: #f8fafc;
         }
-        body.light-studio #canvas-container {
-            background: radial-gradient(circle at 50% 45%, #f8fafc 0%, #e2e8f0 70%, #cbd5e1 100%);
-        }
-        .cad-grid-overlay {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            z-index: 2;
-            background-image: 
-                linear-gradient(to right, rgba(148, 163, 184, 0.05) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
-            background-size: 36px 36px;
-        }
-        body.light-studio .cad-grid-overlay {
-            background-image: 
-                linear-gradient(to right, rgba(100, 116, 139, 0.12) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(100, 116, 139, 0.12) 1px, transparent 1px);
-        }
+        /* Minimal custom range slider */
         input[type="range"] {
             -webkit-appearance: none;
             appearance: none;
-            background: transparent;
+            width: 100%;
+            height: 5px;
+            background: #e2e8f0;
+            border-radius: 9999px;
+            outline: none;
             cursor: pointer;
-        }
-        input[type="range"]::-webkit-slider-runnable-track {
-            height: 8px;
-            border-radius: 999px;
-            background: rgba(51, 65, 85, 0.9);
-            border: 1px solid rgba(148, 163, 184, 0.25);
         }
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
-            background: #f97316;
-            border: 2px solid #fff;
-            margin-top: -7px;
-            box-shadow: 0 0 12px rgba(249, 115, 22, 0.7);
-            transition: transform 0.15s ease, background-color 0.15s ease;
+            background: #ea580c;
+            border: 2px solid #ffffff;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: transform 0.12s ease, background-color 0.12s ease;
         }
         input[type="range"]::-webkit-slider-thumb:hover {
             transform: scale(1.15);
-            background: #fb923c;
+            background: #c2410c;
         }
+        /* Floating 3D Callout Labels */
         .callout-label {
             position: absolute;
             transform: translate(-50%, -50%);
             pointer-events: auto;
             cursor: pointer;
-            transition: opacity 0.2s ease, transform 0.15s ease;
+            transition: opacity 0.2s ease, transform 0.12s ease, border-color 0.12s ease;
             z-index: 10;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 2.5px 8px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #334155;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
         .callout-label:hover {
-            transform: translate(-50%, -50%) scale(1.06);
+            transform: translate(-50%, -50%) scale(1.04);
+            border-color: #ea580c;
+            color: #0f172a;
+            box-shadow: 0 3px 8px rgba(234, 88, 12, 0.18);
             z-index: 25;
         }
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.88);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            border: 1px solid rgba(148, 163, 184, 0.18);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+        .callout-label.active {
+            border-color: #ea580c;
+            background: #fff7ed;
+            color: #c2410c;
+            font-weight: 600;
+            box-shadow: 0 2px 6px rgba(234, 88, 12, 0.22);
         }
-        body.light-studio .glass-panel {
-            background: rgba(255, 255, 255, 0.90);
-            border: 1px solid rgba(148, 163, 184, 0.4);
-            color: #0f172a;
-            box-shadow: 0 15px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
-        }
-        body.light-studio .text-white { color: #0f172a !important; }
-        body.light-studio .text-slate-300 { color: #334155 !important; }
-        body.light-studio .text-slate-400 { color: #64748b !important; }
-        body.light-studio .bg-slate-900\/70,
-        body.light-studio .bg-slate-900\/80,
-        body.light-studio .bg-slate-900\/90 { background: rgba(241, 245, 249, 0.9) !important; }
-        body.light-studio .bg-slate-800 { background: #e2e8f0 !important; color: #1e293b !important; }
-        body.light-studio .border-slate-800 { border-color: #cbd5e1 !important; }
-        body.light-studio .border-slate-700 { border-color: #cbd5e1 !important; }
-
-        select, button {
-            outline: none;
-        }
-        ::-webkit-scrollbar {
+        .callout-dot {
             width: 5px;
             height: 5px;
+            border-radius: 50%;
+            background: #ea580c;
+            flex-shrink: 0;
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
         }
         ::-webkit-scrollbar-track {
-            background: rgba(15, 23, 42, 0.4);
+            background: transparent;
         }
         ::-webkit-scrollbar-thumb {
-            background: rgba(100, 116, 139, 0.5);
+            background: #cbd5e1;
             border-radius: 999px;
         }
     </style>
 </head>
-<body class="w-screen h-screen overflow-hidden select-none">
+<body class="w-screen h-screen overflow-hidden select-none bg-slate-50">
 
     <!-- 3D WebGL Viewport -->
     <div id="canvas-container"></div>
-    <div class="cad-grid-overlay"></div>
 
     <!-- SVG Overlay for Callout Leader Lines -->
     <svg id="leader-svg" class="fixed inset-0 w-full h-full pointer-events-none z-10"></svg>
@@ -146,158 +124,128 @@
     <!-- HTML Container for 3D Floating Callout Badges -->
     <div id="labels-container" class="fixed inset-0 pointer-events-none z-10 overflow-hidden"></div>
 
-    <!-- Top Header Bar -->
-    <header class="fixed top-3 left-3 right-3 z-30 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
-        <!-- Title & Subtitle Badge -->
-        <div class="glass-panel px-4 py-2 rounded-xl flex items-center gap-3 pointer-events-auto shadow-2xl">
-            <a href="../index.html" class="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-sky-400 transition" title="Return to Main Vessel Simulation">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+    <!-- Top Left: Navigation, Title & Components Panel -->
+    <div class="fixed top-6 left-6 z-20 flex flex-col pointer-events-none max-w-[280px]">
+        <!-- Back to vessel button -->
+        <a href="../index.html" class="pointer-events-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/95 hover:bg-white text-slate-700 hover:text-slate-900 border border-slate-200/90 shadow-sm text-xs font-medium transition w-fit mb-3">
+            <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Back to vessel
+        </a>
+
+        <!-- Equipment Title & Subtitle -->
+        <div class="pointer-events-auto mb-4">
+            <h1 id="equipment-title-left" class="text-xl font-bold text-slate-900 tracking-tight leading-snug">Power transformer</h1>
+            <p id="equipment-sub-left" class="text-xs text-slate-500 font-normal mt-0.5">Three-phase · Oil-filled</p>
+        </div>
+
+        <!-- Components List -->
+        <div class="pointer-events-auto">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-xs font-semibold text-slate-900">Components</h3>
+                <button onclick="selectPart(null)" class="text-[10px] text-slate-400 hover:text-orange-600 transition" title="Show all parts">Reset</button>
+            </div>
+            <div id="components-list" class="flex flex-col gap-1 max-h-[calc(100vh-14rem)] overflow-y-auto pr-2">
+                <!-- Dynamically populated: ■ Component Name -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Floating Inspector Card -->
+    <aside id="inspector-card" class="fixed top-6 right-6 w-80 z-20 bg-white/95 backdrop-blur-md rounded-2xl p-5 border border-slate-200/90 shadow-xl pointer-events-auto flex flex-col gap-4 max-h-[calc(100vh-3rem)] overflow-y-auto">
+        <!-- Inspector Header -->
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                <svg class="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="14" width="7" height="7"></rect>
+                    <rect x="3" y="14" width="7" height="7"></rect>
                 </svg>
-            </a>
-            <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-orange-600 to-amber-700 flex items-center justify-center shadow-md">
-                <svg class="w-5 h-5 text-amber-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <path d="M12 9a6 6 0 0 0-6-4c0 3 2 5 3 6"></path>
-                    <path d="M15 12a6 6 0 0 0 4-6c-3 0-5 2-6 3"></path>
-                    <path d="M12 15a6 6 0 0 0 6 4c0-3-2-5-3-6"></path>
-                    <path d="M9 12a6 6 0 0 0-4 6c3 0 5-2 6-3"></path>
+                Inspector
+            </div>
+            <button onclick="resetAllState()" class="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition" title="Reset view and components">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                    <path d="M3 3v5h5"></path>
                 </svg>
-            </div>
-            <div>
-                <div class="flex items-center gap-1.5 flex-wrap">
-                    <span class="text-[10px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 border border-orange-500/30 mono">MARINE CAD TWIN</span>
-                    <span id="badge-voltage" class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 mono">440 V</span>
-                    <span id="badge-kw" class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 mono">135 kW</span>
-                    <span id="badge-bus" class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 mono">MAIN BUS A</span>
-                </div>
-                <h1 id="header-title" class="text-sm font-bold text-white tracking-tight mt-0.5">High-Fidelity Marine CAD Twin</h1>
-            </div>
-        </div>
-
-        <!-- Top Right Controls & Equipment Switcher -->
-        <div class="glass-panel p-1.5 rounded-xl flex flex-wrap items-center gap-1.5 pointer-events-auto shadow-2xl">
-            <!-- Equipment Selector Dropdown -->
-            <div class="flex items-center gap-1 bg-slate-900/80 px-2 py-1 rounded-lg border border-slate-700/80">
-                <span class="text-[9px] font-bold uppercase text-slate-400 mono">EQUIPMENT</span>
-                <select id="eqSelect" class="bg-transparent text-xs font-semibold text-sky-300 cursor-pointer max-w-[210px] sm:max-w-[260px] truncate">
-                </select>
-            </div>
-
-            <button id="btn-labels" onclick="toggleCallouts()" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-400/40 hover:bg-sky-500/30 transition">
-                Labels: ON
-            </button>
-            <button id="btn-theme" onclick="toggleStudioTheme()" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800/80 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">
-                Light CAD
-            </button>
-            <div class="h-4 w-px bg-slate-700 mx-0.5 hidden sm:block"></div>
-            <!-- View Presets -->
-            <button onclick="setCameraPreset('iso')" class="px-2 py-1 rounded-lg text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 transition" title="Isometric View">
-                Iso View
-            </button>
-            <button onclick="setCameraPreset('axial')" class="px-2 py-1 rounded-lg text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 transition" title="Axial / Profile View">
-                Axial View
-            </button>
-            <button onclick="setCameraPreset('exploded')" class="px-2 py-1 rounded-lg text-xs font-medium bg-orange-600/30 hover:bg-orange-600/40 text-orange-300 border border-orange-500/40 transition" title="Exploded CAD View">
-                Exploded View
             </button>
         </div>
-    </header>
 
-    <!-- Left Sidebar: Bill of Materials -->
-    <aside id="left-panel" class="fixed top-20 left-3 bottom-28 w-72 z-20 flex flex-col gap-2 pointer-events-none">
-        <div class="glass-panel rounded-xl p-3 flex flex-col h-full pointer-events-auto shadow-2xl overflow-hidden">
-            <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-700/80">
-                <div>
-                    <h2 id="bom-header-count" class="text-xs font-bold uppercase tracking-wider text-orange-400 mono">Assembly BOM</h2>
-                    <p class="text-[10px] text-slate-400">Click component to inspect</p>
-                </div>
-                <button onclick="selectPart(null)" class="text-[10px] px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
-                    Reset Focus
-                </button>
-            </div>
-
-            <!-- Parts List populated dynamically -->
-            <div id="bom-list" class="flex-1 overflow-y-auto space-y-1.5 pr-1"></div>
-
-            <!-- Electrical Telemetry Grid -->
-            <div id="elec-telemetry" class="pt-2 mt-2 border-t border-slate-700/80 grid grid-cols-2 gap-1.5 text-[10px]">
-            </div>
-        </div>
-    </aside>
-
-    <!-- Right Sidebar: Part Inspector & Dynamic Kinematics Panel -->
-    <aside class="fixed top-20 right-3 w-80 z-20 flex flex-col gap-2 pointer-events-none max-h-[calc(100vh-11rem)] overflow-y-auto pr-1">
-        <!-- Selected Component Details Card -->
-        <div class="glass-panel rounded-xl p-3.5 pointer-events-auto shadow-2xl transition-all duration-200">
-            <div class="flex items-start justify-between gap-2">
-                <div>
-                    <span id="part-code" class="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-orange-500/20 text-orange-400 border border-orange-500/30 mono">ASSY-00</span>
-                    <h3 id="part-title" class="text-sm font-bold text-white mt-1">Complete Assembly</h3>
-                </div>
-                <button id="btn-isolate" onclick="toggleIsolateSelected()" class="hidden text-xs px-2.5 py-1 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-semibold shadow transition">
-                    Isolate
-                </button>
-            </div>
-            <p id="part-desc" class="text-xs text-slate-300 leading-relaxed mt-2">
-                Precision marine engineering assembly inspected via interactive 3D CAD viewport.
+        <!-- Title & Description -->
+        <div>
+            <h2 id="inspector-title" class="text-base font-bold text-slate-900 leading-tight">Power transformer</h2>
+            <p id="inspector-desc" class="text-xs text-slate-500 leading-relaxed mt-1">
+                Transfers power between voltage levels through electromagnetic induction. Inspect the tank, magnetic circuit, windings and cooling system.
             </p>
-            <div class="mt-2.5 pt-2 border-t border-slate-700/70 grid grid-cols-2 gap-1.5 text-[10px]">
-                <div class="bg-slate-900/70 p-1.5 rounded-lg border border-slate-800">
-                    <span class="text-slate-400 block text-[9px] uppercase">Material Spec</span>
-                    <span id="part-material" class="text-slate-100 font-semibold mono">Marine Grade Steel</span>
-                </div>
-                <div class="bg-slate-900/70 p-1.5 rounded-lg border border-slate-800">
-                    <span class="text-slate-400 block text-[9px] uppercase">Explosion Axis</span>
-                    <span id="part-axis" class="text-sky-300 font-semibold mono">Orthogonal Vector</span>
+        </div>
+
+        <!-- View Controls (Labels, See Inside) -->
+        <div class="space-y-1.5">
+            <div class="text-[11px] font-semibold text-slate-500">View</div>
+            <div class="flex flex-wrap items-center gap-1.5" id="view-buttons">
+                <button id="btn-labels" onclick="toggleCallouts()" class="px-3 py-1 rounded-full text-xs font-medium bg-orange-500 text-white shadow-sm transition">
+                    Labels
+                </button>
+                <button id="btn-see-inside" onclick="toggleSeeInside()" class="px-3 py-1 rounded-full text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 transition">
+                    See inside
+                </button>
+            </div>
+        </div>
+
+        <!-- Equipment Selector Dropdown -->
+        <div class="space-y-1.5">
+            <div class="text-[11px] font-semibold text-slate-500">Equipment</div>
+            <div class="relative">
+                <select id="eqSelect" onchange="switchEquipment(this.value)" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs font-medium rounded-xl px-3 py-2 pr-8 appearance-none cursor-pointer hover:bg-white focus:bg-white transition focus:ring-1 focus:ring-orange-500 focus:border-orange-500">
+                </select>
+                <div class="absolute inset-y-0 right-0 flex items-center px-2.5 pointer-events-none text-slate-400">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
                 </div>
             </div>
         </div>
 
-        <!-- Dynamic Equipment-Specific Kinematics / Operational Panel -->
-        <div id="equipment-ctrl-panel" class="glass-panel rounded-xl p-3.5 pointer-events-auto shadow-2xl">
-            <!-- Dynamically populated based on equipment type -->
+        <!-- Equipment Operational Controls (Helm, Start/Stop, etc.) -->
+        <div id="equipment-operational-section" class="space-y-2 pt-2 border-t border-slate-100 hidden">
+        </div>
+
+        <!-- Exploded View Slider Section -->
+        <div class="space-y-2 pt-2 border-t border-slate-100">
+            <div class="flex items-center justify-between text-xs font-semibold">
+                <span class="text-slate-800">Exploded view</span>
+                <span id="explode-pct" class="text-orange-600 font-bold mono">0%</span>
+            </div>
+            <input id="explode-slider" type="range" min="0" max="100" value="0" oninput="onExplodeSliderChange(this.value)">
+            <div class="grid grid-cols-2 gap-2 pt-1">
+                <button onclick="animateExplodeTo(0)" class="py-1.5 px-3 rounded-xl text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 transition text-center">
+                    Assemble
+                </button>
+                <button onclick="animateExplodeTo(1.0)" class="py-1.5 px-3 rounded-xl text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 transition text-center">
+                    Explode
+                </button>
+            </div>
+        </div>
+
+        <!-- Bottom Controls: Reset View and Zoom In / Out -->
+        <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+            <button onclick="setCameraPreset('iso')" class="py-1.5 px-3 rounded-xl text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 transition flex items-center gap-1.5">
+                Reset view
+            </button>
+            <div class="flex items-center gap-1">
+                <button onclick="zoomCamera(1.2)" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 font-bold text-sm transition flex items-center justify-center" title="Zoom in">
+                    +
+                </button>
+                <button onclick="zoomCamera(0.8)" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 font-bold text-sm transition flex items-center justify-center" title="Zoom out">
+                    −
+                </button>
+            </div>
         </div>
     </aside>
 
-    <!-- Bottom Master Explosion Controller -->
-    <footer class="fixed bottom-3 left-3 right-3 z-30 flex justify-center pointer-events-none">
-        <div class="glass-panel px-4 py-2.5 rounded-2xl w-full max-w-2xl pointer-events-auto shadow-2xl">
-            <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
-                <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold uppercase tracking-wider text-orange-400 mono flex items-center gap-1.5">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                        </svg>
-                        Explosion Factor
-                    </span>
-                    <span id="explode-pct" class="px-2 py-0.5 rounded bg-orange-500/20 border border-orange-500/30 text-orange-400 text-xs font-bold mono">0%</span>
-                </div>
-
-                <!-- Quick Stage Presets -->
-                <div class="flex items-center gap-1.5">
-                    <button onclick="animateExplodeTo(0)" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
-                        0% Assembled
-                    </button>
-                    <button onclick="animateExplodeTo(0.45)" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
-                        45% Sub-Assy
-                    </button>
-                    <button onclick="animateExplodeTo(1.0)" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-orange-600 hover:bg-orange-500 text-white shadow-md transition">
-                        100% Exploded
-                    </button>
-                </div>
-            </div>
-
-            <!-- Interactive Slider -->
-            <div class="flex items-center gap-3">
-                <span class="text-[10px] font-medium text-slate-400 mono">LOCKED</span>
-                <input id="explode-slider" type="range" min="0" max="100" value="0" class="w-full" oninput="onExplodeSliderChange(this.value)">
-                <span class="text-[10px] font-medium text-slate-400 mono">EXPLODED</span>
-            </div>
-        </div>
-    </footer>
-
-    <script>
+<script>
         // ============================================================================
         // 1. STATE & GLOBAL CONFIGURATION
         // ============================================================================
@@ -314,6 +262,7 @@
         let kinParam2 = 0; // helm angle or secondary parameter
 
         let showCallouts = true;
+        let seeInside = false;
         let selectedPartId = null;
         let isIsolated = false;
 
@@ -429,38 +378,42 @@
             controls.dampingFactor = 0.05;
             controls.target.set(0, 0, 0);
 
-            // Studio Lighting Setup
-            const hemiLight = new THREE.HemisphereLight(0xe2e8f0, 0x1e293b, 0.85);
+            // Studio Lighting & Light Canvas Setup
+            scene.background = new THREE.Color(0xf8fafc);
+
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0xe2e8f0, 0.95);
             hemiLight.position.set(0, 20, 0);
             scene.add(hemiLight);
 
-            const keyLight = new THREE.DirectionalLight(0xfff7ed, 1.4);
+            const keyLight = new THREE.DirectionalLight(0xfffbf5, 1.35);
             keyLight.position.set(12, 22, 14);
             keyLight.castShadow = true;
             keyLight.shadow.mapSize.width = 2048;
             keyLight.shadow.mapSize.height = 2048;
-            keyLight.shadow.bias = -0.0004;
-            const d = 8;
+            keyLight.shadow.bias = -0.0003;
+            keyLight.shadow.camera.near = 0.5;
+            keyLight.shadow.camera.far = 50;
+            const d = 10;
             keyLight.shadow.camera.left = -d;
             keyLight.shadow.camera.right = d;
             keyLight.shadow.camera.top = d;
             keyLight.shadow.camera.bottom = -d;
             scene.add(keyLight);
 
-            const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.8);
-            fillLight.position.set(-14, 6, -10);
+            const fillLight = new THREE.DirectionalLight(0xf1f5f9, 0.7);
+            fillLight.position.set(-14, 8, -10);
             scene.add(fillLight);
 
-            const rimLight = new THREE.DirectionalLight(0xfdba74, 0.65);
+            const rimLight = new THREE.DirectionalLight(0xffedd5, 0.45);
             rimLight.position.set(-6, -10, 8);
             scene.add(rimLight);
 
-            // Ground Contact Plane with soft shadow receiver
-            const groundGeo = new THREE.PlaneGeometry(35, 35);
-            const groundMat = new THREE.ShadowMaterial({ opacity: 0.22 });
+            // Ground plane with soft realistic drop shadow
+            const groundGeo = new THREE.PlaneGeometry(60, 60);
+            const groundMat = new THREE.ShadowMaterial({ opacity: 0.16 });
             groundMesh = new THREE.Mesh(groundGeo, groundMat);
             groundMesh.rotation.x = -Math.PI / 2;
-            groundMesh.position.y = -0.05;
+            groundMesh.position.y = -0.02;
             groundMesh.receiveShadow = true;
             scene.add(groundMesh);
 
@@ -525,17 +478,35 @@
             currentItem = catalogEquipment[eqId];
             if (!currentItem) return;
 
+            if (currentItem.teardownUrl && !currentItem.glb) {
+                window.location.href = currentItem.teardownUrl;
+                return;
+            }
+
             // Sync URL parameter without reload
             const url = new URL(window.location);
             url.searchParams.set('eq', eqId);
             window.history.replaceState({}, '', url);
 
-            // Header labels
-            document.getElementById('header-title').textContent = currentItem.title || currentItem.name || eqId;
+            // Header and Left Panel Titles
+            const rawTitle = currentItem.title || currentItem.name || eqId;
+            const cleanTitle = rawTitle.split('—')[0].split(' - ')[0].split('(')[0].trim();
+            const leftTitle = document.getElementById('equipment-title-left');
+            if (leftTitle) leftTitle.textContent = cleanTitle;
+            const leftSub = document.getElementById('equipment-sub-left');
             const el = currentItem.electrical || { voltage: '440 V', ratedKw: 100, busId: 'Main Bus' };
-            document.getElementById('badge-voltage').textContent = el.voltage || '440 V';
-            document.getElementById('badge-kw').textContent = el.ratedKw ? `${el.ratedKw} kW` : 'N/A';
-            document.getElementById('badge-bus').textContent = (el.busId || 'MAIN BUS').toUpperCase();
+            if (leftSub) leftSub.textContent = `${el.voltage || '440 V'} · ${currentItem.subtitle?.split('·')[0]?.trim() || 'Marine CAD Twin'}`;
+
+            // Inspector Card
+            const inspTitle = document.getElementById('inspector-title');
+            if (inspTitle) inspTitle.textContent = cleanTitle;
+            const inspDesc = document.getElementById('inspector-desc');
+            if (inspDesc) inspDesc.textContent = currentItem.subtitle || 'Precision marine engineering digital twin.';
+            seeInside = false;
+            const btnSeeInside = document.getElementById('btn-see-inside');
+            if (btnSeeInside) {
+                btnSeeInside.className = 'px-3 py-1 rounded-full text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 transition';
+            }
 
             // Clear previous assembly
             scene.remove(assemblyRoot);
@@ -555,12 +526,15 @@
             bowCutawayTunnelMesh = null;
 
             // Electrical telemetry in BOM sidebar
-            document.getElementById('elec-telemetry').innerHTML = `
-                <div class="bg-slate-900/80 p-1.5 rounded border border-slate-800"><span class="text-slate-400 block text-[9px] uppercase">Feeder Breaker</span><span class="text-slate-200 font-semibold mono">${el.breakerId || 'ACB-01'}</span></div>
-                <div class="bg-slate-900/80 p-1.5 rounded border border-slate-800"><span class="text-slate-400 block text-[9px] uppercase">Starting Method</span><span class="text-orange-400 font-semibold mono">${el.startingMethod || 'DOL'}</span></div>
-                <div class="bg-slate-900/80 p-1.5 rounded border border-slate-800"><span class="text-slate-400 block text-[9px] uppercase">Power Factor</span><span class="text-emerald-400 font-semibold mono">cos φ ${el.powerFactor || 0.88}</span></div>
-                <div class="bg-slate-900/80 p-1.5 rounded border border-slate-800"><span class="text-slate-400 block text-[9px] uppercase">Classification</span><span class="text-sky-300 font-semibold mono">${el.priority?.toUpperCase() || 'ESSENTIAL'}</span></div>
-            `;
+            const elSec = document.getElementById('elec-telemetry');
+            if (elSec) {
+                elSec.innerHTML = `
+                    <div class="bg-slate-50 p-1.5 rounded border border-slate-100"><span class="text-slate-400 block text-[9px] uppercase">Feeder Breaker</span><span class="text-slate-800 font-semibold mono">${el.breakerId || 'ACB-01'}</span></div>
+                    <div class="bg-slate-50 p-1.5 rounded border border-slate-100"><span class="text-slate-400 block text-[9px] uppercase">Starting Method</span><span class="text-orange-400 font-semibold mono">${el.startingMethod || 'DOL'}</span></div>
+                    <div class="bg-slate-50 p-1.5 rounded border border-slate-100"><span class="text-slate-400 block text-[9px] uppercase">Power Factor</span><span class="text-emerald-400 font-semibold mono">cos φ ${el.powerFactor || 0.88}</span></div>
+                    <div class="bg-slate-50 p-1.5 rounded border border-slate-100"><span class="text-slate-400 block text-[9px] uppercase">Classification</span><span class="text-sky-300 font-semibold mono">${el.priority?.toUpperCase() || 'ESSENTIAL'}</span></div>
+                `;
+            }
 
             // Kinematics setup
             currentKinematics = currentItem.kinematics || null;
@@ -1548,33 +1522,53 @@
         // 5. OPERATIONAL CONTROL PANEL (DYNAMIC BY EQUIPMENT TYPE)
         // ============================================================================
         function buildOperationalPanel(eqId, item) {
-            const panel = document.getElementById('equipment-ctrl-panel');
+            const panel = document.getElementById('equipment-operational-section');
+            if (!panel) return;
             panel.innerHTML = '';
+            panel.classList.add('hidden');
+
+            if (item && item.teardownUrl) {
+                panel.innerHTML = `
+                    <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+                        <div class="flex items-center gap-2 mb-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span class="text-xs font-bold text-emerald-900 uppercase tracking-wide">3D Teardown Simulator Ready</span>
+                        </div>
+                        <p class="text-[11px] text-emerald-700 leading-snug mb-2.5">Inspect full kinematic running gear, 4-stroke thermodynamic P-V indicator loops, and 7-subsystem exploded disassembly.</p>
+                        <a href="${item.teardownUrl}" target="_blank" class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                            Inspect Live 3D Teardown
+                        </a>
+                    </div>
+                `;
+                panel.classList.remove('hidden');
+                return;
+            }
 
             if (eqId === 'bowThruster' || eqId === 'bow') {
                 panel.innerHTML = `
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                             <span class="w-2 h-2 rounded-full bg-orange-400"></span>
                             Bow Thruster Bridge Helm
                         </span>
                         <span id="univ-rpm" class="text-xs font-bold text-orange-400 mono">1200 RPM (STBD)</span>
                     </div>
                     <div class="grid grid-cols-3 gap-1.5 mb-2.5">
-                        <button id="btn-bt-port" onclick="setBowThrust(-1)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">PORT</button>
-                        <button id="btn-bt-stop" onclick="setBowThrust(0)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">NEUTRAL</button>
+                        <button id="btn-bt-port" onclick="setBowThrust(-1)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 hover:bg-slate-700 transition">PORT</button>
+                        <button id="btn-bt-stop" onclick="setBowThrust(0)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 hover:bg-slate-700 transition">NEUTRAL</button>
                         <button id="btn-bt-stbd" onclick="setBowThrust(1)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-orange-500/25 text-orange-300 border border-orange-400/50 transition">STBD</button>
                     </div>
-                    <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-800">
+                    <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-100">
                         <button id="btn-bt-cutaway" onclick="toggleBowTunnelCutaway()" class="text-[10px] font-semibold px-1.5 py-1 rounded bg-sky-500/20 text-sky-300 border border-sky-400/40 hover:bg-sky-500/30 transition">${bowTunnelCutaway ? 'Cutaway: ON' : 'Full Tunnel'}</button>
-                        <button id="btn-bt-xray" onclick="toggleBowXRayPod()" class="text-[10px] font-semibold px-1.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">X-Ray Pod</button>
+                        <button id="btn-bt-xray" onclick="toggleBowXRayPod()" class="text-[10px] font-semibold px-1.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 hover:bg-slate-700 transition">X-Ray Pod</button>
                         <button id="btn-bt-motor" onclick="toggleBowMotor()" class="text-[10px] font-semibold px-1.5 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 hover:bg-emerald-500/30 transition">${bowShowMotor ? 'Motor: ON' : 'Motor: OFF'}</button>
                     </div>
                 `;
             } else if (eqId === 'propeller' || eqId === 'prop') {
                 panel.innerHTML = `
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                             Propulsion Telegraph
                         </span>
@@ -1582,10 +1576,10 @@
                     </div>
                     <div class="grid grid-cols-3 gap-1.5 mb-2.5">
                         <button onclick="setUnivRPM(110, 1)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-emerald-500/25 text-emerald-300 border border-emerald-400/50">AHEAD</button>
-                        <button onclick="setUnivRPM(0, 0)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700">STOP</button>
-                        <button onclick="setUnivRPM(60, -1)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700">ASTERN</button>
+                        <button onclick="setUnivRPM(0, 0)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80">STOP</button>
+                        <button onclick="setUnivRPM(60, -1)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80">ASTERN</button>
                     </div>
-                    <div class="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-800">
+                    <div class="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100">
                         <span class="text-slate-400">Kaplan CP Pitch:</span>
                         <span class="text-sky-300 font-bold mono">+18.5° Design Pitch</span>
                     </div>
@@ -1593,7 +1587,7 @@
             } else if (eqId === 'propulsionMotor' || eqId === 'motor') {
                 panel.innerHTML = `
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                             <span class="w-2 h-2 rounded-full bg-sky-400"></span>
                             Motor Drive Inverter
                         </span>
@@ -1601,10 +1595,10 @@
                     </div>
                     <div class="grid grid-cols-3 gap-1.5 mb-2.5">
                         <button onclick="setUnivRPM(720, 1)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-sky-500/25 text-sky-300 border border-sky-400/50">60 Hz (720)</button>
-                        <button onclick="setUnivRPM(360, 0.5)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700">30 Hz (360)</button>
-                        <button onclick="setUnivRPM(0, 0)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700">STOP</button>
+                        <button onclick="setUnivRPM(360, 0.5)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80">30 Hz (360)</button>
+                        <button onclick="setUnivRPM(0, 0)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80">STOP</button>
                     </div>
-                    <div class="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-800">
+                    <div class="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100">
                         <span class="text-slate-400">Class H Stator Temp:</span>
                         <span class="text-emerald-400 font-bold mono">68°C (Normal)</span>
                     </div>
@@ -1612,23 +1606,23 @@
             } else if (eqId === 'propulsionDrive' || eqId === 'drive') {
                 panel.innerHTML = `
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                             <span class="w-2 h-2 rounded-full bg-teal-400"></span>
                             VFD Inverter Converter
                         </span>
                         <span class="text-xs font-bold text-teal-400 mono">6.6 kV / 60 Hz</span>
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-[11px] mb-2.5">
-                        <div class="bg-slate-900/80 p-2 rounded border border-slate-800">
+                        <div class="bg-slate-50 p-2 rounded border border-slate-100">
                             <span class="text-slate-400 block text-[9px]">DC Link Voltage</span>
                             <span class="text-amber-400 font-bold mono">690 V DC</span>
                         </div>
-                        <div class="bg-slate-900/80 p-2 rounded border border-slate-800">
+                        <div class="bg-slate-50 p-2 rounded border border-slate-100">
                             <span class="text-slate-400 block text-[9px]">Gate Status</span>
                             <span class="text-emerald-400 font-bold mono">PWM ACTIVE</span>
                         </div>
                     </div>
-                    <div class="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-800">
+                    <div class="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100">
                         <span class="text-slate-400">Liquid Cooling Skid:</span>
                         <span class="text-teal-300 font-bold mono">3.2 bar (Circulating)</span>
                     </div>
@@ -1636,7 +1630,7 @@
             } else if (eqId === 'steeringGear' || eqId === 'steering') {
                 panel.innerHTML = `
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                             <span class="w-2 h-2 rounded-full bg-sky-400"></span>
                             Electro-Hydraulic Helm
                         </span>
@@ -1646,11 +1640,11 @@
                         <input id="helm-slider" type="range" min="-35" max="35" value="0" class="w-full" oninput="setHelmAngle(this.value)">
                     </div>
                     <div class="grid grid-cols-3 gap-1.5 mb-2">
-                        <button onclick="setHelmPreset(-35)" class="py-1 px-1.5 rounded text-[11px] font-bold bg-slate-800 text-slate-300 border border-slate-700">PORT 35°</button>
+                        <button onclick="setHelmPreset(-35)" class="py-1 px-1.5 rounded text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80">PORT 35°</button>
                         <button onclick="setHelmPreset(0)" class="py-1 px-1.5 rounded text-[11px] font-bold bg-slate-700 text-white border border-slate-600">0° MID</button>
-                        <button onclick="setHelmPreset(35)" class="py-1 px-1.5 rounded text-[11px] font-bold bg-slate-800 text-slate-300 border border-slate-700">STBD 35°</button>
+                        <button onclick="setHelmPreset(35)" class="py-1 px-1.5 rounded text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80">STBD 35°</button>
                     </div>
-                    <div class="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-800">
+                    <div class="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100">
                         <span class="text-slate-400">Hydraulic Pressure:</span>
                         <span class="text-amber-400 font-bold mono">210 bar</span>
                     </div>
@@ -1658,7 +1652,7 @@
             } else if (eqId.includes('Pump') || ['cooling', 'fire', 'ballast', 'bilge'].includes(eqId)) {
                 panel.innerHTML = `
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                             Pump Set Operation
                         </span>
@@ -1666,9 +1660,9 @@
                     </div>
                     <div class="grid grid-cols-2 gap-1.5 mb-2.5">
                         <button onclick="setUnivRPM(1750, 1)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-emerald-500/25 text-emerald-300 border border-emerald-400/50">DOL START</button>
-                        <button onclick="setUnivRPM(0, 0)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700">STOP</button>
+                        <button onclick="setUnivRPM(0, 0)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80">STOP</button>
                     </div>
-                    <div class="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-800">
+                    <div class="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100">
                         <span class="text-slate-400">Discharge Pressure:</span>
                         <span class="text-sky-300 font-bold mono">3.8 bar</span>
                     </div>
@@ -1676,18 +1670,18 @@
             } else if (eqId === 'ventFan') {
                 panel.innerHTML = `
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                             <span class="w-2 h-2 rounded-full bg-teal-400"></span>
                             Ventilation Fan Starter
                         </span>
                         <span id="univ-rpm" class="text-xs font-bold text-teal-400 mono">1750 RPM (SUPPLY)</span>
                     </div>
                     <div class="grid grid-cols-3 gap-1.5 mb-2.5">
-                        <button id="btn-u-ex" onclick="setUnivVentDir(-1)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700">EXHAUST</button>
-                        <button id="btn-u-stop" onclick="setUnivVentDir(0)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700">STOP</button>
+                        <button id="btn-u-ex" onclick="setUnivVentDir(-1)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80">EXHAUST</button>
+                        <button id="btn-u-stop" onclick="setUnivVentDir(0)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80">STOP</button>
                         <button id="btn-u-sup" onclick="setUnivVentDir(1)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-teal-500/25 text-teal-300 border border-teal-400/50">SUPPLY</button>
                     </div>
-                    <div class="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-800">
+                    <div class="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100">
                         <span class="text-slate-400">Fire Damper:</span>
                         <span class="text-emerald-400 font-bold mono">LATCHED OPEN</span>
                     </div>
@@ -1695,7 +1689,7 @@
             } else if (eqId === 'navBridge' || eqId === 'nav') {
                 panel.innerHTML = `
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                             <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
                             S-Band Radar Scanner
                         </span>
@@ -1703,10 +1697,10 @@
                     </div>
                     <div class="grid grid-cols-3 gap-1.5 mb-2.5">
                         <button id="btn-u-24" onclick="setRadarRPM(24)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-sky-500/25 text-sky-300 border border-sky-400/50">24 RPM</button>
-                        <button id="btn-u-12" onclick="setRadarRPM(12)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700">12 RPM</button>
-                        <button id="btn-u-stop" onclick="setRadarRPM(0)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700">STANDBY</button>
+                        <button id="btn-u-12" onclick="setRadarRPM(12)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80">12 RPM</button>
+                        <button id="btn-u-stop" onclick="setRadarRPM(0)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80">STANDBY</button>
                     </div>
-                    <div class="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-800">
+                    <div class="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100">
                         <span class="text-slate-400">COLREG Navlights:</span>
                         <span class="text-emerald-400 font-bold mono">CIRCUIT 1 ENERGIZED</span>
                     </div>
@@ -1714,7 +1708,7 @@
             } else {
                 panel.innerHTML = `
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                             <span class="w-2 h-2 rounded-full bg-orange-400"></span>
                             Operational Controls
                         </span>
@@ -1722,24 +1716,27 @@
                     </div>
                     <div class="grid grid-cols-2 gap-1.5 mb-2.5">
                         <button onclick="toggleUnivKinematics(true)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-orange-500/25 text-orange-300 border border-orange-400/50">RUN</button>
-                        <button onclick="toggleUnivKinematics(false)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700">ISOLATE</button>
+                        <button onclick="toggleUnivKinematics(false)" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80">ISOLATE</button>
                     </div>
-                    <div class="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-800">
+                    <div class="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100">
                         <span class="text-slate-400">Class State:</span>
                         <span class="text-emerald-400 font-bold mono">IEC 60092 COMPLIANT</span>
                     </div>
                 `;
             }
+
+            if (panel && panel.innerHTML.trim() !== '') panel.classList.remove('hidden');
         }
 
         // Operational Panel Callbacks
+
         window.setBowThrust = (dir) => {
             kinParam1 = dir;
             const bPort = document.getElementById('btn-bt-port');
             const bStop = document.getElementById('btn-bt-stop');
             const bStbd = document.getElementById('btn-bt-stbd');
             const rpmEl = document.getElementById('univ-rpm');
-            const inact = 'py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700';
+            const inact = 'py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80';
 
             if (bPort) bPort.className = inact;
             if (bStop) bStop.className = inact;
@@ -1766,7 +1763,7 @@
                 btn.textContent = bowTunnelCutaway ? 'Cutaway: ON' : 'Full Tunnel';
                 btn.className = bowTunnelCutaway
                     ? 'text-[10px] font-semibold px-1.5 py-1 rounded bg-sky-500/20 text-sky-300 border border-sky-400/40 hover:bg-sky-500/30 transition'
-                    : 'text-[10px] font-semibold px-1.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition';
+                    : 'text-[10px] font-semibold px-1.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 hover:bg-slate-700 transition';
             }
         };
 
@@ -1786,7 +1783,7 @@
             if (btn) {
                 btn.className = bowXRayPod
                     ? 'text-[10px] font-semibold px-1.5 py-1 rounded bg-amber-500/20 text-amber-300 border border-amber-400/40 transition'
-                    : 'text-[10px] font-semibold px-1.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition';
+                    : 'text-[10px] font-semibold px-1.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 hover:bg-slate-700 transition';
             }
         };
 
@@ -1800,7 +1797,7 @@
                 btn.textContent = bowShowMotor ? 'Motor: ON' : 'Motor: OFF';
                 btn.className = bowShowMotor
                     ? 'text-[10px] font-semibold px-1.5 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 hover:bg-emerald-500/30 transition'
-                    : 'text-[10px] font-semibold px-1.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 transition';
+                    : 'text-[10px] font-semibold px-1.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-400 border border-slate-200/80 hover:bg-slate-700 transition';
             }
         };
 
@@ -1838,7 +1835,7 @@
             const bStop = document.getElementById('btn-u-stop');
             const bSup = document.getElementById('btn-u-sup');
             const rpmEl = document.getElementById('univ-rpm');
-            const inact = 'py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700';
+            const inact = 'py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80';
 
             if (bEx) bEx.className = inact;
             if (bStop) bStop.className = inact;
@@ -1862,7 +1859,7 @@
             const b12 = document.getElementById('btn-u-12');
             const bStop = document.getElementById('btn-u-stop');
             const rpmEl = document.getElementById('univ-rpm');
-            const inact = 'py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700';
+            const inact = 'py-1.5 px-2 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80';
 
             if (b24) b24.className = inact;
             if (b12) b12.className = inact;
@@ -1928,16 +1925,77 @@
             if (btn) btn.textContent = isLight ? 'Dark CAD' : 'Light CAD';
         }
 
+        
+        function zoomCamera(factor) {
+            if (factor > 1) {
+                controls.dollyIn(1.2);
+            } else {
+                controls.dollyOut(1.2);
+            }
+            controls.update();
+        }
+
+        function resetAllState() {
+            selectPart(null);
+            animateExplodeTo(0);
+            setCameraPreset('iso');
+            if (seeInside) toggleSeeInside();
+        }
+
+        function toggleSeeInside() {
+            seeInside = !seeInside;
+            const btn = document.getElementById('btn-see-inside');
+            if (btn) {
+                btn.className = seeInside
+                    ? 'px-3 py-1 rounded-full text-xs font-medium bg-orange-500 text-white shadow-sm transition'
+                    : 'px-3 py-1 rounded-full text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 transition';
+            }
+
+            if (isProceduralBowThruster) {
+                bowTunnelCutaway = seeInside;
+                if (bowFullTunnelMesh) bowFullTunnelMesh.visible = !bowTunnelCutaway;
+                if (bowCutawayTunnelMesh) bowCutawayTunnelMesh.visible = bowTunnelCutaway;
+                bowXRayPod = seeInside;
+                const podEntry = partMeshGroups['gear_pod'];
+                if (podEntry && podEntry.meshes) {
+                    podEntry.meshes.forEach(m => {
+                        if (m.material) {
+                            m.material.transparent = bowXRayPod;
+                            m.material.opacity = bowXRayPod ? 0.28 : 1.0;
+                            m.material.needsUpdate = true;
+                        }
+                    });
+                }
+                return;
+            }
+
+            const casingKeywords = ['tank', 'lid', 'door', 'casing', 'enclosure', 'cover', 'housing', 'tunnel', 'shutter', 'panel'];
+            for (const pid in partMeshGroups) {
+                const entry = partMeshGroups[pid];
+                if (!entry) continue;
+                const isCasing = casingKeywords.some(k => pid.toLowerCase().includes(k) || (entry.meta?.name && entry.meta.name.toLowerCase().includes(k)));
+                if (isCasing) {
+                    (entry.meshes || []).forEach(m => {
+                        if (m.material) {
+                            m.material.transparent = true;
+                            m.material.opacity = seeInside ? 0.22 : 1.0;
+                            m.material.depthWrite = !seeInside;
+                            m.material.needsUpdate = true;
+                        }
+                    });
+                }
+            }
+        }
+
         function toggleCallouts() {
             showCallouts = !showCallouts;
             document.getElementById('labels-container').style.display = showCallouts ? 'block' : 'none';
             document.getElementById('leader-svg').style.display = showCallouts ? 'block' : 'none';
             const btn = document.getElementById('btn-labels');
             if (btn) {
-                btn.textContent = showCallouts ? 'Labels: ON' : 'Labels: OFF';
                 btn.className = showCallouts
-                    ? 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-400/40 hover:bg-sky-500/30 transition'
-                    : 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800/80 text-slate-400 border border-slate-700 hover:bg-slate-700 transition';
+                    ? 'px-3 py-1 rounded-full text-xs font-medium bg-orange-500 text-white shadow-sm transition'
+                    : 'px-3 py-1 rounded-full text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 transition';
             }
         }
 
@@ -1978,29 +2036,22 @@
         // 7. BILL OF MATERIALS & INSPECTION
         // ============================================================================
         function buildBOMSidebar(parts) {
-            const listEl = document.getElementById('bom-list');
-            const countEl = document.getElementById('bom-header-count');
-            if (countEl) countEl.textContent = `Assembly BOM (${parts.length} Units)`;
+            const listEl = document.getElementById('components-list');
             if (!listEl) return;
             listEl.innerHTML = '';
 
             parts.forEach((part) => {
                 const isSelected = selectedPartId === part.id;
                 const item = document.createElement('div');
-                item.className = `w-full text-left px-2.5 py-1.5 rounded-lg border transition flex items-center justify-between gap-1.5 cursor-pointer ${
+                item.className = `flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition text-xs select-none ${
                     isSelected
-                        ? 'bg-orange-500/25 border-orange-400/60 text-white shadow-md'
-                        : 'bg-slate-900/60 hover:bg-slate-800/80 border-slate-800 text-slate-300'
+                        ? 'font-semibold text-slate-900 bg-orange-50/90 border-l-2 border-orange-500 pl-2'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
                 }`;
                 item.onclick = () => selectPart(part.id);
                 item.innerHTML = `
-                    <div class="truncate flex-1">
-                        <span class="text-[9px] font-bold text-orange-400 mono block leading-tight">${part.code}</span>
-                        <span class="text-xs font-medium truncate block leading-tight mt-0.5">${part.name}</span>
-                    </div>
-                    <button onclick="event.stopPropagation(); toggleIsolatePart('${part.id}')" class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 mono" title="Isolate Part">
-                        ${isIsolated && selectedPartId === part.id ? 'Show' : 'Iso'}
-                    </button>
+                    <span class="w-2 h-2 rounded-[2px] ${isSelected ? 'bg-orange-500' : 'bg-slate-300'} flex-shrink-0"></span>
+                    <span class="truncate">${part.name}</span>
                 `;
                 listEl.appendChild(item);
             });
@@ -2022,14 +2073,13 @@
                 });
             }
 
+            const inspTitle = document.getElementById('inspector-title');
+            const inspDesc = document.getElementById('inspector-desc');
+
             if (!partId) {
                 isIsolated = false;
-                isolateBtn.classList.add('hidden');
-                document.getElementById('part-code').textContent = 'ASSY-00';
-                document.getElementById('part-title').textContent = currentItem?.title || 'Complete Assembly';
-                document.getElementById('part-desc').textContent = currentItem?.subtitle || 'Precision marine engineering assembly.';
-                document.getElementById('part-material').textContent = 'Marine Class Alloy / Steel';
-                document.getElementById('part-axis').textContent = 'Multi-Axis Orthogonal';
+                if (inspTitle) inspTitle.textContent = currentItem?.title?.split('—')[0]?.split('(')[0]?.trim() || currentItem?.name || 'Complete Assembly';
+                if (inspDesc) inspDesc.textContent = currentItem?.subtitle || 'Precision marine engineering assembly.';
 
                 for (const pid in partMeshGroups) {
                     if (partMeshGroups[pid]?.group) partMeshGroups[pid].group.visible = true;
@@ -2038,13 +2088,8 @@
                 const entry = partMeshGroups[partId];
                 if (entry) {
                     const meta = entry.meta;
-                    isolateBtn.classList.remove('hidden');
-                    isolateBtn.textContent = isIsolated ? 'Show All' : 'Isolate';
-                    document.getElementById('part-code').textContent = meta.code;
-                    document.getElementById('part-title').textContent = meta.name;
-                    document.getElementById('part-desc').textContent = meta.desc;
-                    document.getElementById('part-material').textContent = meta.material;
-                    document.getElementById('part-axis').textContent = meta.axis;
+                    if (inspTitle) inspTitle.textContent = meta.name;
+                    if (inspDesc) inspDesc.textContent = `${meta.desc} ${meta.material ? '(' + meta.material + ')' : ''}`;
 
                     // Emissive highlight on selected part
                     (entry.meshes || []).forEach(m => {
@@ -2099,8 +2144,8 @@
 
             parts.forEach((part) => {
                 const div = document.createElement('div');
-                div.className = 'callout-label px-2 py-0.5 rounded-md bg-slate-900/90 border border-slate-600/80 text-[9px] font-bold tracking-wider text-slate-100 shadow-lg mono whitespace-nowrap';
-                div.textContent = part.shortLabel;
+                div.className = 'callout-label';
+                div.innerHTML = `<span class="callout-dot"></span><span>${part.name || part.shortLabel}</span>`;
                 div.onclick = () => selectPart(part.id);
                 container.appendChild(div);
                 calloutDOMMap[part.id] = div;
@@ -2147,9 +2192,13 @@
 
                 domEl.style.left = `${labelX}px`;
                 domEl.style.top = `${labelY}px`;
-                domEl.style.opacity = (selectedPartId === partId ? '1' : '0.88');
+                domEl.style.opacity = '1';
                 domEl.style.pointerEvents = 'auto';
-                domEl.style.borderColor = (selectedPartId === partId ? '#f97316' : 'rgba(100,116,139,0.7)');
+                if (selectedPartId === partId) {
+                    domEl.classList.add('active');
+                } else {
+                    domEl.classList.remove('active');
+                }
 
                 // SVG Leader Polyline
                 const line = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
@@ -2157,16 +2206,16 @@
                 const elbowY = labelY;
                 line.setAttribute('points', `${anchorX},${anchorY} ${elbowX},${elbowY} ${labelX},${labelY}`);
                 line.setAttribute('fill', 'none');
-                line.setAttribute('stroke', selectedPartId === partId ? '#f97316' : '#64748b');
-                line.setAttribute('stroke-width', selectedPartId === partId ? '2' : '1.2');
+                line.setAttribute('stroke', selectedPartId === partId ? '#ea580c' : '#cbd5e1');
+                line.setAttribute('stroke-width', selectedPartId === partId ? '1.8' : '1.0');
                 svg.appendChild(line);
 
                 // Anchor Dot
                 const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                 dot.setAttribute('cx', anchorX);
                 dot.setAttribute('cy', anchorY);
-                dot.setAttribute('r', '3');
-                dot.setAttribute('fill', selectedPartId === partId ? '#f97316' : '#38bdf8');
+                dot.setAttribute('r', selectedPartId === partId ? '3' : '2.5');
+                dot.setAttribute('fill', selectedPartId === partId ? '#ea580c' : '#94a3b8');
                 svg.appendChild(dot);
             }
         }
@@ -2272,10 +2321,15 @@
             updateCalloutPositions();
         }
 
-        window.onload = () => {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                initScene();
+                animate();
+            });
+        } else {
             initScene();
             animate();
-        };
+        }
     </script>
 </body>
 </html>

@@ -3,6 +3,7 @@
   "standard": "IEC 60092 / SOLAS Marine Engineering Digital Twin Manifest",
   "lastUpdated": "2026-10-20T19:46:32.879Z",
   "canonicalList": [
+    "generator",
     "bowThruster",
     "propeller",
     "propulsionMotor",
@@ -6074,6 +6075,564 @@
     "eRadio": {
       "id": "battery",
       "glb": "/models/battery_system.glb"
+    },
+    "generator": {
+      "id": "generator",
+      "title": "Marine Diesel Generating Set (DG 1-4)",
+      "subtitle": "2,500 kVA / 6.6 kV / 60 Hz · 4-Stroke Medium-Speed · IEC 60092 & SOLAS Digital Twin",
+      "teardownUrl": "/teardowns/dg.html",
+      "electrical": {
+        "voltage": "6.6 kV",
+        "ratedKw": 2000,
+        "powerFactor": 0.8,
+        "frequency": "60 Hz",
+        "poles": 8,
+        "rpm": 900,
+        "busId": "hvBusA",
+        "priority": "essential",
+        "startingMethod": "Compressed Air (30 bar)"
+      },
+      "kinematics": {
+        "axis": "z",
+        "pivotY": 0.75,
+        "rpm": 900,
+        "rotatingPrefixes": [
+          "crankshaft",
+          "flywheel",
+          "rotor",
+          "coupling"
+        ]
+      },
+      "parts": {
+        "bedplate": {
+          "category": "Bedplate",
+          "code": "ASSY-01",
+          "label": "01 · Fabricated Steel Bedplate & Sump",
+          "shortLabel": "BEDPLATE & SUMP",
+          "material": "Structural Steel + Resilient Chocks",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Rigid common bedplate carrying the engine block and alternator, with deep lube oil sump and 16 anti-vibration rubber chocks."
+        },
+        "crankcase": {
+          "category": "Crankcase",
+          "code": "ASSY-02",
+          "label": "02 · Monobloc Engine Block & Wet Liners",
+          "shortLabel": "ENGINE BLOCK & LINERS",
+          "material": "Nodular Cast Iron GGG-40 / Alloy Iron",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Engine crankcase housing 6 centrifugally cast wet cylinder liners (bore 320 mm, stroke 400 mm) with explosion relief valves."
+        },
+        "running_gear": {
+          "category": "RunningGear",
+          "code": "ASSY-03",
+          "label": "03 · Forged Crankshaft, Conrods & Pistons",
+          "shortLabel": "RUNNING GEAR",
+          "material": "Forged Cr-Mo Alloy Steel / Aluminium Skirt",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Forged crankshaft with balance counterweights, 720 mm drop-forged H-section connecting rods, and oil-cooled trunk pistons with 4 compression rings."
+        },
+        "cylinder_heads": {
+          "category": "CylinderHeads",
+          "code": "ASSY-04",
+          "label": "04 · Cylinder Heads, Valves & Fuel Injector",
+          "shortLabel": "CYLINDER HEADS & VALVES",
+          "material": "Bore-Cooled Cast Iron / Stellite Seats",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "6 modular heads with twin intake/exhaust valves, rocker arms, pushrods, and central 1,800 bar high-pressure fuel injector."
+        },
+        "turbocharger": {
+          "category": "Turbocharger",
+          "code": "ASSY-05",
+          "label": "05 · Exhaust Gas Turbocharger & Intercooler",
+          "shortLabel": "TURBOCHARGER & COOLER",
+          "material": "Heat-Resistant Alloy / Aluminium / Cu-Ni",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Radial exhaust gas turbine and centrifugal compressor linked to a plate-fin charge-air cooler delivering 2.4 bar boost."
+        },
+        "alternator_stator": {
+          "category": "AlternatorStator",
+          "code": "ASSY-06",
+          "label": "06 · 6.6 kV Alternator Stator & Terminal Box",
+          "shortLabel": "ALTERNATOR STATOR",
+          "material": "Silicon Steel Core / Class H Nomex Copper Windings",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Brushless synchronous stator, form-wound 6.6 kV windings, and top-mounted terminal cubicle with digital AVR and porcelain bushings."
+        },
+        "rotor_exciter": {
+          "category": "RotorExciter",
+          "code": "ASSY-07",
+          "label": "07 · Salient 8-Pole Rotor & Brushless Exciter",
+          "shortLabel": "ROTOR & BRUSHLESS EXCITER",
+          "material": "Forged Steel Shaft / Laminated Poles / Copper Coils",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Salient 8-pole rotor with amortisseur damper cage, turning gear flywheel, brushless 3-phase exciter armature, and rotating 6-diode rectifier."
+        }
+      }
+    },
+    "dg1": {
+      "id": "dg1",
+      "title": "Diesel Generator 1 (Port Incomer)",
+      "subtitle": "2,500 kVA / 6.6 kV / 60 Hz · 4-Stroke Medium-Speed · IEC 60092 & SOLAS Digital Twin",
+      "teardownUrl": "/teardowns/dg.html",
+      "electrical": {
+        "voltage": "6.6 kV",
+        "ratedKw": 2000,
+        "powerFactor": 0.8,
+        "frequency": "60 Hz",
+        "poles": 8,
+        "rpm": 900,
+        "busId": "hvBusA",
+        "priority": "essential",
+        "startingMethod": "Compressed Air (30 bar)"
+      },
+      "kinematics": {
+        "axis": "z",
+        "pivotY": 0.75,
+        "rpm": 900,
+        "rotatingPrefixes": [
+          "crankshaft",
+          "flywheel",
+          "rotor",
+          "coupling"
+        ]
+      },
+      "parts": {
+        "bedplate": {
+          "category": "Bedplate",
+          "code": "ASSY-01",
+          "label": "01 · Fabricated Steel Bedplate & Sump",
+          "shortLabel": "BEDPLATE & SUMP",
+          "material": "Structural Steel + Resilient Chocks",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Rigid common bedplate carrying the engine block and alternator, with deep lube oil sump and 16 anti-vibration rubber chocks."
+        },
+        "crankcase": {
+          "category": "Crankcase",
+          "code": "ASSY-02",
+          "label": "02 · Monobloc Engine Block & Wet Liners",
+          "shortLabel": "ENGINE BLOCK & LINERS",
+          "material": "Nodular Cast Iron GGG-40 / Alloy Iron",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Engine crankcase housing 6 centrifugally cast wet cylinder liners (bore 320 mm, stroke 400 mm) with explosion relief valves."
+        },
+        "running_gear": {
+          "category": "RunningGear",
+          "code": "ASSY-03",
+          "label": "03 · Forged Crankshaft, Conrods & Pistons",
+          "shortLabel": "RUNNING GEAR",
+          "material": "Forged Cr-Mo Alloy Steel / Aluminium Skirt",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Forged crankshaft with balance counterweights, 720 mm drop-forged H-section connecting rods, and oil-cooled trunk pistons with 4 compression rings."
+        },
+        "cylinder_heads": {
+          "category": "CylinderHeads",
+          "code": "ASSY-04",
+          "label": "04 · Cylinder Heads, Valves & Fuel Injector",
+          "shortLabel": "CYLINDER HEADS & VALVES",
+          "material": "Bore-Cooled Cast Iron / Stellite Seats",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "6 modular heads with twin intake/exhaust valves, rocker arms, pushrods, and central 1,800 bar high-pressure fuel injector."
+        },
+        "turbocharger": {
+          "category": "Turbocharger",
+          "code": "ASSY-05",
+          "label": "05 · Exhaust Gas Turbocharger & Intercooler",
+          "shortLabel": "TURBOCHARGER & COOLER",
+          "material": "Heat-Resistant Alloy / Aluminium / Cu-Ni",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Radial exhaust gas turbine and centrifugal compressor linked to a plate-fin charge-air cooler delivering 2.4 bar boost."
+        },
+        "alternator_stator": {
+          "category": "AlternatorStator",
+          "code": "ASSY-06",
+          "label": "06 · 6.6 kV Alternator Stator & Terminal Box",
+          "shortLabel": "ALTERNATOR STATOR",
+          "material": "Silicon Steel Core / Class H Nomex Copper Windings",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Brushless synchronous stator, form-wound 6.6 kV windings, and top-mounted terminal cubicle with digital AVR and porcelain bushings."
+        },
+        "rotor_exciter": {
+          "category": "RotorExciter",
+          "code": "ASSY-07",
+          "label": "07 · Salient 8-Pole Rotor & Brushless Exciter",
+          "shortLabel": "ROTOR & BRUSHLESS EXCITER",
+          "material": "Forged Steel Shaft / Laminated Poles / Copper Coils",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Salient 8-pole rotor with amortisseur damper cage, turning gear flywheel, brushless 3-phase exciter armature, and rotating 6-diode rectifier."
+        }
+      }
+    },
+    "dg2": {
+      "id": "dg2",
+      "title": "Diesel Generator 2 (Port Incomer)",
+      "subtitle": "2,500 kVA / 6.6 kV / 60 Hz · 4-Stroke Medium-Speed · IEC 60092 & SOLAS Digital Twin",
+      "teardownUrl": "/teardowns/dg.html",
+      "electrical": {
+        "voltage": "6.6 kV",
+        "ratedKw": 2000,
+        "powerFactor": 0.8,
+        "frequency": "60 Hz",
+        "poles": 8,
+        "rpm": 900,
+        "busId": "hvBusA",
+        "priority": "essential",
+        "startingMethod": "Compressed Air (30 bar)"
+      },
+      "kinematics": {
+        "axis": "z",
+        "pivotY": 0.75,
+        "rpm": 900,
+        "rotatingPrefixes": [
+          "crankshaft",
+          "flywheel",
+          "rotor",
+          "coupling"
+        ]
+      },
+      "parts": {
+        "bedplate": {
+          "category": "Bedplate",
+          "code": "ASSY-01",
+          "label": "01 · Fabricated Steel Bedplate & Sump",
+          "shortLabel": "BEDPLATE & SUMP",
+          "material": "Structural Steel + Resilient Chocks",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Rigid common bedplate carrying the engine block and alternator, with deep lube oil sump and 16 anti-vibration rubber chocks."
+        },
+        "crankcase": {
+          "category": "Crankcase",
+          "code": "ASSY-02",
+          "label": "02 · Monobloc Engine Block & Wet Liners",
+          "shortLabel": "ENGINE BLOCK & LINERS",
+          "material": "Nodular Cast Iron GGG-40 / Alloy Iron",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Engine crankcase housing 6 centrifugally cast wet cylinder liners (bore 320 mm, stroke 400 mm) with explosion relief valves."
+        },
+        "running_gear": {
+          "category": "RunningGear",
+          "code": "ASSY-03",
+          "label": "03 · Forged Crankshaft, Conrods & Pistons",
+          "shortLabel": "RUNNING GEAR",
+          "material": "Forged Cr-Mo Alloy Steel / Aluminium Skirt",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Forged crankshaft with balance counterweights, 720 mm drop-forged H-section connecting rods, and oil-cooled trunk pistons with 4 compression rings."
+        },
+        "cylinder_heads": {
+          "category": "CylinderHeads",
+          "code": "ASSY-04",
+          "label": "04 · Cylinder Heads, Valves & Fuel Injector",
+          "shortLabel": "CYLINDER HEADS & VALVES",
+          "material": "Bore-Cooled Cast Iron / Stellite Seats",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "6 modular heads with twin intake/exhaust valves, rocker arms, pushrods, and central 1,800 bar high-pressure fuel injector."
+        },
+        "turbocharger": {
+          "category": "Turbocharger",
+          "code": "ASSY-05",
+          "label": "05 · Exhaust Gas Turbocharger & Intercooler",
+          "shortLabel": "TURBOCHARGER & COOLER",
+          "material": "Heat-Resistant Alloy / Aluminium / Cu-Ni",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Radial exhaust gas turbine and centrifugal compressor linked to a plate-fin charge-air cooler delivering 2.4 bar boost."
+        },
+        "alternator_stator": {
+          "category": "AlternatorStator",
+          "code": "ASSY-06",
+          "label": "06 · 6.6 kV Alternator Stator & Terminal Box",
+          "shortLabel": "ALTERNATOR STATOR",
+          "material": "Silicon Steel Core / Class H Nomex Copper Windings",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Brushless synchronous stator, form-wound 6.6 kV windings, and top-mounted terminal cubicle with digital AVR and porcelain bushings."
+        },
+        "rotor_exciter": {
+          "category": "RotorExciter",
+          "code": "ASSY-07",
+          "label": "07 · Salient 8-Pole Rotor & Brushless Exciter",
+          "shortLabel": "ROTOR & BRUSHLESS EXCITER",
+          "material": "Forged Steel Shaft / Laminated Poles / Copper Coils",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Salient 8-pole rotor with amortisseur damper cage, turning gear flywheel, brushless 3-phase exciter armature, and rotating 6-diode rectifier."
+        }
+      }
+    },
+    "dg3": {
+      "id": "dg3",
+      "title": "Diesel Generator 3 (Starboard Incomer)",
+      "subtitle": "2,500 kVA / 6.6 kV / 60 Hz · 4-Stroke Medium-Speed · IEC 60092 & SOLAS Digital Twin",
+      "teardownUrl": "/teardowns/dg.html",
+      "electrical": {
+        "voltage": "6.6 kV",
+        "ratedKw": 2000,
+        "powerFactor": 0.8,
+        "frequency": "60 Hz",
+        "poles": 8,
+        "rpm": 900,
+        "busId": "hvBusA",
+        "priority": "essential",
+        "startingMethod": "Compressed Air (30 bar)"
+      },
+      "kinematics": {
+        "axis": "z",
+        "pivotY": 0.75,
+        "rpm": 900,
+        "rotatingPrefixes": [
+          "crankshaft",
+          "flywheel",
+          "rotor",
+          "coupling"
+        ]
+      },
+      "parts": {
+        "bedplate": {
+          "category": "Bedplate",
+          "code": "ASSY-01",
+          "label": "01 · Fabricated Steel Bedplate & Sump",
+          "shortLabel": "BEDPLATE & SUMP",
+          "material": "Structural Steel + Resilient Chocks",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Rigid common bedplate carrying the engine block and alternator, with deep lube oil sump and 16 anti-vibration rubber chocks."
+        },
+        "crankcase": {
+          "category": "Crankcase",
+          "code": "ASSY-02",
+          "label": "02 · Monobloc Engine Block & Wet Liners",
+          "shortLabel": "ENGINE BLOCK & LINERS",
+          "material": "Nodular Cast Iron GGG-40 / Alloy Iron",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Engine crankcase housing 6 centrifugally cast wet cylinder liners (bore 320 mm, stroke 400 mm) with explosion relief valves."
+        },
+        "running_gear": {
+          "category": "RunningGear",
+          "code": "ASSY-03",
+          "label": "03 · Forged Crankshaft, Conrods & Pistons",
+          "shortLabel": "RUNNING GEAR",
+          "material": "Forged Cr-Mo Alloy Steel / Aluminium Skirt",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Forged crankshaft with balance counterweights, 720 mm drop-forged H-section connecting rods, and oil-cooled trunk pistons with 4 compression rings."
+        },
+        "cylinder_heads": {
+          "category": "CylinderHeads",
+          "code": "ASSY-04",
+          "label": "04 · Cylinder Heads, Valves & Fuel Injector",
+          "shortLabel": "CYLINDER HEADS & VALVES",
+          "material": "Bore-Cooled Cast Iron / Stellite Seats",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "6 modular heads with twin intake/exhaust valves, rocker arms, pushrods, and central 1,800 bar high-pressure fuel injector."
+        },
+        "turbocharger": {
+          "category": "Turbocharger",
+          "code": "ASSY-05",
+          "label": "05 · Exhaust Gas Turbocharger & Intercooler",
+          "shortLabel": "TURBOCHARGER & COOLER",
+          "material": "Heat-Resistant Alloy / Aluminium / Cu-Ni",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Radial exhaust gas turbine and centrifugal compressor linked to a plate-fin charge-air cooler delivering 2.4 bar boost."
+        },
+        "alternator_stator": {
+          "category": "AlternatorStator",
+          "code": "ASSY-06",
+          "label": "06 · 6.6 kV Alternator Stator & Terminal Box",
+          "shortLabel": "ALTERNATOR STATOR",
+          "material": "Silicon Steel Core / Class H Nomex Copper Windings",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Brushless synchronous stator, form-wound 6.6 kV windings, and top-mounted terminal cubicle with digital AVR and porcelain bushings."
+        },
+        "rotor_exciter": {
+          "category": "RotorExciter",
+          "code": "ASSY-07",
+          "label": "07 · Salient 8-Pole Rotor & Brushless Exciter",
+          "shortLabel": "ROTOR & BRUSHLESS EXCITER",
+          "material": "Forged Steel Shaft / Laminated Poles / Copper Coils",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Salient 8-pole rotor with amortisseur damper cage, turning gear flywheel, brushless 3-phase exciter armature, and rotating 6-diode rectifier."
+        }
+      }
+    },
+    "dg4": {
+      "id": "dg4",
+      "title": "Diesel Generator 4 (Starboard Incomer)",
+      "subtitle": "2,500 kVA / 6.6 kV / 60 Hz · 4-Stroke Medium-Speed · IEC 60092 & SOLAS Digital Twin",
+      "teardownUrl": "/teardowns/dg.html",
+      "electrical": {
+        "voltage": "6.6 kV",
+        "ratedKw": 2000,
+        "powerFactor": 0.8,
+        "frequency": "60 Hz",
+        "poles": 8,
+        "rpm": 900,
+        "busId": "hvBusA",
+        "priority": "essential",
+        "startingMethod": "Compressed Air (30 bar)"
+      },
+      "kinematics": {
+        "axis": "z",
+        "pivotY": 0.75,
+        "rpm": 900,
+        "rotatingPrefixes": [
+          "crankshaft",
+          "flywheel",
+          "rotor",
+          "coupling"
+        ]
+      },
+      "parts": {
+        "bedplate": {
+          "category": "Bedplate",
+          "code": "ASSY-01",
+          "label": "01 · Fabricated Steel Bedplate & Sump",
+          "shortLabel": "BEDPLATE & SUMP",
+          "material": "Structural Steel + Resilient Chocks",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Rigid common bedplate carrying the engine block and alternator, with deep lube oil sump and 16 anti-vibration rubber chocks."
+        },
+        "crankcase": {
+          "category": "Crankcase",
+          "code": "ASSY-02",
+          "label": "02 · Monobloc Engine Block & Wet Liners",
+          "shortLabel": "ENGINE BLOCK & LINERS",
+          "material": "Nodular Cast Iron GGG-40 / Alloy Iron",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Engine crankcase housing 6 centrifugally cast wet cylinder liners (bore 320 mm, stroke 400 mm) with explosion relief valves."
+        },
+        "running_gear": {
+          "category": "RunningGear",
+          "code": "ASSY-03",
+          "label": "03 · Forged Crankshaft, Conrods & Pistons",
+          "shortLabel": "RUNNING GEAR",
+          "material": "Forged Cr-Mo Alloy Steel / Aluminium Skirt",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Forged crankshaft with balance counterweights, 720 mm drop-forged H-section connecting rods, and oil-cooled trunk pistons with 4 compression rings."
+        },
+        "cylinder_heads": {
+          "category": "CylinderHeads",
+          "code": "ASSY-04",
+          "label": "04 · Cylinder Heads, Valves & Fuel Injector",
+          "shortLabel": "CYLINDER HEADS & VALVES",
+          "material": "Bore-Cooled Cast Iron / Stellite Seats",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "6 modular heads with twin intake/exhaust valves, rocker arms, pushrods, and central 1,800 bar high-pressure fuel injector."
+        },
+        "turbocharger": {
+          "category": "Turbocharger",
+          "code": "ASSY-05",
+          "label": "05 · Exhaust Gas Turbocharger & Intercooler",
+          "shortLabel": "TURBOCHARGER & COOLER",
+          "material": "Heat-Resistant Alloy / Aluminium / Cu-Ni",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Radial exhaust gas turbine and centrifugal compressor linked to a plate-fin charge-air cooler delivering 2.4 bar boost."
+        },
+        "alternator_stator": {
+          "category": "AlternatorStator",
+          "code": "ASSY-06",
+          "label": "06 · 6.6 kV Alternator Stator & Terminal Box",
+          "shortLabel": "ALTERNATOR STATOR",
+          "material": "Silicon Steel Core / Class H Nomex Copper Windings",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Brushless synchronous stator, form-wound 6.6 kV windings, and top-mounted terminal cubicle with digital AVR and porcelain bushings."
+        },
+        "rotor_exciter": {
+          "category": "RotorExciter",
+          "code": "ASSY-07",
+          "label": "07 · Salient 8-Pole Rotor & Brushless Exciter",
+          "shortLabel": "ROTOR & BRUSHLESS EXCITER",
+          "material": "Forged Steel Shaft / Laminated Poles / Copper Coils",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Salient 8-pole rotor with amortisseur damper cage, turning gear flywheel, brushless 3-phase exciter armature, and rotating 6-diode rectifier."
+        }
+      }
+    },
+    "dg": {
+      "id": "dg",
+      "title": "Marine Diesel Generating Set (DG 1-4)",
+      "subtitle": "2,500 kVA / 6.6 kV / 60 Hz · 4-Stroke Medium-Speed · IEC 60092 & SOLAS Digital Twin",
+      "teardownUrl": "/teardowns/dg.html",
+      "electrical": {
+        "voltage": "6.6 kV",
+        "ratedKw": 2000,
+        "powerFactor": 0.8,
+        "frequency": "60 Hz",
+        "poles": 8,
+        "rpm": 900,
+        "busId": "hvBusA",
+        "priority": "essential",
+        "startingMethod": "Compressed Air (30 bar)"
+      },
+      "kinematics": {
+        "axis": "z",
+        "pivotY": 0.75,
+        "rpm": 900,
+        "rotatingPrefixes": [
+          "crankshaft",
+          "flywheel",
+          "rotor",
+          "coupling"
+        ]
+      },
+      "parts": {
+        "bedplate": {
+          "category": "Bedplate",
+          "code": "ASSY-01",
+          "label": "01 · Fabricated Steel Bedplate & Sump",
+          "shortLabel": "BEDPLATE & SUMP",
+          "material": "Structural Steel + Resilient Chocks",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Rigid common bedplate carrying the engine block and alternator, with deep lube oil sump and 16 anti-vibration rubber chocks."
+        },
+        "crankcase": {
+          "category": "Crankcase",
+          "code": "ASSY-02",
+          "label": "02 · Monobloc Engine Block & Wet Liners",
+          "shortLabel": "ENGINE BLOCK & LINERS",
+          "material": "Nodular Cast Iron GGG-40 / Alloy Iron",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Engine crankcase housing 6 centrifugally cast wet cylinder liners (bore 320 mm, stroke 400 mm) with explosion relief valves."
+        },
+        "running_gear": {
+          "category": "RunningGear",
+          "code": "ASSY-03",
+          "label": "03 · Forged Crankshaft, Conrods & Pistons",
+          "shortLabel": "RUNNING GEAR",
+          "material": "Forged Cr-Mo Alloy Steel / Aluminium Skirt",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Forged crankshaft with balance counterweights, 720 mm drop-forged H-section connecting rods, and oil-cooled trunk pistons with 4 compression rings."
+        },
+        "cylinder_heads": {
+          "category": "CylinderHeads",
+          "code": "ASSY-04",
+          "label": "04 · Cylinder Heads, Valves & Fuel Injector",
+          "shortLabel": "CYLINDER HEADS & VALVES",
+          "material": "Bore-Cooled Cast Iron / Stellite Seats",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "6 modular heads with twin intake/exhaust valves, rocker arms, pushrods, and central 1,800 bar high-pressure fuel injector."
+        },
+        "turbocharger": {
+          "category": "Turbocharger",
+          "code": "ASSY-05",
+          "label": "05 · Exhaust Gas Turbocharger & Intercooler",
+          "shortLabel": "TURBOCHARGER & COOLER",
+          "material": "Heat-Resistant Alloy / Aluminium / Cu-Ni",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Radial exhaust gas turbine and centrifugal compressor linked to a plate-fin charge-air cooler delivering 2.4 bar boost."
+        },
+        "alternator_stator": {
+          "category": "AlternatorStator",
+          "code": "ASSY-06",
+          "label": "06 · 6.6 kV Alternator Stator & Terminal Box",
+          "shortLabel": "ALTERNATOR STATOR",
+          "material": "Silicon Steel Core / Class H Nomex Copper Windings",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Brushless synchronous stator, form-wound 6.6 kV windings, and top-mounted terminal cubicle with digital AVR and porcelain bushings."
+        },
+        "rotor_exciter": {
+          "category": "RotorExciter",
+          "code": "ASSY-07",
+          "label": "07 · Salient 8-Pole Rotor & Brushless Exciter",
+          "shortLabel": "ROTOR & BRUSHLESS EXCITER",
+          "material": "Forged Steel Shaft / Laminated Poles / Copper Coils",
+          "teardownUrl": "/teardowns/dg.html",
+          "description": "Salient 8-pole rotor with amortisseur damper cage, turning gear flywheel, brushless 3-phase exciter armature, and rotating 6-diode rectifier."
+        }
+      }
     }
   }
 }

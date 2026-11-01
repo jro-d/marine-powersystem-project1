@@ -20,7 +20,7 @@ import {
   shorePowerAssembly,
   bridgeNavComAssembly
 } from './assemblies/consumer-assemblies';
-import { resolveAssemblyUrl } from './vessel/assets';
+import { resolveAssemblyUrl, resolveTeardownUrl } from './vessel/assets';
 import { simEngine, LOAD_SPECS } from './core/sim-engine';
 
 // Stroke icons (24px grid, drawn with currentColor) used in place of unicode glyphs.
@@ -309,7 +309,19 @@ function toggleSource(id:string){
   setMessage(`${byId[id].name} ${state.running[id]?'started':'stopped'}. ${id==='shore'?'Close the Shore Connection breaker when main generator breakers are open.':'A running generator supplies its bus only through a closed generator breaker.'}`);
   refresh();
 }
-function select(id:string){if(!byId[id]&&!edgeById[id])return;selected=id;selectedPart=undefined;renderInspector();renderSchematic();vessel.update(state,live,selected);}
+let lastInspectorSelected: string | undefined = undefined;
+
+function select(id:string){
+  if(!byId[id]&&!edgeById[id])return;
+  if(selected !== id){
+    selected=id;
+    selectedPart=undefined;
+    lastInspectorSelected=undefined;
+  }
+  renderInspector();
+  renderSchematic();
+  vessel.update(state,live,selected);
+}
 function scenario(id:string){
   const item=scenarios.find(s=>s.id===id);
   if(!item)return;
@@ -1438,6 +1450,14 @@ interface AssemblyPageInfo {
 
 
 function getAssemblyPage(selectedId: string, model: ModelType | undefined): AssemblyPageInfo | null {
+  if (['dg1', 'dg2', 'dg3', 'dg4', 'eg', 'generator'].includes(selectedId) || model === 'generator') {
+    return {
+      url: resolveTeardownUrl('dg.html'),
+      title: 'Marine Diesel Generating Set (DG 1-4) — 2,500 kVA / 6.6 kV',
+      subtitle: '4-Stroke Medium-Speed Diesel (320mm/400mm) · 8-Pole Brushless Alternator · IEC 60092 & SOLAS Digital Twin',
+      tag: 'IEC 60092 & SOLAS DIESEL GENERATOR'
+    };
+  }
   if (model === 'thruster' || selectedId === 'bow') {
     return {
       url: resolveAssemblyUrl('universal_viewer.html?eq=bowThruster'),
@@ -1619,6 +1639,8 @@ function renderLotoModalContent(targetId: string) {
   const badge = document.querySelector<HTMLElement>('#lotoModalBadge');
   if (!body || !subtitle || !badge) return;
 
+  const prevModalScroll = body.scrollTop;
+
   const e = byId[targetId];
   const map = HV_EQUIPMENT_VCB_MAP[targetId];
   if (!map) return;
@@ -1680,7 +1702,8 @@ function renderLotoModalContent(targetId: string) {
   `;
 
   body.querySelectorAll<HTMLButtonElement>('[data-modal-loto-step]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
       const stepNum = parseInt(btn.dataset.modalLotoStep || '0', 10);
       const res = hvLotoManager.executeStep(targetId, stepNum, state.closed);
       if (res.success) {
@@ -1695,7 +1718,8 @@ function renderLotoModalContent(targetId: string) {
     });
   });
 
-  body.querySelector<HTMLButtonElement>('#btnModalResetLoto')?.addEventListener('click', () => {
+  body.querySelector<HTMLButtonElement>('#btnModalResetLoto')?.addEventListener('click', (e) => {
+    e.preventDefault();
     const msg = hvLotoManager.resetEquipmentLoto(targetId);
     document.querySelector('#arcFlashBanner')?.classList.add('hidden');
     const model = modelForSelection();
@@ -1708,6 +1732,13 @@ function renderLotoModalContent(targetId: string) {
     refresh();
     renderLotoModalContent(targetId);
   });
+
+  if (prevModalScroll > 0) {
+    body.scrollTop = prevModalScroll;
+    requestAnimationFrame(() => {
+      body.scrollTop = prevModalScroll;
+    });
+  }
 }
 
 function openLotoModal(targetId: string) {
@@ -1821,6 +1852,10 @@ function wireAssemblyControls(
 
 function renderInspector(){
   const pane=document.querySelector('#inspector')!;
+  const oldScrollEl=pane.querySelector<HTMLElement>('.inspector-scroll');
+  const isSameSelection = lastInspectorSelected === selected;
+  const prevScroll = (isSameSelection && oldScrollEl) ? oldScrollEl.scrollTop : 0;
+  lastInspectorSelected = selected;
   const e=byId[selected],c=edgeById[selected];
   const model=modelForSelection();
   const assemblyInfo=getAssemblyPage(selected, model);
@@ -2060,7 +2095,7 @@ function renderInspector(){
     ${e&&allSupplyIds.includes(e.id)?`<div class="inspector-actions"><button class="button button-primary" data-source="${e.id}" type="button">${state.running[e.id]?'Stop':'Start'} ${e.id==='shore'?'shore supply':'generator'}</button></div>`:''}
     ${c?.breaker?`<div class="inspector-actions"><button class="button button-primary" data-breaker="${c.id}" type="button">${state.closed[c.id]?'Open':'Close'} breaker</button></div>`:''}
     ${e?relatedControls(e.id):''}
-    ${assemblyInfo?`<div class="inspector-actions"><button id="openCadAssembly" type="button" class="button button-secondary">${icon('external')}Open assembly and specs</button></div>`:''}
+    ${['dg1', 'dg2', 'dg3', 'dg4', 'eg', 'generator'].includes(selected) || model === 'generator' ? `<div class="inspector-actions" style="margin-top: 6px;"><button id="openLiveTeardown" type="button" class="button button-primary" style="background:#059669; border-color:#047857; color:white; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px;">${icon('external')}Inspect Live 3D Teardown</button></div>` : ''}
     ${selected === 'prop' || e?.kind === 'propeller' ? renderAssemblyControlsCard('Propeller and stern tube', 'Nickel-aluminium bronze hub, four blades, thrust washer, retaining nut, seals, aft gland and stern tube cutaway.', propellerAssembly.targetExplosionFactor, 'propeller') : ''}
     ${['txA', 'txB', 'txReeferA', 'txReeferB', 'txConA', 'txConB'].includes(selected) || e?.kind === 'transformer' || model === 'transformer' ? renderAssemblyControlsCard('6.6 kV / 440 V distribution transformer', 'CRGO laminated core, concentric LV and HV resin coils, Nomex barriers, bushings and radiator banks.', transformerAssembly.targetExplosionFactor, 'transformer', true) : ''}
     ${selected === 'drive' || e?.kind === 'drive' || model === 'drive' ? renderAssemblyControlsCard('Propulsion frequency converter', 'MV input switchgear, DC-link capacitor bank, water-cooled IGBT stacks, cooling loop and control rack.', driveAssembly.targetExplosionFactor, 'drive', true) : ''}
@@ -2076,7 +2111,7 @@ function renderInspector(){
     ${selected === 'galley440' || selected === 'galley' ? renderAssemblyControlsCard('440 V galley board', 'Stainless panel, 400 A incomer MCCB with shunt-trip coil, remote trip station, latching pushbutton and range sub-MCCBs.', galleyBoardAssembly.targetExplosionFactor, 'galleyboard') : ''}
     ${selected === 'shore' ? renderAssemblyControlsCard('6.6 kV shore power reel', 'Reel chassis, motorised drum, 6.6 kV flexible cable, slip-ring collector, terminal box and key-interlocked earthing switch.', shorePowerAssembly.targetExplosionFactor, 'shorereel', true) : ''}
     ${selected === 'nav' ? renderAssemblyControlsCard('Bridge navigation console', 'Console desk, navigation-light panel, radar and ECDIS displays, GMDSS station, mast and S-band scanner.', bridgeNavComAssembly.targetExplosionFactor, 'bridgenav') : ''}
-    ${model?`<div class="exploded-section${explodedExpanded?' expanded':''}"><div class="section-heading"><div><div class="eyebrow">${assemblyInfo?'3D model':'Generic 3D model'}</div><h3>${assemblyInfo?assemblyInfo.title.split('—')[0].trim():model==='generator'?'Marine diesel generator':model==='breaker'?'Vacuum circuit breaker':model==='hv-board'?'6.6 kV main switchboard':model==='lv-board'?'Low-voltage switchboard':'Inside the equipment'}</h3></div><div class="heading-tools"><span class="generic-tag ${assemblyInfo?'cad-badge':''}">${assemblyInfo?'CAD MODEL':'GENERIC'}</span><button id="explodeExpand" type="button" class="button button-secondary expand-button" aria-expanded="${explodedExpanded}" aria-label="Enlarge the equipment viewer">${assemblyInfo?'Enlarge':explodedExpanded?'Close':'Enlarge'}</button></div></div><p class="micro-copy">${assemblyInfo?`${assemblyInfo.subtitle.split('·')[0].trim()}. ${modelParts[model].length} parts; Enlarge opens the full assembly with its bill of materials.`:`Simplified teaching model with ${modelParts[model].length} parts. Explode it, pick a part, then focus to inspect.`}</p><div class="exploded-host" id="explodedHost"></div><div class="exploded-actions"><button id="explodeToggle" type="button" class="button button-secondary">Explode</button><button id="focusPart" type="button" class="button button-secondary" disabled>Focus part</button><button id="resetModelView" type="button" class="button button-secondary">Fit all</button><span>Drag to rotate, scroll to zoom</span></div><div class="parts-list" id="partsList"></div><div id="partDescription" class="part-description">Select a part to see what it does.</div></div>`:''}
+    ${model?`<div class="exploded-section"><div class="section-heading"><div><div class="eyebrow">${assemblyInfo?'3D model':'Generic 3D model'}</div><h3>${assemblyInfo?assemblyInfo.title.split('—')[0].trim():model==='generator'?'Marine diesel generator':model==='breaker'?'Vacuum circuit breaker':model==='hv-board'?'6.6 kV main switchboard':model==='lv-board'?'Low-voltage switchboard':'Inside the equipment'}</h3></div><div class="heading-tools"><span class="generic-tag ${assemblyInfo?'cad-badge':''}">${assemblyInfo?'CAD MODEL':'GENERIC'}</span></div></div><p class="micro-copy">${assemblyInfo?`${assemblyInfo.subtitle.split('·')[0].trim()}.`:`Simplified teaching model with ${modelParts[model].length} parts.`}</p><div class="exploded-host" id="explodedHost"></div><div class="exploded-actions"><button id="explodeToggle" type="button" class="button button-secondary">Explode</button><button id="resetModelView" type="button" class="button button-secondary">Fit all</button><span>Drag to rotate, scroll to zoom</span></div></div>`:''}
     </div>`;
 
   pane.querySelectorAll<HTMLButtonElement>('[data-source]').forEach(b=>b.onclick=()=>toggleSource(b.dataset.source!));
@@ -2109,7 +2144,8 @@ function renderInspector(){
 
   // Wire Phase 4 LOTO Step Buttons in Inspector
   pane.querySelectorAll<HTMLButtonElement>('[data-loto-step]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
+    btn.addEventListener('click',(e)=>{
+      e.preventDefault();
       const stepNum=parseInt(btn.dataset.lotoStep||'1',10) as 1|2|3|4|5;
       const res=hvLotoManager.executeStep(selected,stepNum,state.closed);
       if(res.success){
@@ -2122,7 +2158,8 @@ function renderInspector(){
       refresh();
     });
   });
-  pane.querySelector<HTMLButtonElement>('#btnResetLoto')?.addEventListener('click',()=>{
+  pane.querySelector<HTMLButtonElement>('#btnResetLoto')?.addEventListener('click',(e)=>{
+    e.preventDefault();
     const msg=hvLotoManager.resetEquipmentLoto(selected);
     document.querySelector('#arcFlashBanner')?.classList.add('hidden');
     if(['txA','txB','txReeferA','txReeferB','txConA','txConB'].includes(selected)||model==='transformer')transformerAssembly.setExplosionFactor(0);
@@ -2146,12 +2183,9 @@ function renderInspector(){
     refresh();
   });
 
-  if(assemblyInfo){
-    pane.querySelector<HTMLButtonElement>('#openCadAssembly')?.addEventListener('click',()=>{
-      if(needsLoto && !verifyHvIsolationOrWarn(selected))return;
-      openAssemblyModal(assemblyInfo);
-    });
-  }
+  pane.querySelector<HTMLButtonElement>('#openLiveTeardown')?.addEventListener('click', () => {
+    window.open(resolveTeardownUrl('dg.html'), '_blank');
+  });
 
   wireAssemblyControls(pane, 'propeller', propellerAssembly);
   wireAssemblyControls(pane, 'transformer', transformerAssembly, true, selected);
@@ -2170,35 +2204,30 @@ function renderInspector(){
   wireAssemblyControls(pane, 'bridgenav', bridgeNavComAssembly);
 
   if(model){
-    pane.querySelector<HTMLButtonElement>('#explodeExpand')!.onclick=()=>{
-      if(needsLoto && !verifyHvIsolationOrWarn(selected))return;
-      if(assemblyInfo){
-        openAssemblyModal(assemblyInfo);
-      }else{
-        setExpanded(!explodedExpanded);
-      }
-    };
-    document.body.classList.toggle('has-expanded-viewer',explodedExpanded);
     const host=pane.querySelector<HTMLElement>('#explodedHost')!;
     host.appendChild(explodedElement());
     exploded.setModel(model);
-    exploded.setPart(selectedPart);
     const button=pane.querySelector<HTMLButtonElement>('#explodeToggle')!;
     button.onclick=()=>{
       if(!exploded.isExploded() && needsLoto && !verifyHvIsolationOrWarn(selected))return;
       exploded.setExploded(!exploded.isExploded());
       button.textContent=exploded.isExploded()?'Assemble':'Explode';
     };
-    pane.querySelector<HTMLButtonElement>('#focusPart')!.onclick=()=>exploded.focusPart();
     pane.querySelector<HTMLButtonElement>('#resetModelView')!.onclick=()=>exploded.resetView();
-    const list=pane.querySelector('#partsList')!;
-    list.innerHTML=modelParts[model].map((p,i)=>`<button class="part-chip ${selectedPart===p.id?'active':''}" data-part="${p.id}" type="button"><span>${String(i+1).padStart(2,'0')}</span>${p.name}</button>`).join('');
-    list.querySelectorAll<HTMLButtonElement>('[data-part]').forEach(b=>b.onclick=()=>{selectedPart=b.dataset.part;exploded.setPart(selectedPart);updatePartDescription(model);});
-    updatePartDescription(model);
   } else {
     exploded.setModel(undefined);
     explodedExpanded=false;
     document.body.classList.remove('has-expanded-viewer');
+  }
+
+  if (prevScroll > 0) {
+    const newScrollEl = pane.querySelector<HTMLElement>('.inspector-scroll');
+    if (newScrollEl) {
+      newScrollEl.scrollTop = prevScroll;
+      requestAnimationFrame(() => {
+        if (newScrollEl) newScrollEl.scrollTop = prevScroll;
+      });
+    }
   }
 }
 
@@ -2284,7 +2313,7 @@ function updatePartDescription(model:ModelType){
   if(focusButton)focusButton.disabled=!selectedPart;
   document.querySelectorAll<HTMLButtonElement>('.part-chip').forEach(b=>b.classList.toggle('active',b.dataset.part===selectedPart));
   const part=modelParts[model].find(p=>p.id===selectedPart);
-  document.querySelector('#partDescription')!.innerHTML=part?`<strong>${part.name}</strong><p>${part.description}</p>`:'Select a part to see what it does.';
+  const descEl = document.querySelector('#partDescription'); if (descEl) descEl.innerHTML=part?`<strong>${part.name}</strong><p>${part.description}</p>`:'Select a part to see what it does.';
 }
 
 function updateLiveTelemetryDOM(){

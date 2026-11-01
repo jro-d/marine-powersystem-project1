@@ -44,3 +44,21 @@ export function resolveAssemblyUrl(filename: string): string {
   }
   return `${window.location.origin}${path}assemblies/${filename}`;
 }
+
+export function resolveTeardownUrl(filename: string = 'dg.html'): string {
+  const base = typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL ? import.meta.env.BASE_URL : '';
+  if (base && base.startsWith('/') && base !== '/') {
+    const cleanBase = base.endsWith('/') ? base : `${base}/`;
+    return `${window.location.origin}${cleanBase}teardowns/${filename}`;
+  }
+  let path = typeof window !== 'undefined' && window.location ? window.location.pathname : '/';
+  if (!path.endsWith('/')) {
+    if (path.endsWith('.html') || path.endsWith('.htm')) {
+      path = path.substring(0, path.lastIndexOf('/') + 1);
+    } else {
+      path = `${path}/`;
+    }
+  }
+  return `${window.location.origin}${path}teardowns/${filename}`;
+}
+
