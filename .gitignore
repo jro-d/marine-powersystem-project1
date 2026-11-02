@@ -14,3 +14,12 @@ __pycache__/
 *.pyc
 session.txt
 add-workspace.py
+
+# Local agent & transient artifacts
+.agents/
+.gemini/
+teardown-out/
+*_PROMPT*.md
+*TEARDOWN_PROMPTS*.md
+*.tmp
+*.log
