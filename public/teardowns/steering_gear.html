@@ -1,0 +1,1903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOLAS Twin-Ram Electro-Hydraulic Marine Steering Gear — 3D CAD Digital Twin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #f2f4f7;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #0f172a;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    #canvas-container {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+    }
+    .hud-glass {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(203, 213, 225, 0.92);
+      box-shadow: 0 10px 30px -8px rgba(15, 23, 42, 0.08), 0 4px 10px -2px rgba(15, 23, 42, 0.04);
+    }
+    .toolbar-btn {
+      transition: all 0.16s ease;
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+    .toolbar-btn:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+      color: #0f172a;
+    }
+    .toolbar-btn.active {
+      background: #fff7ed;
+      border-color: #ea580c;
+      color: #9a3412;
+      font-weight: 600;
+    }
+    .part-chip {
+      transition: all 0.15s ease;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: #475569;
+    }
+    .part-chip:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      color: #0f172a;
+    }
+    .part-chip.active {
+      background: #ea580c;
+      border-color: #c2410c;
+      color: #ffffff;
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #ea580c;
+      border: 2px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.3);
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+    .callout-badge {
+      position: absolute;
+      width: 180px;
+      pointer-events: auto;
+      transform: translateY(-50%);
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid rgba(203, 213, 225, 0.95);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+      border-radius: 10px;
+      padding: 6px 10px;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .callout-badge:hover {
+      border-color: #94a3b8;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
+    }
+    .callout-badge.selected {
+      background: #fff7ed;
+      border-color: #ea580c;
+      box-shadow: 0 6px 18px rgba(234, 88, 12, 0.18);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 3D WebGL Viewport -->
+  <div id="canvas-container"></div>
+
+  <!-- Divided Left/Right Callout Badges & SVG Leader Lines Overlay -->
+  <div id="callouts-overlay" class="fixed inset-0 pointer-events-none z-10 overflow-hidden">
+    <svg id="leader-svg" class="w-full h-full block"></svg>
+    <div id="badges-layer" class="absolute inset-0 pointer-events-none"></div>
+  </div>
+
+  <!-- Top-Left Header & Sub-Assembly Isolation Bar -->
+  <header class="fixed top-4 left-4 z-20 max-w-xl pointer-events-auto flex flex-col gap-2">
+    <div class="hud-glass rounded-2xl px-4 py-3">
+      <div class="flex items-center gap-2.5">
+        <span class="px-2 py-0.5 rounded-md bg-teal-100 text-teal-800 mono text-[11px] font-bold">SOLAS CH. II-1 REG. 29</span>
+        <h1 class="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+          SOLAS Twin-Ram Electro-Hydraulic Steering Gear
+        </h1>
+      </div>
+      <p class="text-[11px] text-slate-500 mt-0.5 mono">
+        Rapson-Slide ±35° Actuator · Dual 440 V HPU (Main &amp; ESB) · 28s Hard-Over to Hard-Over
+      </p>
+
+      <!-- Sub-Assembly Quick Filter Chips -->
+      <div class="flex flex-wrap items-center gap-1.5 mt-2.5 pt-2.5 border-t border-slate-200/80" id="part-chips-bar">
+        <button class="part-chip active px-2.5 py-1 rounded-lg text-[11px] font-semibold" data-part="all">Show All</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="steering_bedplate">FB · Bedplate &amp; Carrier</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="rudder_stock_tiller">RT · Stock &amp; Fork Tiller</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="hydraulic_rams">HR · Chrome Ram &amp; Crosshead</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="ram_cylinders">CY · Twin Ram Cylinders</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="hpu_pumps">HP · Dual 440V HPUs</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="manifold_valves">MV · Bypass &amp; Solenoids</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="telemetry_follow_up">FT · Follow-Up &amp; Trick Wheel</button>
+      </div>
+    </div>
+
+    <!-- Active Sub-Assembly Inspector & Live Rapson-Slide Telemetry Card -->
+    <div id="part-info-card" class="hud-glass rounded-xl px-3.5 py-2.5 text-xs max-w-md">
+      <div class="flex items-center justify-between">
+        <span id="info-badge" class="mono text-[10px] font-bold uppercase text-orange-700">STEERING GEAR OVERVIEW · 7 SUB-ASSEMBLIES</span>
+        <span id="info-spec" class="mono text-[10px] text-slate-400">210 bar · 1,450 kN·m Torque</span>
+      </div>
+      <div id="info-title" class="font-semibold text-slate-900 mt-0.5">Rapson-Slide Twin-Ram Actuator &amp; Dual 440 V HPU Redundancy</div>
+      <p id="info-desc" class="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+        Opposed double-acting hydraulic cylinders drive a chrome ram and phosphor-bronze swivel block inside a forked tiller arm, increasing mechanical torque advantage by 1/cos²(θ) (+49% at ±35° hard-over). Powered by HPU No. 1 (Main 440 V Bus) and HPU No. 2 (Emergency Switchboard eSteer).
+      </p>
+      <div class="grid grid-cols-4 gap-1.5 mt-2 pt-2 border-t border-slate-200/80 text-center mono">
+        <div class="bg-slate-50 rounded-lg py-1 px-1.5 border border-slate-200/60">
+          <span class="text-[9px] text-slate-400 block">RUDDER (θ)</span>
+          <span id="tel-angle" class="text-[11px] font-bold text-slate-800">0.0° MID</span>
+        </div>
+        <div class="bg-slate-50 rounded-lg py-1 px-1.5 border border-slate-200/60">
+          <span class="text-[9px] text-slate-400 block">RAM STROKE</span>
+          <span id="tel-stroke" class="text-[11px] font-bold text-orange-600">0.0 mm</span>
+        </div>
+        <div class="bg-slate-50 rounded-lg py-1 px-1.5 border border-slate-200/60">
+          <span class="text-[9px] text-slate-400 block">TORQUE (τ)</span>
+          <span id="tel-torque" class="text-[11px] font-bold text-teal-700">120 kN·m</span>
+        </div>
+        <div class="bg-slate-50 rounded-lg py-1 px-1.5 border border-slate-200/60">
+          <span class="text-[9px] text-slate-400 block">OIL PRESS</span>
+          <span id="tel-press" class="text-[11px] font-bold text-sky-700">35 bar</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Top-Right Pill Toolbar -->
+  <nav class="fixed top-4 right-4 z-20 pointer-events-auto flex flex-wrap items-center gap-1.5">
+    <button id="btn-reset-view" class="toolbar-btn px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm">
+      Reset View
+    </button>
+    <button id="btn-auto-rotate" class="toolbar-btn px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm">
+      Auto-Rotate
+    </button>
+    <button id="btn-toggle-labels" class="toolbar-btn active px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm">
+      Toggle Labels
+    </button>
+    <button id="btn-toggle-xray" class="toolbar-btn px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm">
+      X-Ray Cylinders
+    </button>
+  </nav>
+
+  <!-- Bottom Dock Control Bar (Explode Slider, Helm Rudder Angle Slider & HPU / SOLAS Bypass Mode) -->
+  <footer class="fixed bottom-4 left-1/2 -translate-x-1/2 z-20 w-[95vw] max-w-4xl hud-glass rounded-2xl px-5 py-3.5 pointer-events-auto">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+
+      <!-- 1. Explode Assembly Slider (0% to 100%) -->
+      <div class="md:col-span-4 flex flex-col gap-1">
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-semibold text-slate-700">Explode Assembly</span>
+          <span id="lbl-explode-val" class="mono text-[11px] font-bold text-orange-700">0% · ASSEMBLED</span>
+        </div>
+        <input id="slider-explode" type="range" min="0" max="100" value="0" step="1" />
+        <div class="flex justify-between text-[9px] mono text-slate-400">
+          <button id="btn-exp-0" class="hover:text-slate-800">0% Assembled</button>
+          <button id="btn-exp-50" class="hover:text-slate-800">50% Inspect</button>
+          <button id="btn-exp-100" class="hover:text-slate-800">100% Teardown</button>
+        </div>
+      </div>
+
+      <!-- 2. Interactive Helm / Rudder Angle Slider (-35° PORT to +35° STBD) -->
+      <div class="md:col-span-4 flex flex-col gap-1">
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-semibold text-slate-700">Helm / Rudder Order (θ)</span>
+          <span id="lbl-rudder-val" class="mono text-[11px] font-bold text-teal-700">0.0° · MIDSHIPS</span>
+        </div>
+        <input id="slider-rudder" type="range" min="-35" max="35" value="0" step="0.5" />
+        <div class="flex justify-between text-[9px] mono text-slate-400">
+          <button id="btn-rudder-port" class="hover:text-red-600 font-semibold">-35° PORT</button>
+          <button id="btn-rudder-mid" class="hover:text-slate-800 font-semibold">0° MIDSHIPS</button>
+          <button id="btn-rudder-stbd" class="hover:text-emerald-600 font-semibold">+35° STBD</button>
+        </div>
+      </div>
+
+      <!-- 3. Dual 440 V HPU & SOLAS Leak-Isolation Mode Toggle -->
+      <div class="md:col-span-4 flex flex-col gap-1.5">
+        <div class="grid grid-cols-2 gap-1.5">
+          <button id="btn-hpu-mode" class="py-1.5 px-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-[11px] font-bold tracking-wide shadow transition flex items-center justify-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-300 animate-ping"></span>
+            <span id="lbl-hpu-btn">HPU 1+2 DUAL</span>
+          </button>
+          <button id="btn-auto-sweep" class="py-1.5 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-[11px] font-semibold shadow transition flex items-center justify-center gap-1">
+            <span id="lbl-sweep-btn">⇄ DEMO ±35° SWEEP</span>
+          </button>
+        </div>
+        <div class="flex items-center justify-between px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200/90 text-[10px] mono">
+          <span class="text-slate-500">SOLAS STATUS:</span>
+          <span id="solas-status-badge" class="font-bold text-emerald-700">MAIN + ESB eSTEER READY</span>
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- Three.js ES Module Application -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+    /* =====================================================================
+       1. SCENE, RENDERER, CAMERA & SMOOTH CLAMPED WHEEL ZOOM (MANDATORY)
+       ===================================================================== */
+    const container = document.getElementById('canvas-container');
+    const leaderSvg = document.getElementById('leader-svg');
+    const badgesLayer = document.getElementById('badges-layer');
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf2f4f7);
+
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environmentIntensity = 0.82;
+
+    const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
+    const DEFAULT_CAM_POS = new THREE.Vector3(-3.4, 2.4, 4.2);
+    const DEFAULT_CAM_TARGET = new THREE.Vector3(0, 0.85, 0);
+    camera.position.copy(DEFAULT_CAM_POS);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.copy(DEFAULT_CAM_TARGET);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.enablePan = true;
+    controls.enableZoom = false; // Mandatory custom non-jumping wheel zoom below
+    controls.minDistance = 1.8;
+    controls.maxDistance = 12.0;
+    controls.maxPolarAngle = Math.PI * 0.495;
+    controls.update();
+
+    let isCameraTweening = false;
+    const tweenPos = DEFAULT_CAM_POS.clone();
+    const tweenTarget = DEFAULT_CAM_TARGET.clone();
+
+    controls.addEventListener('start', () => {
+      isCameraTweening = false;
+    });
+
+    // Smooth Non-Jumping Wheel Zoom (4.2% per scroll notch, clamped between 1.8m and 12.0m)
+    renderer.domElement.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = THREE.MathUtils.clamp(e.deltaY, -100, 100);
+      const zoomFactor = 1 + (delta > 0 ? 0.042 : -0.042) * (Math.abs(delta) / 100);
+      const offset = camera.position.clone().sub(controls.target);
+      const newDist = THREE.MathUtils.clamp(offset.length() * zoomFactor, controls.minDistance, controls.maxDistance);
+      offset.setLength(newDist);
+      camera.position.copy(controls.target).add(offset);
+    }, { passive: false });
+
+    // Studio Lighting & Steering Flat Deck Floor
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xdbe2ea, 1.15);
+    scene.add(hemiLight);
+
+    const keyLight = new THREE.DirectionalLight(0xfffdf9, 1.35);
+    keyLight.position.set(-5.0, 9.0, 6.5);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.width = 2048;
+    keyLight.shadow.mapSize.height = 2048;
+    keyLight.shadow.bias = -0.0003;
+    keyLight.shadow.camera.near = 0.5;
+    keyLight.shadow.camera.far = 25;
+    keyLight.shadow.camera.left = -4.5;
+    keyLight.shadow.camera.right = 4.5;
+    keyLight.shadow.camera.top = 4.5;
+    keyLight.shadow.camera.bottom = -4.5;
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0xe2e8f0, 0.85);
+    fillLight.position.set(6.0, 5.5, -5.0);
+    scene.add(fillLight);
+
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.55);
+    rimLight.position.set(0.0, 4.0, 7.5);
+    scene.add(rimLight);
+
+    // Studio Plinth & Drafting Grid positioned at Y = -0.46 m so that even at 100% Explode (where `steering_bedplate` shifts -0.45 m), no part ever dips below the floor!
+    const FLOOR_Y = -0.46;
+    const plinthGroup = new THREE.Group();
+    const plinthTop = new THREE.Mesh(
+      new THREE.BoxGeometry(4.8, 0.06, 3.8),
+      new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.85, metalness: 0.05 })
+    );
+    plinthTop.position.set(0, FLOOR_Y - 0.03, 0.05);
+    plinthTop.receiveShadow = true;
+    plinthGroup.add(plinthTop);
+
+    const plinthCurb = new THREE.Mesh(
+      new THREE.BoxGeometry(4.96, 0.06, 3.96),
+      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.80, metalness: 0.08 })
+    );
+    plinthCurb.position.set(0, FLOOR_Y - 0.07, 0.05);
+    plinthCurb.receiveShadow = true;
+    plinthGroup.add(plinthCurb);
+    scene.add(plinthGroup);
+
+    const gridHelper = new THREE.GridHelper(18, 36, 0xdde2e8, 0xe8ecf0);
+    gridHelper.position.y = FLOOR_Y - 0.095;
+    scene.add(gridHelper);
+
+    const shadowPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(24, 24),
+      new THREE.ShadowMaterial({ opacity: 0.16 })
+    );
+    shadowPlane.rotation.x = -Math.PI / 2;
+    shadowPlane.position.y = FLOOR_Y + 0.002;
+    shadowPlane.receiveShadow = true;
+    scene.add(shadowPlane);
+
+    /* =====================================================================
+       2. PHYSICALLY BASED MATERIAL PALETTE (`MeshStandardMaterial`)
+       ===================================================================== */
+    function createCastMetalBumpTexture() {
+      const c = document.createElement('canvas');
+      c.width = 128;
+      c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#808080';
+      ctx.fillRect(0, 0, 128, 128);
+      for (let i = 0; i < 1400; i++) {
+        const v = 114 + Math.floor(Math.random() * 32);
+        ctx.fillStyle = `rgb(${v},${v},${v})`;
+        ctx.fillRect(Math.random() * 128, Math.random() * 128, 2, 2);
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(6, 6);
+      return tex;
+    }
+    const castBumpTex = createCastMetalBumpTexture();
+
+    // Exact Prompt Material Palette
+    const matBedplateSteel = new THREE.MeshStandardMaterial({
+      color: 0x263238,
+      roughness: 0.50,
+      metalness: 0.48,
+      bumpMap: castBumpTex,
+      bumpScale: 0.002,
+      side: THREE.DoubleSide
+    });
+    const matTealCylinder = new THREE.MeshStandardMaterial({
+      color: 0x2b6e68,
+      roughness: 0.36,
+      metalness: 0.32,
+      bumpMap: castBumpTex,
+      bumpScale: 0.0018,
+      side: THREE.DoubleSide
+    });
+    const matChromeRam = new THREE.MeshStandardMaterial({
+      color: 0xdce3ea,
+      roughness: 0.12,
+      metalness: 0.92
+    });
+    const matForgedTiller = new THREE.MeshStandardMaterial({
+      color: 0x475569,
+      roughness: 0.35,
+      metalness: 0.72,
+      bumpMap: castBumpTex,
+      bumpScale: 0.0015
+    });
+    const matPhosphorBronze = new THREE.MeshStandardMaterial({
+      color: 0xc88a32,
+      roughness: 0.25,
+      metalness: 0.86
+    });
+    const matHydraulicBrass = new THREE.MeshStandardMaterial({
+      color: 0xd4af37,
+      roughness: 0.24,
+      metalness: 0.82
+    });
+    const matMotorSlate = new THREE.MeshStandardMaterial({
+      color: 0x334155,
+      roughness: 0.42,
+      metalness: 0.55
+    });
+    const matCabinetGrey = new THREE.MeshStandardMaterial({
+      color: 0xc9d2db,
+      roughness: 0.38,
+      metalness: 0.22
+    });
+    const matPortRed = new THREE.MeshStandardMaterial({
+      color: 0xdc2626,
+      roughness: 0.32,
+      metalness: 0.20
+    });
+    const matStbdGreen = new THREE.MeshStandardMaterial({
+      color: 0x16a34a,
+      roughness: 0.32,
+      metalness: 0.20
+    });
+    const matSafetyYellow = new THREE.MeshStandardMaterial({
+      color: 0xeab308,
+      roughness: 0.34,
+      metalness: 0.18
+    });
+    const matSightGlassOil = new THREE.MeshPhysicalMaterial({
+      color: 0xf59e0b,
+      transparent: true,
+      opacity: 0.78,
+      roughness: 0.10,
+      transmission: 0.65
+    });
+    const matXrayCylinder = new THREE.MeshPhysicalMaterial({
+      color: 0x5eead4,
+      transparent: true,
+      opacity: 0.24,
+      roughness: 0.10,
+      transmission: 0.82,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+
+    // Procedural Brass Rudder Angle Scale Arc Texture (-35° PORT ← 0° → +35° STBD)
+    function createRudderScaleTexture() {
+      const c = document.createElement('canvas');
+      c.width = 512;
+      c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#d4af37';
+      ctx.fillRect(0, 0, 512, 128);
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(4, 4, 504, 120);
+
+      // Port red & Starboard green bands
+      ctx.fillStyle = '#dc2626';
+      ctx.fillRect(20, 18, 210, 22);
+      ctx.fillStyle = '#16a34a';
+      ctx.fillRect(282, 18, 210, 22);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 15px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('← PORT (-35°)', 125, 34);
+      ctx.fillText('STBD (+35°) →', 387, 34);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 18px JetBrains Mono, monospace';
+      const degMarks = [-35, -30, -20, -10, 0, 10, 20, 30, 35];
+      degMarks.forEach((d) => {
+        const x = 256 + (d / 35) * 210;
+        ctx.beginPath();
+        ctx.moveTo(x, 46);
+        ctx.lineTo(x, 74);
+        ctx.lineWidth = d === 0 ? 4 : 2;
+        ctx.stroke();
+        ctx.fillText(`${d > 0 ? '+' : ''}${d}°`, x, 102);
+      });
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+    const rudderScaleTex = createRudderScaleTexture();
+
+    // Procedural Follow-Up Synchro Dial Texture
+    function createSynchroDialTexture() {
+      const c = document.createElement('canvas');
+      c.width = 256;
+      c.height = 256;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(128, 128, 122, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#d4af37';
+      ctx.lineWidth = 8;
+      ctx.stroke();
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 18px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('RUDDER ANGLE', 128, 68);
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 15px JetBrains Mono, monospace';
+      ctx.fillText('FOLLOW-UP TX', 128, 92);
+
+      ctx.fillStyle = '#ef4444';
+      ctx.fillText('35°P', 52, 148);
+      ctx.fillStyle = '#22c55e';
+      ctx.fillText('35°S', 204, 148);
+      ctx.fillStyle = '#eab308';
+      ctx.fillText('0°', 128, 212);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+    const synchroDialTex = createSynchroDialTexture();
+
+    /* =====================================================================
+       3. SEVEN COHESIVE FUNCTIONAL SUB-ASSEMBLIES (`parts` REGISTRY)
+       ===================================================================== */
+    const RAM_Y = 0.68;
+    const RAM_Z = 0.55; // Lever radius R_lever = 0.55 m from rudder stock center (0, 0)
+
+    const parts = {
+      steering_bedplate: {
+        code: 'FB',
+        name: 'Foundation Bedplate & Carrier Bearing',
+        spec: '2.80×1.80 m Box-Girder · 16 Hold-Down Bolts',
+        desc: 'Massive welded box-girder steel bedplate with central circular pedestal housing the heavy phosphor-bronze Rudder Carrier Thrust Bearing, perimeter oil-drip coaming, foundation chocks, and 16 holding-down bolts.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(0, -0.45, 0),
+        anchor: new THREE.Vector3(-1.15, 0.14, 0.55)
+      },
+      rudder_stock_tiller: {
+        code: 'RT',
+        name: 'Forged Rudder Stock & Forked Tiller',
+        spec: 'Ø400 mm Alloy Stock · Rapson-Slide Fork',
+        desc: 'Central vertical forged alloy-steel Rudder Stock (R = 0.20 m, H = 1.45 m) crowned with a heavy keyed split-clamp Forked Tiller Arm with precision-machined internal guideways and top brass Rudder Angle Pointer Scale.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(0, 0.75, 0),
+        anchor: new THREE.Vector3(0.0, 0.85, 0.12)
+      },
+      hydraulic_rams: {
+        code: 'HR',
+        name: 'Chrome Hydraulic Ram & Swivel Crosshead',
+        spec: 'Ø220 mm Double-Acting Ram · Bronze Trunnion',
+        desc: 'Through-going hard-chrome-plated Double-Ended Hydraulic Ram (R = 0.11 m, L = 1.95 m) with a central phosphor-bronze Rapson-Slide Swivel Crosshead Block that slides and pivots inside the forked tiller arm.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(0, 0.35, 0.55),
+        anchor: new THREE.Vector3(0.25, 0.68, 0.55)
+      },
+      ram_cylinders: {
+        code: 'CY',
+        name: 'Twin Cast-Steel Cylinders & Glands',
+        spec: '210 bar Working · 12-Stud Bronze Stuffing Box',
+        desc: 'Port and Starboard flanged cast-steel hydraulic cylinder barrels with heavy 12-stud phosphor-bronze stuffing-box gland followers, wiper seals, air-bleed cocks, and spherical rear trunnion mounts.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(0, 0.05, 0.85),
+        anchor: new THREE.Vector3(-0.92, 0.68, 0.55)
+      },
+      hpu_pumps: {
+        code: 'HP',
+        name: 'Dual Redundant 440 V HPU Pump Skids',
+        spec: 'HPU 1 (Main Bus) + HPU 2 (SOLAS ESB eSteer)',
+        desc: 'Two independent 440 V / 45 kW squirrel-cage motors coupled to Hele-Shaw / axial-piston variable-delivery hydraulic pumps atop separate oil reservoirs with sight glasses and return filters.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(0, 0.25, -0.75),
+        anchor: new THREE.Vector3(0.82, 0.72, -0.48)
+      },
+      manifold_valves: {
+        code: 'MV',
+        name: 'Solenoid Valves & SOLAS Bypass Block',
+        spec: 'SOL A/B Proportional · 245 bar Shock Relief',
+        desc: 'Central high-pressure steel valve chest linking both HPUs to the port and starboard cylinders via 210 bar seamless cross-pipes, proportional solenoid pilot valves, and automatic SOLAS leak-isolation bypass block.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(0, 0.65, -0.35),
+        anchor: new THREE.Vector3(0.18, 0.92, -0.18)
+      },
+      telemetry_follow_up: {
+        code: 'FT',
+        name: 'Follow-Up Transmitter & Trick Wheel',
+        spec: 'Synchro Feedback · ±37° Limit Switches',
+        desc: 'Geared potentiometer/synchro Follow-Up Feedback Transmitter (FU) sending actual rudder angle to the bridge autopilot, ±37° limit switches, and a local chromed Emergency Hand-Steering Trick Wheel.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(0, 1.15, 0.25),
+        anchor: new THREE.Vector3(0.0, 1.48, 0.15)
+      }
+    };
+
+    for (const key in parts) {
+      scene.add(parts[key].group);
+    }
+
+    // Kinematic Node References
+    const xrayCylinderMeshes = [];
+    const hpuMotorCoolingFans = [];
+    const solenoidLedMeshes = [];
+    let rudderTillerPivot = null;
+    let ramTranslationGroup = null;
+    let crossheadSwivelShoe = null;
+    let followUpPointerArm = null;
+    let trickWheelGroup = null;
+    let limitSwitchPortRoller = null;
+    let limitSwitchStbdRoller = null;
+
+    /* =====================================================================
+       3.1 BUILD `steering_bedplate` — WELDED FOUNDATION BEDPLATE & CARRIER
+       ===================================================================== */
+    function buildSteeringBedplate() {
+      const grp = parts.steering_bedplate.group;
+      const bedW = 2.80, bedH = 0.24, bedD = 1.80;
+
+      // Main Welded Box-Girder Steel Bedplate Deck (Y = 0.02 m to 0.26 m)
+      const mainBed = new THREE.Mesh(new THREE.BoxGeometry(bedW, bedH, bedD), matBedplateSteel);
+      mainBed.position.set(0, 0.14, 0);
+      mainBed.castShadow = true;
+      mainBed.receiveShadow = true;
+      grp.add(mainBed);
+
+      // Perimeter Oil-Drip Coaming Lip around the Bedplate Top Edge
+      const coamingH = 0.045;
+      [-bedD / 2 + 0.015, bedD / 2 - 0.015].forEach((cz) => {
+        const lipZ = new THREE.Mesh(new THREE.BoxGeometry(bedW, coamingH, 0.03), matBedplateSteel);
+        lipZ.position.set(0, 0.26 + coamingH / 2, cz);
+        grp.add(lipZ);
+      });
+      [-bedW / 2 + 0.015, bedW / 2 - 0.015].forEach((cx) => {
+        const lipX = new THREE.Mesh(new THREE.BoxGeometry(0.03, coamingH, bedD), matBedplateSteel);
+        lipX.position.set(cx, 0.26 + coamingH / 2, 0);
+        grp.add(lipX);
+      });
+
+      // 16 Foundation Chocks & High-Tensile Holding-Down Bolts around Perimeter
+      for (let i = 0; i < 6; i++) {
+        const bx = -1.25 + i * 0.50;
+        [-0.86, 0.86].forEach((bz) => {
+          const chock = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.035, 0.10), matForgedTiller);
+          chock.position.set(bx, 0.018, bz);
+          grp.add(chock);
+
+          const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.28, 6), matChromeRam);
+          bolt.position.set(bx, 0.15, bz);
+          grp.add(bolt);
+
+          const nut = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.028, 6), matHydraulicBrass);
+          nut.position.set(bx, 0.275, bz);
+          grp.add(nut);
+        });
+      }
+      [-0.45, 0.45].forEach((bz) => {
+        [-1.36, 1.36].forEach((bx) => {
+          const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.28, 6), matChromeRam);
+          bolt.position.set(bx, 0.15, bz);
+          grp.add(bolt);
+
+          const nut = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.028, 6), matHydraulicBrass);
+          nut.position.set(bx, 0.275, bz);
+          grp.add(nut);
+        });
+      });
+
+      // Central Circular Pedestal Housing & Heavy Bronze-Lined Rudder Carrier Thrust Bearing (at X=0, Z=0)
+      const carrierPedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.44, 0.28, 36), matBedplateSteel);
+      carrierPedestal.position.set(0, 0.38, 0);
+      carrierPedestal.castShadow = true;
+      grp.add(carrierPedestal);
+
+      // 8 Radial Cast Web Gusset Ribs Buttressing the Rudder Carrier Pedestal
+      for (let r = 0; r < 8; r++) {
+        const ra = (r / 8) * Math.PI * 2 + Math.PI / 8;
+        const rib = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.24, 0.24), matBedplateSteel);
+        rib.position.set(Math.sin(ra) * 0.42, 0.36, Math.cos(ra) * 0.42);
+        rib.rotation.y = ra;
+        grp.add(rib);
+      }
+
+      // Phosphor-Bronze Rudder Carrier Thrust Ring & Lubrication Collar (`0xc88a32`)
+      const bronzeCarrierRing = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 0.08, 36), matPhosphorBronze);
+      bronzeCarrierRing.position.set(0, 0.54, 0);
+      bronzeCarrierRing.castShadow = true;
+      grp.add(bronzeCarrierRing);
+
+      // 12 Carrier Bearing Flange Studs & Automatic Grease Cup Lubricators
+      for (let b = 0; b < 12; b++) {
+        const ba = (b / 12) * Math.PI * 2;
+        const stud = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.04, 6), matChromeRam);
+        stud.position.set(Math.sin(ba) * 0.33, 0.53, Math.cos(ba) * 0.33);
+        grp.add(stud);
+
+        if (b % 3 === 0) {
+          const greaseCup = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.055, 16), matHydraulicBrass);
+          greaseCup.position.set(Math.sin(ba) * 0.30, 0.59, Math.cos(ba) * 0.30);
+          grp.add(greaseCup);
+        }
+      }
+
+      // Raised Cylinder Mounting Pedestals & Mechanical Hard-Over Rudder Stoppers (±37°) on Forward Bedplate
+      [-0.85, 0.85].forEach((cx) => {
+        const cylSaddle = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.16, 0.44), matBedplateSteel);
+        cylSaddle.position.set(cx, 0.34, RAM_Z);
+        cylSaddle.castShadow = true;
+        grp.add(cylSaddle);
+      });
+
+      // Port & Starboard Mechanical Hard-Over Tiller Stopper Blocks (±37° mechanical stops)
+      [-0.44, 0.44].forEach((sx) => {
+        const stopperBlock = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.22, 0.11), matForgedTiller);
+        stopperBlock.position.set(sx, 0.36, 0.36);
+        stopperBlock.rotation.y = sx > 0 ? -0.62 : 0.62;
+        grp.add(stopperBlock);
+
+        const bronzeStrikePad = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.14, 0.02), matPhosphorBronze);
+        bronzeStrikePad.position.set(sx * 0.92, 0.38, 0.35);
+        bronzeStrikePad.rotation.y = sx > 0 ? -0.62 : 0.62;
+        grp.add(bronzeStrikePad);
+      });
+
+      // Top Stationary Brass Rudder Angle Scale Arc Bridge (-35° PORT ← 0° → +35° STBD)
+      [-0.36, 0.36].forEach((px) => {
+        const scalePillar = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.018, 0.56, 16), matForgedTiller);
+        scalePillar.position.set(px, 0.80, 0.32);
+        grp.add(scalePillar);
+      });
+
+      const scalePlate = new THREE.Mesh(
+        new THREE.BoxGeometry(0.78, 0.085, 0.014),
+        new THREE.MeshStandardMaterial({ map: rudderScaleTex, roughness: 0.28, metalness: 0.65 })
+      );
+      scalePlate.position.set(0, 1.08, 0.32);
+      scalePlate.rotation.x = -0.35;
+      grp.add(scalePlate);
+    }
+
+    /* =====================================================================
+       3.2 BUILD `rudder_stock_tiller` — FORGED RUDDER STOCK & FORKED TILLER
+       ===================================================================== */
+    function buildRudderStockTiller() {
+      const grp = parts.rudder_stock_tiller.group;
+
+      // Rotating Pivot Group centered at Rudder Stock Axis (X = 0, Z = 0)
+      rudderTillerPivot = new THREE.Group();
+      rudderTillerPivot.position.set(0, 0, 0);
+      grp.add(rudderTillerPivot);
+
+      // Central Vertical Forged Alloy-Steel Rudder Stock (R = 0.20 m, H = 1.45 m)
+      const rudderStock = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.20, 1.45, 40), matChromeRam);
+      rudderStock.position.set(0, 0.725, 0);
+      rudderStock.castShadow = true;
+      rudderTillerPivot.add(rudderStock);
+
+      // Vertical Machined Keyway & Heavy Feather Key on Rudder Stock Head
+      const stockKey = new THREE.Mesh(new THREE.BoxGeometry(0.048, 0.42, 0.045), matPhosphorBronze);
+      stockKey.position.set(0, 0.76, -0.195);
+      rudderTillerPivot.add(stockKey);
+
+      // Lower & Upper Bronze Journal Sleeve Liners on Rudder Stock
+      [0.32, 0.54].forEach((yl) => {
+        const liner = new THREE.Mesh(new THREE.CylinderGeometry(0.212, 0.212, 0.10, 36), matPhosphorBronze);
+        liner.position.set(0, yl, 0);
+        rudderTillerPivot.add(liner);
+      });
+
+      // Heavy Keyed Split-Clamp Tiller Hub Boss surrounding Rudder Stock at Y = 0.68 m
+      const tillerHub = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.34, 36), matForgedTiller);
+      tillerHub.position.set(0, RAM_Y, 0);
+      tillerHub.castShadow = true;
+      rudderTillerPivot.add(tillerHub);
+
+      // Rear Split-Clamp Clamping Ears & 4 Massive High-Tensile Shrink Bolts with Castellated Nuts
+      const clampEar = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.32, 0.22), matForgedTiller);
+      clampEar.position.set(0, RAM_Y, -0.28);
+      clampEar.castShadow = true;
+      rudderTillerPivot.add(clampEar);
+
+      [-0.09, 0.09].forEach((yb) => {
+        [-0.32, -0.22].forEach((zb) => {
+          const clampBolt = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.36, 16), matChromeRam);
+          clampBolt.rotation.z = Math.PI / 2;
+          clampBolt.position.set(0, RAM_Y + yb, zb);
+          rudderTillerPivot.add(clampBolt);
+
+          [-0.16, 0.16].forEach((xb) => {
+            const hexNut = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.032, 6), matHydraulicBrass);
+            hexNut.rotation.z = Math.PI / 2;
+            hexNut.position.set(xb, RAM_Y + yb, zb);
+            rudderTillerPivot.add(hexNut);
+          });
+        });
+      });
+
+      // Forked Rapson-Slide Tiller Arm extending forward (+Z from Z = +0.18 m to Z = +0.86 m)
+      // Upper & Lower Tiller Jaws straddling the Chrome Hydraulic Ram (at Y = RAM_Y ± 0.155 m)
+      [-0.155, 0.155].forEach((yJaw) => {
+        // Left & Right Cheeks of the Forked Tiller Jaw creating the precision-machined central guideway slot (slot width = 0.21 m)
+        [-0.155, 0.155].forEach((xCheek) => {
+          const jawArm = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.075, 0.68), matForgedTiller);
+          jawArm.position.set(xCheek, RAM_Y + yJaw, 0.50);
+          jawArm.castShadow = true;
+          rudderTillerPivot.add(jawArm);
+
+          // Precision-Machined Phosphor-Bronze Wear Strips lining the inner Rapson-Slide guideway slot
+          const wearStrip = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.068, 0.58), matPhosphorBronze);
+          wearStrip.position.set(xCheek > 0 ? xCheek - 0.052 : xCheek + 0.052, RAM_Y + yJaw, 0.52);
+          rudderTillerPivot.add(wearStrip);
+        });
+
+        // Root Bridge connecting the Tiller Hub to the Fork Cheeks at Z = +0.22 m
+        const rootBridge = new THREE.Mesh(new THREE.BoxGeometry(0.41, 0.078, 0.14), matForgedTiller);
+        rootBridge.position.set(0, RAM_Y + yJaw, 0.22);
+        rudderTillerPivot.add(rootBridge);
+
+        // Nose Tie-Bridge & Keeper Bolts at Forward Tip of Tiller Fork (Z = +0.84 m)
+        const noseBridge = new THREE.Mesh(new THREE.BoxGeometry(0.41, 0.075, 0.065), matForgedTiller);
+        noseBridge.position.set(0, RAM_Y + yJaw, 0.84);
+        rudderTillerPivot.add(noseBridge);
+      });
+
+      // Vertical Side Stiffening Webs at Root of Tiller Fork (Z = +0.22 m)
+      [-0.20, 0.20].forEach((xw) => {
+        const rootWeb = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.36, 0.14), matForgedTiller);
+        rootWeb.position.set(xw, RAM_Y, 0.22);
+        rudderTillerPivot.add(rootWeb);
+      });
+
+      // Top Mechanical Brass Rudder Angle Pointer Needle sweeping over the Degree Scale Arc
+      const pointerNeedle = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.016, 0.36), matPortRed);
+      pointerNeedle.position.set(0, 1.04, 0.18);
+      rudderTillerPivot.add(pointerNeedle);
+
+      const pointerTip = new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.06, 12), matHydraulicBrass);
+      pointerTip.rotation.x = Math.PI / 2;
+      pointerTip.position.set(0, 1.04, 0.36);
+      rudderTillerPivot.add(pointerTip);
+    }
+
+    /* =====================================================================
+       3.3 BUILD `hydraulic_rams` — CHROME RAM & BRONZE RAPSON-SLIDE CROSSHEAD
+       ===================================================================== */
+    function buildHydraulicRams() {
+      const grp = parts.hydraulic_rams.group;
+
+      // Translating Group that moves along X by `ramX = R_lever * Math.tan(theta)`
+      ramTranslationGroup = new THREE.Group();
+      ramTranslationGroup.position.set(0, RAM_Y, RAM_Z);
+      grp.add(ramTranslationGroup);
+
+      // Single Through-Going Hard-Chrome-Plated Double-Ended Hydraulic Ram (R = 0.105 m, L = 1.98 m) along X-axis
+      const chromeRam = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.105, 1.98, 36), matChromeRam);
+      chromeRam.rotation.z = Math.PI / 2;
+      chromeRam.castShadow = true;
+      ramTranslationGroup.add(chromeRam);
+
+      // Internal Piston Rings & Stroke End Cushions at Port & Starboard Ends of Chrome Ram (Visible in X-Ray Mode!)
+      [-0.78, 0.78].forEach((xp) => {
+        const pistonRing = new THREE.Mesh(new THREE.CylinderGeometry(0.118, 0.118, 0.06, 32), matPhosphorBronze);
+        pistonRing.rotation.z = Math.PI / 2;
+        pistonRing.position.x = xp;
+        ramTranslationGroup.add(pistonRing);
+      });
+
+      // Central Forged Ram Trunnion Carrier Collar clamped to the middle of the Chrome Ram (X = 0)
+      const ramCollar = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.23, 0.24), matForgedTiller);
+      ramCollar.castShadow = true;
+      ramTranslationGroup.add(ramCollar);
+
+      // Vertical Hardened Steel Trunnion Pin passing through the Ram Collar & Bronze Swivel Crosshead
+      const trunnionPin = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.068, 0.44, 28), matChromeRam);
+      trunnionPin.castShadow = true;
+      ramTranslationGroup.add(trunnionPin);
+
+      // Top & Bottom Bronze Lubrication Caps on Trunnion Pin
+      [-0.225, 0.225].forEach((yp) => {
+        const pinCap = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.082, 0.022, 24), matHydraulicBrass);
+        pinCap.position.y = yp;
+        ramTranslationGroup.add(pinCap);
+      });
+
+      // Phosphor-Bronze Rapson-Slide Swivel Crosshead Guide Block (`crossheadSwivelShoe`)
+      // Rotates by `theta` around Y so its outer guide faces stay 100% parallel inside the Forked Tiller Slot!
+      crossheadSwivelShoe = new THREE.Group();
+      ramTranslationGroup.add(crossheadSwivelShoe);
+
+      // Upper & Lower Phosphor-Bronze Sliding Shoes engaging the Upper & Lower Tiller Fork Guideways
+      [-0.155, 0.155].forEach((yShoe) => {
+        const bronzeShoe = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.082, 0.24), matPhosphorBronze);
+        bronzeShoe.position.set(0, yShoe, 0);
+        bronzeShoe.castShadow = true;
+        crossheadSwivelShoe.add(bronzeShoe);
+
+        // Machined Oil-Groove Flanges on Top & Bottom of Bronze Sliding Shoe
+        [-0.044, 0.044].forEach((yFlange) => {
+          const lip = new THREE.Mesh(new THREE.BoxGeometry(0.225, 0.010, 0.25), matHydraulicBrass);
+          lip.position.set(0, yShoe + yFlange, 0);
+          crossheadSwivelShoe.add(lip);
+        });
+      });
+    }
+
+    /* =====================================================================
+       3.4 BUILD `ram_cylinders` — TWIN CAST-STEEL CYLINDERS & STUFFING BOXES
+       ===================================================================== */
+    function buildRamCylinders() {
+      const grp = parts.ram_cylinders.group;
+      xrayCylinderMeshes.length = 0;
+
+      // Port (X = -0.88 m) & Starboard (X = +0.88 m) Cast-Steel Hydraulic Cylinders at Y = RAM_Y, Z = RAM_Z
+      [-1, 1].forEach((side) => {
+        const cx = side * 0.88;
+        const cylAssy = new THREE.Group();
+        cylAssy.position.set(cx, RAM_Y, RAM_Z);
+        grp.add(cylAssy);
+
+        // Main Cast-Steel Cylinder Barrel (`0x2b6e68` Marine Machinery Teal-Green)
+        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.185, 0.185, 0.72, 36), matTealCylinder);
+        barrel.rotation.z = Math.PI / 2;
+        barrel.castShadow = true;
+        cylAssy.add(barrel);
+        xrayCylinderMeshes.push(barrel);
+
+        // 3 External Cast Circumferential Reinforcement Ribs on Cylinder Barrel
+        [-0.18, 0.0, 0.18].forEach((xr) => {
+          const rib = new THREE.Mesh(new THREE.TorusGeometry(0.192, 0.016, 12, 36), matTealCylinder);
+          rib.rotation.y = Math.PI / 2;
+          rib.position.x = xr;
+          cylAssy.add(rib);
+          xrayCylinderMeshes.push(rib);
+        });
+
+        // Inner Neck Flange & Heavy 12-Stud Phosphor-Bronze Stuffing-Box Gland Follower facing Center (X = -side * 0.36)
+        const innerX = -side * 0.36;
+        const neckFlange = new THREE.Mesh(new THREE.CylinderGeometry(0.235, 0.235, 0.045, 36), matTealCylinder);
+        neckFlange.rotation.z = Math.PI / 2;
+        neckFlange.position.x = innerX;
+        cylAssy.add(neckFlange);
+
+        const glandFollower = new THREE.Mesh(new THREE.CylinderGeometry(0.165, 0.185, 0.085, 32), matPhosphorBronze);
+        glandFollower.rotation.z = Math.PI / 2;
+        glandFollower.position.x = innerX - side * 0.055;
+        glandFollower.castShadow = true;
+        cylAssy.add(glandFollower);
+
+        // Wiper Seal Ring around Chrome Ram Entry
+        const wiperRing = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.012, 10, 28), matHydraulicBrass);
+        wiperRing.rotation.y = Math.PI / 2;
+        wiperRing.position.x = innerX - side * 0.10;
+        cylAssy.add(wiperRing);
+
+        // 12 High-Tensile Stuffing-Box Gland Studs & Brass Hex Nuts
+        for (let s = 0; s < 12; s++) {
+          const sa = (s / 12) * Math.PI * 2;
+          const stud = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.12, 8), matChromeRam);
+          stud.rotation.z = Math.PI / 2;
+          stud.position.set(innerX - side * 0.045, Math.cos(sa) * 0.20, Math.sin(sa) * 0.20);
+          cylAssy.add(stud);
+
+          const nut = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.018, 6), matHydraulicBrass);
+          nut.rotation.z = Math.PI / 2;
+          nut.position.set(innerX - side * 0.095, Math.cos(sa) * 0.20, Math.sin(sa) * 0.20);
+          cylAssy.add(nut);
+        }
+
+        // Outer Dished Cylinder Head Cap & Spherical Rear Trunnion Pedestal Mount (X = +side * 0.36)
+        const outerX = side * 0.36;
+        const headFlange = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.23, 0.045, 36), matTealCylinder);
+        headFlange.rotation.z = Math.PI / 2;
+        headFlange.position.x = outerX;
+        cylAssy.add(headFlange);
+
+        const dishedDome = new THREE.Mesh(new THREE.SphereGeometry(0.18, 28, 16), matTealCylinder);
+        dishedDome.scale.set(0.45, 1.0, 1.0);
+        dishedDome.position.x = outerX + side * 0.03;
+        cylAssy.add(dishedDome);
+
+        // Spherical Rear Trunnion Eye & Clevis Foot bolted to Bedplate
+        const trunnionClevis = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.32, 0.26), matForgedTiller);
+        trunnionClevis.position.set(outerX + side * 0.12, -0.10, 0);
+        trunnionClevis.castShadow = true;
+        cylAssy.add(trunnionClevis);
+
+        const trunnionShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.32, 20), matChromeRam);
+        trunnionShaft.rotation.x = Math.PI / 2;
+        trunnionShaft.position.set(outerX + side * 0.11, 0, 0);
+        cylAssy.add(trunnionShaft);
+
+        // Top Brass Air-Bleed Valve Cock & High-Pressure Hydraulic Inlet Boss
+        const bleedBoss = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.038, 0.07, 16), matPhosphorBronze);
+        bleedBoss.position.set(side * 0.18, 0.21, 0);
+        cylAssy.add(bleedBoss);
+
+        const bleedTBar = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.08, 10), matHydraulicBrass);
+        bleedTBar.rotation.z = Math.PI / 2;
+        bleedTBar.position.set(side * 0.18, 0.255, 0);
+        cylAssy.add(bleedTBar);
+
+        // Port (Red) / Starboard (Green) Identification Collar Band
+        const idBand = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.188, 0.188, 0.045, 36),
+          side < 0 ? matPortRed : matStbdGreen
+        );
+        idBand.rotation.z = Math.PI / 2;
+        idBand.position.x = -side * 0.08;
+        cylAssy.add(idBand);
+      });
+    }
+
+    /* =====================================================================
+       3.5 BUILD `hpu_pumps` — DUAL REDUNDANT 440 V ELECTRO-HYDRAULIC UNITS
+       ===================================================================== */
+    function buildHpuPumps() {
+      const grp = parts.hpu_pumps.group;
+      hpuMotorCoolingFans.length = 0;
+
+      // HPU No. 1 (Port X = -0.82 m, Main 440V Bus) & HPU No. 2 (Starboard X = +0.82 m, SOLAS ESB eSteer) at Z = -0.48 m
+      [-1, 1].forEach((side, idx) => {
+        const hx = side * 0.82;
+        const hz = -0.48;
+        const hpuUnit = new THREE.Group();
+        hpuUnit.position.set(hx, 0.26, hz);
+        grp.add(hpuUnit);
+
+        // Independent Steel Hydraulic Oil Reservoir Tank (`0x2b6e68`, 0.82 m × 0.38 m × 0.56 m)
+        const tank = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.38, 0.56), matTealCylinder);
+        tank.position.set(0, 0.19, 0);
+        tank.castShadow = true;
+        tank.receiveShadow = true;
+        hpuUnit.add(tank);
+
+        // Bolted Tank Inspection Clean-Out Cover & Oil Level Sight Glass Gauge
+        const cleanCover = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.02, 20), matForgedTiller);
+        cleanCover.rotation.x = Math.PI / 2;
+        cleanCover.position.set(-0.20, 0.19, -0.285);
+        hpuUnit.add(cleanCover);
+
+        const sightFrame = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.24, 0.025), matHydraulicBrass);
+        sightFrame.position.set(0.24, 0.19, -0.285);
+        hpuUnit.add(sightFrame);
+
+        const sightOil = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.20, 16), matSightGlassOil);
+        sightOil.position.set(0.24, 0.19, -0.298);
+        hpuUnit.add(sightOil);
+
+        // Top Chrome Air Breather Cap & Return-Line Duplex Spin-On Oil Filter Canisters
+        const breather = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.028, 0.075, 20), matChromeRam);
+        breather.position.set(-0.32, 0.42, 0.16);
+        hpuUnit.add(breather);
+
+        [-0.08, 0.08].forEach((zf) => {
+          const filterCan = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.048, 0.18, 24), matSafetyYellow);
+          filterCan.position.set(side * 0.30, 0.47, zf);
+          hpuUnit.add(filterCan);
+        });
+
+        // Horizontal 440 V / 45 kW Squirrel-Cage Induction Motor (`0x334155`) mounted atop Reservoir Tank
+        const motorX = -side * 0.14;
+        const motorY = 0.56;
+        const motorBody = new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.145, 0.38, 32), matMotorSlate);
+        motorBody.rotation.z = Math.PI / 2;
+        motorBody.position.set(motorX, motorY, 0);
+        motorBody.castShadow = true;
+        hpuUnit.add(motorBody);
+
+        // 16 Radial Cooling Fins around 440 V Motor Frame
+        for (let f = 0; f < 16; f++) {
+          const fa = (f / 16) * Math.PI * 2;
+          const fin = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.012, 0.026), matMotorSlate);
+          fin.position.set(motorX, motorY + Math.cos(fa) * 0.15, Math.sin(fa) * 0.15);
+          fin.rotation.x = fa;
+          hpuUnit.add(fin);
+        }
+
+        // Top 440 V Terminal Box (Port = Main 440V Bus, Starboard = SOLAS ESB Red/Yellow Emergency Box)
+        const termBox = new THREE.Mesh(
+          new THREE.BoxGeometry(0.14, 0.11, 0.14),
+          idx === 0 ? matCabinetGrey : matSafetyYellow
+        );
+        termBox.position.set(motorX, motorY + 0.19, 0);
+        hpuUnit.add(termBox);
+
+        // Concentric Rotating Motor Cooling Fan Impeller at Outer End of Motor (`hpuMotorCoolingFans`)
+        const fanGroup = new THREE.Group();
+        fanGroup.position.set(motorX - side * 0.20, motorY, 0);
+        hpuUnit.add(fanGroup);
+        hpuMotorCoolingFans.push(fanGroup);
+
+        const fanHub = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.03, 16), matHydraulicBrass);
+        fanHub.rotation.z = Math.PI / 2;
+        fanGroup.add(fanHub);
+
+        for (let b = 0; b < 8; b++) {
+          const ba = (b / 8) * Math.PI * 2;
+          const blade = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.11, 0.008), matChromeRam);
+          blade.position.set(0, Math.cos(ba) * 0.065, Math.sin(ba) * 0.065);
+          blade.rotation.x = ba;
+          fanGroup.add(blade);
+        }
+
+        // Bellhousing Coupling & Hele-Shaw / Axial-Piston Variable-Delivery Hydraulic Pump (`0xc88a32` / `0x475569`)
+        const bellHousing = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.135, 0.12, 24), matForgedTiller);
+        bellHousing.rotation.z = side > 0 ? -Math.PI / 2 : Math.PI / 2;
+        bellHousing.position.set(motorX + side * 0.24, motorY, 0);
+        hpuUnit.add(bellHousing);
+
+        const axialPump = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.115, 0.20, 28), matPhosphorBronze);
+        axialPump.rotation.z = Math.PI / 2;
+        axialPump.position.set(motorX + side * 0.38, motorY, 0);
+        axialPump.castShadow = true;
+        hpuUnit.add(axialPump);
+
+        // Variable Swashplate Servo Actuator Cylinder on top of Axial-Piston Pump
+        const swashServo = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.14), matHydraulicBrass);
+        swashServo.position.set(motorX + side * 0.38, motorY + 0.13, 0);
+        hpuUnit.add(swashServo);
+      });
+    }
+
+    /* =====================================================================
+       3.6 BUILD `manifold_valves` — SOLENOID VALVES & SOLAS BYPASS BLOCK
+       ===================================================================== */
+    function buildManifoldValves() {
+      const grp = parts.manifold_valves.group;
+      solenoidLedMeshes.length = 0;
+
+      // Central High-Pressure Forged Steel Valve Chest & SOLAS Automatic Leak-Isolation Bypass Block (`[0, 0.88, -0.24]`)
+      const valveChest = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.22, 0.28), matForgedTiller);
+      valveChest.position.set(0, 0.88, -0.24);
+      valveChest.castShadow = true;
+      grp.add(valveChest);
+
+      // Vertical Support Pillars from Bedplate to Valve Chest
+      [-0.22, 0.22].forEach((px) => {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.028, 0.56, 16), matBedplateSteel);
+        leg.position.set(px, 0.52, -0.24);
+        grp.add(leg);
+      });
+
+      // Dual Proportional Directional Solenoid Pilot Valves (SOL A Port / SOL B Starboard) atop Valve Chest
+      [-0.15, 0.15].forEach((sx, idx) => {
+        const subplate = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.06, 0.16), matHydraulicBrass);
+        subplate.position.set(sx, 1.02, -0.24);
+        grp.add(subplate);
+
+        // Twin Solenoid Coils per Valve
+        [-0.06, 0.06].forEach((zx) => {
+          const coil = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.09, 20), matMotorSlate);
+          coil.rotation.x = Math.PI / 2;
+          coil.position.set(sx, 1.08, -0.24 + zx * 1.4);
+          grp.add(coil);
+
+          // Glowing Status LED on Solenoid DIN Connector Plug
+          const led = new THREE.Mesh(
+            new THREE.BoxGeometry(0.022, 0.016, 0.022),
+            new THREE.MeshBasicMaterial({ color: idx === 0 ? 0xef4444 : 0x22c55e })
+          );
+          led.position.set(sx, 1.12, -0.24 + zx * 1.4);
+          grp.add(led);
+          solenoidLedMeshes.push({ mesh: led, side: idx === 0 ? -1 : 1 });
+        });
+      });
+
+      // Central SOLAS Automatic Leak-Isolation & Rudder-Locking Bypass Valve Cartridge + Manual Bypass Handwheel
+      const bypassTurret = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, 0.16, 24), matHydraulicBrass);
+      bypassTurret.position.set(0, 1.06, -0.24);
+      grp.add(bypassTurret);
+
+      const bypassWheel = new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.010, 10, 24), matPortRed);
+      bypassWheel.rotation.x = Math.PI / 2;
+      bypassWheel.position.set(0, 1.15, -0.24);
+      grp.add(bypassWheel);
+
+      // Twin 245 bar Shock-Relief Safety Valves with Lead Seals
+      [-0.24, 0.24].forEach((rx) => {
+        const reliefCartridge = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.028, 0.12, 16), matHydraulicBrass);
+        reliefCartridge.rotation.x = -Math.PI / 4;
+        reliefCartridge.position.set(rx, 0.96, -0.36);
+        grp.add(reliefCartridge);
+      });
+
+      // Seamless High-Pressure 210 bar Steel Cross-Pipes (`0xd4af37`) linking HPU 1 & HPU 2 -> Valve Chest -> Port & Starboard Cylinders
+      const pipeRoutes = [
+        // HPU 1 (Port) discharge to Valve Chest
+        [
+          new THREE.Vector3(-0.56, 0.82, -0.48),
+          new THREE.Vector3(-0.42, 0.88, -0.42),
+          new THREE.Vector3(-0.28, 0.88, -0.24)
+        ],
+        // HPU 2 (Stbd) discharge to Valve Chest
+        [
+          new THREE.Vector3(0.56, 0.82, -0.48),
+          new THREE.Vector3(0.42, 0.88, -0.42),
+          new THREE.Vector3(0.28, 0.88, -0.24)
+        ],
+        // Valve Chest Port Line A to Port Cylinder Head
+        [
+          new THREE.Vector3(-0.18, 0.86, -0.10),
+          new THREE.Vector3(-0.62, 0.86, 0.15),
+          new THREE.Vector3(-1.06, 0.86, RAM_Z),
+          new THREE.Vector3(-1.06, RAM_Y + 0.18, RAM_Z)
+        ],
+        // Valve Chest Port Line B to Port Cylinder Inner Neck
+        [
+          new THREE.Vector3(-0.10, 0.82, -0.10),
+          new THREE.Vector3(-0.48, 0.82, 0.22),
+          new THREE.Vector3(-0.68, 0.82, RAM_Z),
+          new THREE.Vector3(-0.68, RAM_Y + 0.18, RAM_Z)
+        ],
+        // Valve Chest Starboard Line A to Starboard Cylinder Head
+        [
+          new THREE.Vector3(0.18, 0.86, -0.10),
+          new THREE.Vector3(0.62, 0.86, 0.15),
+          new THREE.Vector3(1.06, 0.86, RAM_Z),
+          new THREE.Vector3(1.06, RAM_Y + 0.18, RAM_Z)
+        ],
+        // Valve Chest Starboard Line B to Starboard Cylinder Inner Neck
+        [
+          new THREE.Vector3(0.10, 0.82, -0.10),
+          new THREE.Vector3(0.48, 0.82, 0.22),
+          new THREE.Vector3(0.68, 0.82, RAM_Z),
+          new THREE.Vector3(0.68, RAM_Y + 0.18, RAM_Z)
+        ]
+      ];
+
+      pipeRoutes.forEach((pts) => {
+        const curve = new THREE.CatmullRomCurve3(pts);
+        const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 28, 0.016, 12, false), matHydraulicBrass);
+        tube.castShadow = true;
+        grp.add(tube);
+      });
+    }
+
+    /* =====================================================================
+       3.7 BUILD `telemetry_follow_up` — FOLLOW-UP TRANSMITTER & TRICK WHEEL
+       ===================================================================== */
+    function buildTelemetryFollowUp() {
+      const grp = parts.telemetry_follow_up.group;
+
+      // Overhead Bridge Arch Bracket spanning above the Rudder Stock Crown (`[0, 1.38, 0]`)
+      [-0.32, 0.32].forEach((px) => {
+        const stanchion = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, 0.86, 16), matForgedTiller);
+        stanchion.position.set(px, 0.96, -0.06);
+        grp.add(stanchion);
+      });
+
+      const archBeam = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.045, 0.22), matForgedTiller);
+      archBeam.position.set(0, 1.38, -0.02);
+      archBeam.castShadow = true;
+      grp.add(archBeam);
+
+      // Geared Synchro / Potentiometer Follow-Up Feedback Transmitter (`FU`) Housing (`[0, 1.48, -0.02]`)
+      const fuBox = new THREE.Mesh(new THREE.CylinderGeometry(0.135, 0.145, 0.16, 28), matCabinetGrey);
+      fuBox.position.set(0, 1.48, -0.02);
+      fuBox.castShadow = true;
+      grp.add(fuBox);
+
+      const fuDialFace = new THREE.Mesh(
+        new THREE.CircleGeometry(0.125, 28),
+        new THREE.MeshBasicMaterial({ map: synchroDialTex })
+      );
+      fuDialFace.rotation.x = -Math.PI / 3;
+      fuDialFace.position.set(0, 1.565, 0.02);
+      grp.add(fuDialFace);
+
+      // Rotating Follow-Up Mechanical Linkage Arm coupled to Rudder Stock Crown (`followUpPointerArm`)
+      followUpPointerArm = new THREE.Group();
+      followUpPointerArm.position.set(0, 1.32, 0);
+      grp.add(followUpPointerArm);
+
+      const fuShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.22, 20), matChromeRam);
+      followUpPointerArm.add(fuShaft);
+
+      const fuCrank = new THREE.Mesh(new THREE.BoxGeometry(0.036, 0.022, 0.22), matHydraulicBrass);
+      fuCrank.position.set(0, -0.04, 0.08);
+      followUpPointerArm.add(fuCrank);
+
+      // Port & Starboard ±37° Hard-Over Electrical Limit Switches with Roller Levers
+      [-0.28, 0.28].forEach((lx, idx) => {
+        const limitBox = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.095, 0.065), matSafetyYellow);
+        limitBox.position.set(lx, 1.32, 0.10);
+        grp.add(limitBox);
+
+        const rollerArm = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.065, 0.014), matChromeRam);
+        rollerArm.position.set(lx * 0.85, 1.26, 0.12);
+        grp.add(rollerArm);
+        if (idx === 0) limitSwitchPortRoller = rollerArm;
+        else limitSwitchStbdRoller = rollerArm;
+      });
+
+      // Local Emergency Hand-Steering Control Pedestal & Chromed Trick Wheel (`[0, 1.18, -0.34]`)
+      const trickPedestal = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.26, 0.18), matCabinetGrey);
+      trickPedestal.position.set(0, 1.18, -0.34);
+      trickPedestal.castShadow = true;
+      grp.add(trickPedestal);
+
+      // Twin Bourdon-Tube Hydraulic Pressure Gauges (Port Cyl Bar & Stbd Cyl Bar, 0–250 bar)
+      [-0.07, 0.07].forEach((gx) => {
+        const gaugeCase = new THREE.Mesh(new THREE.CylinderGeometry(0.044, 0.044, 0.028, 24), matHydraulicBrass);
+        gaugeCase.rotation.x = Math.PI / 3;
+        gaugeCase.position.set(gx, 1.32, -0.32);
+        grp.add(gaugeCase);
+
+        const gaugeFace = new THREE.Mesh(
+          new THREE.CircleGeometry(0.038, 24),
+          new THREE.MeshBasicMaterial({ color: 0xf8fafc })
+        );
+        gaugeFace.rotation.x = -Math.PI / 6;
+        gaugeFace.position.set(gx, 1.335, -0.308);
+        grp.add(gaugeFace);
+      });
+
+      // Chromed Spoked Emergency Hand-Steering Trick Wheel (`trickWheelGroup`)
+      trickWheelGroup = new THREE.Group();
+      trickWheelGroup.position.set(0, 1.18, -0.45);
+      grp.add(trickWheelGroup);
+
+      const wheelRim = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.014, 14, 32), matChromeRam);
+      wheelRim.castShadow = true;
+      trickWheelGroup.add(wheelRim);
+
+      const wheelHub = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.05, 20), matHydraulicBrass);
+      wheelHub.rotation.x = Math.PI / 2;
+      trickWheelGroup.add(wheelHub);
+
+      for (let s = 0; s < 6; s++) {
+        const sa = (s / 6) * Math.PI * 2;
+        const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.31, 12), matChromeRam);
+        spoke.rotation.z = sa;
+        trickWheelGroup.add(spoke);
+
+        // Outer Brass Rim Handles (Helm Pegs)
+        const peg = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.007, 0.055, 12), matHydraulicBrass);
+        peg.position.set(Math.cos(sa) * 0.19, Math.sin(sa) * 0.19, 0);
+        peg.rotation.z = sa - Math.PI / 2;
+        trickWheelGroup.add(peg);
+      }
+    }
+
+    buildSteeringBedplate();
+    buildRudderStockTiller();
+    buildHydraulicRams();
+    buildRamCylinders();
+    buildHpuPumps();
+    buildManifoldValves();
+    buildTelemetryFollowUp();
+
+    /* =====================================================================
+       4. NATIVE-COLOR GHOST ISOLATION & EXPLODE DASHED CENTERLINES
+       ===================================================================== */
+    const state = {
+      explode: 0.0,
+      targetExplode: 0.0,
+      rudderDeg: 0.0,        // Current rudder angle θ in [-35.0° .. +35.0°]
+      targetRudderDeg: 0.0,
+      hpuMode: 0,            // 0 = HPU 1+2 DUAL (28s -> 14s fast), 1 = HPU 1 MAIN ONLY, 2 = HPU 2 ESB eSTEER ONLY
+      autoSweep: false,
+      selectedPart: 'all',
+      labelsOn: true,
+      xrayCylinders: false,
+      autoRotate: false,
+      time: 0
+    };
+
+    const explodeLines = [];
+
+    function prepareMaterialsAndGuideLines() {
+      for (const key in parts) {
+        const p = parts[key];
+        const origMap = new Map();
+        const ghostMap = new Map();
+
+        p.group.traverse((obj) => {
+          if (obj.isMesh && obj.material) {
+            obj.userData.partKey = key;
+            if (!origMap.has(obj.material)) {
+              const origClone = obj.material.clone();
+              const ghostClone = origClone.clone();
+              ghostClone.transparent = true;
+              ghostClone.opacity = 0.14;
+              ghostClone.depthWrite = false;
+              origMap.set(obj.material, origClone);
+              ghostMap.set(obj.material, ghostClone);
+            }
+            obj.userData.origMaterial = origMap.get(obj.material);
+            obj.userData.ghostMaterial = ghostMap.get(obj.material);
+            obj.material = obj.userData.origMaterial;
+          }
+        });
+
+        // Dashed Explode Line
+        const lMat = new THREE.LineDashedMaterial({
+          color: 0xea580c,
+          dashSize: 0.08,
+          gapSize: 0.05,
+          transparent: true,
+          opacity: 0.0
+        });
+        const lGeo = new THREE.BufferGeometry().setFromPoints([p.anchor.clone(), p.anchor.clone()]);
+        const line = new THREE.Line(lGeo, lMat);
+        line.computeLineDistances();
+        scene.add(line);
+        explodeLines.push({ key, line, base: p.anchor, vec: p.explodeVec });
+      }
+    }
+    prepareMaterialsAndGuideLines();
+
+    function applyMaterialIsolationAndXray() {
+      for (const k in parts) {
+        const p = parts[k];
+        const isTarget = (state.selectedPart === 'all' || state.selectedPart === k);
+        p.group.traverse((obj) => {
+          if (!obj.isMesh || !obj.userData.origMaterial) return;
+          if (isTarget) {
+            if (state.xrayCylinders && xrayCylinderMeshes.includes(obj)) {
+              obj.material = matXrayCylinder;
+            } else {
+              obj.material = obj.userData.origMaterial;
+            }
+          } else {
+            obj.material = obj.userData.ghostMaterial;
+          }
+        });
+      }
+    }
+
+    function selectPart(partKey) {
+      state.selectedPart = partKey;
+
+      document.querySelectorAll('.part-chip').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.part === partKey);
+      });
+      document.querySelectorAll('.callout-badge').forEach((badge) => {
+        badge.classList.toggle('selected', badge.dataset.part === partKey);
+      });
+
+      if (partKey !== 'all' && parts[partKey]) {
+        const m = parts[partKey];
+        document.getElementById('info-badge').textContent = `${m.code} · SUB-ASSEMBLY INSPECTION`;
+        document.getElementById('info-title').textContent = m.name;
+        document.getElementById('info-spec').textContent = m.spec;
+        document.getElementById('info-desc').textContent = m.desc;
+      } else {
+        document.getElementById('info-badge').textContent = 'STEERING GEAR OVERVIEW · 7 SUB-ASSEMBLIES';
+        document.getElementById('info-title').textContent = 'Rapson-Slide Twin-Ram Actuator & Dual 440 V HPU Redundancy';
+        document.getElementById('info-spec').textContent = '210 bar · 1,450 kN·m Torque';
+        document.getElementById('info-desc').textContent = 'Opposed double-acting hydraulic cylinders drive a chrome ram and phosphor-bronze swivel block inside a forked tiller arm, increasing mechanical torque advantage by 1/cos²(θ) (+49% at ±35° hard-over). Powered by HPU No. 1 (Main 440 V Bus) and HPU No. 2 (Emergency Switchboard eSteer).';
+      }
+
+      applyMaterialIsolationAndXray();
+    }
+
+    /* =====================================================================
+       5. DIVIDED LEFT & RIGHT CALLOUT COLUMNS WITH LONG SVG LEADER LINES
+       ===================================================================== */
+    const calloutDefs = [
+      // Left Column (FT, RT, CY, FB at LEFT_X = 24px)
+      { key: 'telemetry_follow_up', code: 'FT', title: 'Follow-Up & Trick Wheel', side: 'left' },
+      { key: 'rudder_stock_tiller', code: 'RT', title: 'Stock & Forked Tiller',   side: 'left' },
+      { key: 'ram_cylinders',       code: 'CY', title: 'Twin Ram Cylinders',      side: 'left' },
+      { key: 'steering_bedplate',   code: 'FB', title: 'Foundation & Carrier',    side: 'left' },
+      // Right Column (MV, HR, HP at RIGHT_X = window.innerWidth - 204px)
+      { key: 'manifold_valves',     code: 'MV', title: 'Bypass & Solenoid Block', side: 'right' },
+      { key: 'hydraulic_rams',      code: 'HR', title: 'Chrome Ram & Crosshead',  side: 'right' },
+      { key: 'hpu_pumps',           code: 'HP', title: 'Dual 440V HPU Pumps',     side: 'right' }
+    ];
+
+    const calloutBadgesMap = new Map();
+
+    calloutDefs.forEach((def) => {
+      const badge = document.createElement('div');
+      badge.className = 'callout-badge';
+      badge.dataset.part = def.key;
+      badge.innerHTML = `
+        <div class="flex items-center justify-between gap-1.5">
+          <div class="flex items-center gap-1.5 truncate">
+            <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 mono text-[9px] font-bold">${def.code}</span>
+            <span class="text-[11px] font-semibold text-slate-800 truncate">${def.title}</span>
+          </div>
+          <span class="text-slate-400 text-[10px]">↗</span>
+        </div>
+      `;
+      badge.addEventListener('click', () => {
+        selectPart(state.selectedPart === def.key ? 'all' : def.key);
+      });
+      badgesLayer.appendChild(badge);
+
+      const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      polyline.setAttribute('fill', 'none');
+      polyline.setAttribute('stroke', '#94a3b8');
+      polyline.setAttribute('stroke-width', '1.3');
+      leaderSvg.appendChild(polyline);
+
+      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('r', '3.0');
+      dot.setAttribute('fill', '#ea580c');
+      leaderSvg.appendChild(dot);
+
+      calloutBadgesMap.set(def.key, { def, badge, polyline, dot, y: 0, anchorX: 0, anchorY: 0, visible: true });
+    });
+
+    function updateDividedCallouts() {
+      if (!state.labelsOn) {
+        badgesLayer.style.display = 'none';
+        leaderSvg.style.display = 'none';
+        return;
+      }
+      badgesLayer.style.display = 'block';
+      leaderSvg.style.display = 'block';
+
+      const leftItems = [];
+      const rightItems = [];
+      const tempV = new THREE.Vector3();
+      const thetaRad = THREE.MathUtils.degToRad(state.rudderDeg);
+      const ramX = RAM_Z * Math.tan(thetaRad);
+
+      calloutDefs.forEach((def) => {
+        const item = calloutBadgesMap.get(def.key);
+        const p = parts[def.key];
+        tempV.copy(p.anchor).addScaledVector(p.explodeVec, state.explode);
+        if (def.key === 'hydraulic_rams') {
+          tempV.x += ramX;
+        }
+        tempV.project(camera);
+
+        if (tempV.z > 1.0) {
+          item.visible = false;
+          item.badge.style.display = 'none';
+          item.polyline.style.display = 'none';
+          item.dot.style.display = 'none';
+          return;
+        }
+
+        item.visible = true;
+        item.anchorX = (tempV.x * 0.5 + 0.5) * window.innerWidth;
+        item.anchorY = (-(tempV.y * 0.5) + 0.5) * window.innerHeight;
+        item.y = item.anchorY;
+
+        if (def.side === 'left') leftItems.push(item);
+        else rightItems.push(item);
+      });
+
+      function resolveCollision(arr) {
+        if (arr.length === 0) return;
+        arr.sort((a, b) => a.y - b.y);
+        const minY = 235;
+        const maxY = window.innerHeight - 135;
+        const MIN_GAP = 42;
+
+        arr[0].y = Math.max(minY, arr[0].y);
+        for (let i = 1; i < arr.length; i++) {
+          if (arr[i].y - arr[i - 1].y < MIN_GAP) {
+            arr[i].y = arr[i - 1].y + MIN_GAP;
+          }
+        }
+        const last = arr[arr.length - 1];
+        if (last.y > maxY) {
+          last.y = maxY;
+          for (let i = arr.length - 2; i >= 0; i--) {
+            if (arr[i + 1].y - arr[i].y < MIN_GAP) {
+              arr[i].y = Math.max(minY, arr[i + 1].y - MIN_GAP);
+            }
+          }
+        }
+      }
+
+      resolveCollision(leftItems);
+      resolveCollision(rightItems);
+
+      const LEFT_X = 24;
+      const RIGHT_X = window.innerWidth - 204;
+
+      calloutDefs.forEach((def) => {
+        const item = calloutBadgesMap.get(def.key);
+        if (!item.visible) return;
+
+        const colX = def.side === 'left' ? LEFT_X : RIGHT_X;
+        const badgeEdgeX = def.side === 'left' ? (LEFT_X + 180) : RIGHT_X;
+        const elbowX = def.side === 'left' ? (badgeEdgeX + 18) : (badgeEdgeX - 18);
+
+        item.badge.style.display = 'block';
+        item.badge.style.left = `${colX}px`;
+        item.badge.style.top = `${item.y}px`;
+
+        const isSelected = (state.selectedPart === def.key);
+        item.polyline.style.display = 'block';
+        item.polyline.setAttribute(
+          'points',
+          `${item.anchorX},${item.anchorY} ${elbowX},${item.y} ${badgeEdgeX},${item.y}`
+        );
+        item.polyline.setAttribute('stroke', isSelected ? '#ea580c' : '#94a3b8');
+        item.polyline.setAttribute('stroke-width', isSelected ? '2.0' : '1.3');
+
+        item.dot.style.display = 'block';
+        item.dot.setAttribute('cx', `${item.anchorX}`);
+        item.dot.setAttribute('cy', `${item.anchorY}`);
+      });
+    }
+
+    /* =====================================================================
+       6. UI CONTROLS & RAPSON-SLIDE TRIGONOMETRIC KINEMATICS
+       ===================================================================== */
+    document.querySelectorAll('.part-chip').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        selectPart(btn.dataset.part);
+      });
+    });
+
+    const sliderExplode = document.getElementById('slider-explode');
+    function setExplode(pct) {
+      state.targetExplode = pct / 100;
+      sliderExplode.value = pct;
+      document.getElementById('lbl-explode-val').textContent = pct === 0 ? '0% · ASSEMBLED' : `${pct}% · EXPLODED`;
+    }
+    sliderExplode.addEventListener('input', (e) => setExplode(parseFloat(e.target.value)));
+    document.getElementById('btn-exp-0').addEventListener('click', () => setExplode(0));
+    document.getElementById('btn-exp-50').addEventListener('click', () => setExplode(50));
+    document.getElementById('btn-exp-100').addEventListener('click', () => setExplode(100));
+
+    const sliderRudder = document.getElementById('slider-rudder');
+    function setRudderOrder(deg) {
+      state.targetRudderDeg = THREE.MathUtils.clamp(deg, -35, 35);
+      sliderRudder.value = state.targetRudderDeg;
+      const sideTag = Math.abs(deg) < 0.3 ? 'MIDSHIPS' : (deg < 0 ? 'PORT' : 'STBD');
+      document.getElementById('lbl-rudder-val').textContent = `${deg > 0 ? '+' : ''}${deg.toFixed(1)}° · ${sideTag}`;
+    }
+    sliderRudder.addEventListener('input', (e) => {
+      state.autoSweep = false;
+      document.getElementById('lbl-sweep-btn').textContent = '⇄ DEMO ±35° SWEEP';
+      setRudderOrder(parseFloat(e.target.value));
+    });
+    document.getElementById('btn-rudder-port').addEventListener('click', () => {
+      state.autoSweep = false;
+      setRudderOrder(-35.0);
+    });
+    document.getElementById('btn-rudder-mid').addEventListener('click', () => {
+      state.autoSweep = false;
+      setRudderOrder(0.0);
+    });
+    document.getElementById('btn-rudder-stbd').addEventListener('click', () => {
+      state.autoSweep = false;
+      setRudderOrder(35.0);
+    });
+
+    // Dual 440V HPU & SOLAS ESB Mode Button
+    document.getElementById('btn-hpu-mode').addEventListener('click', () => {
+      state.hpuMode = (state.hpuMode + 1) % 3;
+      const lbl = document.getElementById('lbl-hpu-btn');
+      const badge = document.getElementById('solas-status-badge');
+      if (state.hpuMode === 0) {
+        lbl.textContent = 'HPU 1+2 DUAL';
+        badge.textContent = 'MAIN + ESB eSTEER READY (14s)';
+        badge.className = 'font-bold text-emerald-700';
+      } else if (state.hpuMode === 1) {
+        lbl.textContent = 'HPU 1 (MAIN BUS)';
+        badge.textContent = 'HPU 1 DUTY · 28s SOLAS REG.29';
+        badge.className = 'font-bold text-sky-700';
+      } else {
+        lbl.textContent = 'HPU 2 (ESB eSTEER)';
+        badge.textContent = 'SOLAS EMERGENCY BUS ACTIVE';
+        badge.className = 'font-bold text-amber-700';
+      }
+    });
+
+    // Demo ±35° Hard-Over Sweep Toggle
+    document.getElementById('btn-auto-sweep').addEventListener('click', () => {
+      state.autoSweep = !state.autoSweep;
+      document.getElementById('lbl-sweep-btn').textContent = state.autoSweep ? '⏹ STOP SWEEP' : '⇄ DEMO ±35° SWEEP';
+    });
+
+    document.getElementById('btn-reset-view').addEventListener('click', () => {
+      tweenPos.copy(DEFAULT_CAM_POS);
+      tweenTarget.copy(DEFAULT_CAM_TARGET);
+      isCameraTweening = true;
+      setExplode(0);
+      selectPart('all');
+    });
+
+    const btnAutoRotate = document.getElementById('btn-auto-rotate');
+    btnAutoRotate.addEventListener('click', () => {
+      state.autoRotate = !state.autoRotate;
+      controls.autoRotate = state.autoRotate;
+      controls.autoRotateSpeed = 1.3;
+      btnAutoRotate.classList.toggle('active', state.autoRotate);
+    });
+
+    const btnToggleLabels = document.getElementById('btn-toggle-labels');
+    btnToggleLabels.addEventListener('click', () => {
+      state.labelsOn = !state.labelsOn;
+      btnToggleLabels.classList.toggle('active', state.labelsOn);
+    });
+
+    const btnToggleXray = document.getElementById('btn-toggle-xray');
+    btnToggleXray.addEventListener('click', () => {
+      state.xrayCylinders = !state.xrayCylinders;
+      btnToggleXray.classList.toggle('active', state.xrayCylinders);
+      applyMaterialIsolationAndXray();
+    });
+
+    // 3D Raycaster Click to Isolate Sub-Assembly
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    let pointerDownPos = { x: 0, y: 0 };
+
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      pointerDownPos = { x: e.clientX, y: e.clientY };
+    });
+    renderer.domElement.addEventListener('pointerup', (e) => {
+      if (Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y) > 5) return;
+      pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const allMeshes = [];
+      for (const k in parts) {
+        parts[k].group.traverse((o) => { if (o.isMesh) allMeshes.push(o); });
+      }
+      const hits = raycaster.intersectObjects(allMeshes, false);
+      if (hits.length > 0) {
+        const hitKey = hits[0].object.userData.partKey;
+        if (hitKey) {
+          selectPart(state.selectedPart === hitKey ? 'all' : hitKey);
+        }
+      }
+    });
+
+    /* =====================================================================
+       7. MAIN ANIMATION LOOP & RAPSON-SLIDE KINEMATIC SOLVER
+       ===================================================================== */
+    let lastTime = performance.now();
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+      state.time += dt;
+
+      // Optional Demo ±35° Hard-Over Sweep
+      if (state.autoSweep) {
+        const sweepDeg = 35.0 * Math.sin(state.time * 0.85);
+        setRudderOrder(sweepDeg);
+      }
+
+      // Smoothly interpolate Explode & Rudder Angle (Dual HPU slews faster than single HPU)
+      state.explode += (state.targetExplode - state.explode) * 0.12;
+      const slewRate = state.hpuMode === 0 ? 5.5 : 3.2;
+      state.rudderDeg += (state.targetRudderDeg - state.rudderDeg) * Math.min(1.0, dt * slewRate);
+
+      // Apply Explode Vectors & Dashed Guide Lines
+      for (const key in parts) {
+        const p = parts[key];
+        p.group.position.copy(p.explodeVec).multiplyScalar(state.explode);
+      }
+
+      explodeLines.forEach((g) => {
+        if (state.explode > 0.02) {
+          const arr = g.line.geometry.attributes.position.array;
+          arr[0] = g.base.x;
+          arr[1] = g.base.y;
+          arr[2] = g.base.z;
+          arr[3] = g.base.x + g.vec.x * state.explode;
+          arr[4] = g.base.y + g.vec.y * state.explode;
+          arr[5] = g.base.z + g.vec.z * state.explode;
+          g.line.geometry.attributes.position.needsUpdate = true;
+          g.line.computeLineDistances();
+          g.line.material.opacity = Math.min(0.65, state.explode * 0.85);
+        } else {
+          g.line.material.opacity = 0.0;
+        }
+      });
+
+      // EXACT RAPSON-SLIDE TRIGONOMETRIC KINEMATICS:
+      // Forked Tiller rotates by `theta` around Y.
+      // Chrome Hydraulic Ram translates along X by `ramX = R_lever * tan(theta)` where R_lever = RAM_Z = 0.55 m.
+      // Phosphor-Bronze Swivel Crosshead Block rotates by `theta` around Y so it slides smoothly along the forked tiller slot!
+      const thetaRad = THREE.MathUtils.degToRad(state.rudderDeg);
+      const ramX = RAM_Z * Math.tan(thetaRad); // ±0.3851 m at ±35°
+
+      if (rudderTillerPivot) {
+        rudderTillerPivot.rotation.y = thetaRad;
+      }
+      if (ramTranslationGroup) {
+        ramTranslationGroup.position.x = ramX;
+      }
+      if (crossheadSwivelShoe) {
+        crossheadSwivelShoe.rotation.y = thetaRad;
+      }
+      if (followUpPointerArm) {
+        followUpPointerArm.rotation.y = thetaRad;
+      }
+      if (trickWheelGroup) {
+        trickWheelGroup.rotation.z = -thetaRad * 3.5;
+      }
+
+      // Deflect ±37° Limit Switch Rollers near hard-over
+      if (limitSwitchPortRoller) {
+        limitSwitchPortRoller.rotation.z = state.rudderDeg < -31 ? -0.45 : 0.0;
+      }
+      if (limitSwitchStbdRoller) {
+        limitSwitchStbdRoller.rotation.z = state.rudderDeg > 31 ? 0.45 : 0.0;
+      }
+
+      // Spin Active 440 V HPU Motor Cooling Fans
+      hpuMotorCoolingFans.forEach((fan, idx) => {
+        const isRunning = (state.hpuMode === 0) || (state.hpuMode === 1 && idx === 0) || (state.hpuMode === 2 && idx === 1);
+        if (isRunning) {
+          fan.rotation.x += dt * 24.0;
+        }
+      });
+
+      // Update Solenoid Pilot Valve LEDs based on Slewing Direction
+      const errDeg = state.targetRudderDeg - state.rudderDeg;
+      solenoidLedMeshes.forEach((item) => {
+        const isFiring = (item.side < 0 && errDeg < -0.2) || (item.side > 0 && errDeg > 0.2);
+        const col = isFiring ? 0xfacc15 : (item.side < 0 ? 0xdc2626 : 0x16a34a);
+        if (item.mesh.userData.origMaterial) {
+          item.mesh.userData.origMaterial.color.setHex(col);
+        }
+      });
+
+      // Update Live Rapson-Slide Telemetry Readouts
+      // Rapson-Slide Torque: τ(θ) = τ_base + τ_hydro * (|θ|/35) / cos²(θ)
+      const cosTheta = Math.cos(thetaRad);
+      const rapsonFactor = 1.0 / (cosTheta * cosTheta); // 1.00 at 0° to 1.49 at ±35°
+      const angleNorm = Math.abs(state.rudderDeg) / 35.0;
+      const workingBar = 35 + Math.round(175 * angleNorm + (Math.abs(errDeg) > 0.5 ? 25 : 0));
+      const torqueKnm = Math.round((120 + 890 * angleNorm) * rapsonFactor);
+      const strokeMm = ramX * 1000.0;
+
+      const sideStr = Math.abs(state.rudderDeg) < 0.3 ? 'MID' : (state.rudderDeg < 0 ? 'P' : 'S');
+      document.getElementById('tel-angle').textContent = `${Math.abs(state.rudderDeg).toFixed(1)}° ${sideStr}`;
+      document.getElementById('tel-stroke').textContent = `${strokeMm >= 0 ? '+' : ''}${strokeMm.toFixed(0)} mm`;
+      document.getElementById('tel-torque').textContent = `${torqueKnm.toLocaleString()} kN·m`;
+      document.getElementById('tel-press').textContent = `${workingBar} bar`;
+
+      // Camera Tweening
+      if (isCameraTweening) {
+        camera.position.lerp(tweenPos, 0.10);
+        controls.target.lerp(tweenTarget, 0.10);
+        if (camera.position.distanceTo(tweenPos) < 0.03) {
+          isCameraTweening = false;
+        }
+      }
+      controls.update();
+
+      updateDividedCallouts();
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

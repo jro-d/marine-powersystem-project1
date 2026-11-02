@@ -1,0 +1,3090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TX A / TX B · 2,500 kVA 6.6 kV / 440 V Cast-Resin Transformer — 3D Digital Twin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #f8fafc;
+      color: #0f172a;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    #canvas-container {
+      position: absolute;
+      inset: 0;
+      left: 280px;
+      width: calc(100% - 280px);
+      height: 100%;
+      z-index: 1;
+      background: radial-gradient(circle at 50% 45%, #f8fafc 0%, #eaedf1 100%);
+    }
+    @media (max-width: 768px) {
+      #canvas-container {
+        left: 0;
+        width: 100%;
+      }
+    }
+    .inspector-card {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 5px;
+      background: #e2e8f0;
+      border-radius: 9999px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: #c25b2a;
+      cursor: pointer;
+      border: 2px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+      transition: transform 0.15s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+    .subsystem-btn {
+      transition: all 0.16s ease;
+    }
+    .subsystem-btn:hover {
+      background: #f8fafc;
+    }
+    .subsystem-btn.active {
+      background: #fff7ed !important;
+      border-color: #fdba74 !important;
+    }
+    .subsystem-btn.active .sub-badge {
+      background: #ea580c !important;
+      color: #ffffff !important;
+    }
+    .view-pill {
+      transition: all 0.15s ease;
+      background: #f8fafc;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+    }
+    .view-pill.active {
+      background: #faeee7;
+      color: #9a3412;
+      border-color: #f3c6b1;
+      font-weight: 500;
+    }
+    /* Auto Tour Pointer */
+    #tour-pointer {
+      pointer-events: none;
+      position: absolute;
+      z-index: 99;
+      transform: translate(-50%, -50%);
+      transition: top 1.0s cubic-bezier(0.2, 0.8, 0.2, 1), left 1.0s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    /* Divided Left/Right Callout Pills */
+    .callout-pill {
+      pointer-events: auto;
+      transition: opacity 0.18s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid rgba(203, 213, 225, 0.92);
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+      color: #334155;
+    }
+    .callout-pill:hover {
+      border-color: #94a3b8;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+      color: #0f172a;
+    }
+    .callout-pill.isolated {
+      border-color: #ea580c;
+      background: #fff7ed;
+      color: #9a3412;
+    }
+    #interlock-toast {
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  </style>
+</head>
+<body class="w-screen h-screen relative select-none overflow-hidden">
+
+  <!-- 3D WebGL Canvas Host -->
+  <div id="canvas-container"></div>
+
+  <!-- Divided Left/Right Callouts & Long SVG Leader Lines Container -->
+  <div id="callouts-container" class="pointer-events-none fixed inset-0 z-10 overflow-hidden">
+    <svg id="callouts-svg" class="w-full h-full block"></svg>
+  </div>
+
+  <!-- Auto Tour Cursor Indicator -->
+  <div id="tour-pointer" class="hidden">
+    <div class="relative flex items-center gap-2">
+      <div class="w-5 h-5 rounded-full bg-orange-500/60 border-2 border-white shadow animate-ping absolute"></div>
+      <div class="w-5 h-5 rounded-full bg-orange-600 border-2 border-white shadow-md flex items-center justify-center text-[8px] text-white font-bold">●</div>
+      <div id="tour-tag" class="px-2.5 py-1 rounded-md bg-white/95 border border-slate-300 text-slate-800 text-[11px] font-medium whitespace-nowrap shadow-md">Tour Active</div>
+    </div>
+  </div>
+
+  <!-- Floating Interlock Toast Warning -->
+  <div id="interlock-toast" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 translate-y-[-10px] transition duration-200">
+    <div class="px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-300 shadow-xl flex items-center gap-2.5 text-amber-900 text-xs font-semibold">
+      <svg class="w-4 h-4 text-amber-600 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+      <span id="interlock-msg">IEC 60076-11 Safety Interlock Active</span>
+    </div>
+  </div>
+
+  <!-- Left Minimal Equipment Sidebar (280px wide) -->
+  <aside class="fixed top-0 left-0 bottom-0 w-[280px] bg-white border-r border-slate-200/90 z-20 flex flex-col justify-between p-4 overflow-y-auto">
+    <div>
+      <!-- Top Domain Pill -->
+      <div class="flex items-center justify-between px-2.5 py-2 rounded-lg border border-slate-200/90 bg-slate-50/60 text-xs font-medium text-slate-700 mb-4">
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded bg-orange-100 text-orange-700 flex items-center justify-center text-[10px] font-bold mono">TX</span>
+          <span>Power Distribution</span>
+        </div>
+        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+
+      <!-- Title & Spec Subtitle -->
+      <div class="px-1 mb-4">
+        <h1 class="text-base font-semibold text-slate-900 tracking-tight leading-snug">Marine 6.6 kV / 440 V Cast-Resin Transformer</h1>
+        <p class="text-[11px] text-slate-400 mt-0.5">2,500 kVA · Dyn11 · AN/AF · IEC 60076-11</p>
+      </div>
+
+      <!-- Equipment Header -->
+      <div class="flex items-center justify-between px-1 mb-2">
+        <span class="text-[11px] font-semibold text-slate-500">Equipment</span>
+        <button id="btn-show-all" class="text-[11px] text-orange-700 hover:text-orange-800 font-medium">Show all</button>
+      </div>
+
+      <!-- 7 Subsystem Isolation Buttons (Native-Color Ghost-Opacity Isolation) -->
+      <div class="flex flex-col gap-1" id="subsystem-buttons">
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="enclosure">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">EN</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">IP23 Drip-Proof Enclosure</div>
+              <div class="text-[11px] text-slate-400">RAL 7032 · Louvers &amp; windows</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">↗</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="magneticCore">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">MC</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">3-Limb CRGO Steel Core</div>
+              <div class="text-[11px] text-slate-400">Step-lap silicon steel · Yokes</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">↗</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="lvWindings">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">LV</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">440 V Foil Secondary Coils</div>
+              <div class="text-[11px] text-slate-400">3,280 A · Star (y) neutral bar</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">↗</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="hvWindings">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">HV</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">6.6 kV Cast-Resin Primary</div>
+              <div class="text-[11px] text-slate-400">Vacuum epoxy · Delta &amp; ±5% taps</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">↗</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="bushingsTerminals">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">BT</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">HV Bushings &amp; Arresters</div>
+              <div class="text-[11px] text-slate-400">Shedded porcelain · ZnO · CTs</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">↗</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="coolingFans">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">CF</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">AF Tangential Cooling Fans</div>
+              <div class="text-[11px] text-slate-400">Cross-flow blowers · PT100</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">↗</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="magneticFlux">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">MF</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">Dyn11 Core Flux &amp; Airflow</div>
+              <div class="text-[11px] text-slate-400">120° 3-phase flux · Thermal air</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">↗</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Bottom 2x2 Nameplate & Live Telemetry Strip -->
+    <div class="pt-3 border-t border-slate-100">
+      <div class="flex items-center justify-between text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-2 px-1">
+        <span>Live Telemetry</span>
+        <span id="tel-status-pill" class="flex items-center gap-1 text-emerald-600 font-semibold">
+          <span id="tel-status-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="tel-status-txt">ENERGIZED</span>
+        </span>
+      </div>
+      <div class="grid grid-cols-2 gap-1.5 text-left">
+        <div class="bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1.5">
+          <span class="text-[10px] text-slate-400 block">Ratio (Dyn11)</span>
+          <span id="tel-ratio" class="text-xs font-semibold mono text-slate-800">6600 / 440 V</span>
+        </div>
+        <div class="bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1.5">
+          <span class="text-[10px] text-slate-400 block">Apparent Load</span>
+          <span id="tel-kva" class="text-xs font-semibold mono text-slate-800">2,000 kVA</span>
+        </div>
+        <div class="bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1.5">
+          <span class="text-[10px] text-slate-400 block">Hot-Spot Temp</span>
+          <span id="tel-temp" class="text-xs font-semibold mono text-emerald-700">104.2 °C</span>
+        </div>
+        <div class="bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1.5">
+          <span class="text-[10px] text-slate-400 block">Efficiency (η)</span>
+          <span id="tel-eff" class="text-xs font-semibold mono text-slate-800">98.96%</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Top-Left Floating Header & Proof Pill Bar -->
+  <div class="fixed top-4 left-[296px] z-20 flex items-center gap-2">
+    <a href="../index.html" class="px-3 py-1.5 rounded-lg inspector-card hover:bg-white text-slate-600 hover:text-slate-900 text-xs font-medium transition flex items-center gap-1.5">
+      <span>←</span>
+      <span>Vessel view</span>
+    </a>
+    <button id="btn-math-proof" class="px-3 py-1.5 rounded-lg inspector-card hover:bg-white text-slate-600 hover:text-slate-900 text-xs font-medium transition flex items-center gap-1.5">
+      <span>Kinematic &amp; IEC proof</span>
+    </button>
+  </div>
+
+  <!-- Right Floating Inspector Card (330px wide) -->
+  <aside class="fixed top-4 right-4 z-20 w-[330px] inspector-card rounded-2xl p-4 flex flex-col gap-3 max-h-[calc(100vh-32px)] overflow-y-auto">
+    <!-- Inspector Top Bar -->
+    <div class="flex items-center justify-between text-slate-500 border-b border-slate-100 pb-2">
+      <div class="flex items-center gap-2 text-xs font-medium text-slate-700">
+        <svg class="w-3.5 h-3.5 text-slate-400" fill="currentColor" viewBox="0 0 16 16">
+          <circle cx="3" cy="3" r="1.4"/><circle cx="8" cy="3" r="1.4"/><circle cx="13" cy="3" r="1.4"/>
+          <circle cx="3" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="13" cy="8" r="1.4"/>
+        </svg>
+        <span>Inspector</span>
+        <span id="info-code" class="text-[10px] mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">ASSY-00</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <button id="btn-start-tour" class="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition" title="Auto-Tour">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        </button>
+        <button id="btn-collapse-telemetry" class="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition" title="Toggle Telemetry Drawer">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Component Title & Description -->
+    <div>
+      <span id="info-subsystem" class="text-[10px] font-semibold uppercase tracking-wider text-orange-700 block mb-0.5">Transformer Overview</span>
+      <h2 id="info-title" class="text-sm font-semibold text-slate-900 leading-snug">Follow the power</h2>
+      <p id="info-desc" class="text-xs text-slate-500 mt-1 leading-relaxed">2,500 kVA dry-type vacuum-cast epoxy resin marine distribution transformer stepping 6.6 kV primary delta down to 440 V secondary star (Dyn11, +30° lead).</p>
+    </div>
+
+    <!-- View Section (Labels, Cutaway, Telemetry Pills) -->
+    <div>
+      <span class="text-[11px] text-slate-400 font-medium block mb-1.5">View</span>
+      <div class="flex flex-wrap items-center gap-1.5">
+        <button id="btn-labels-toggle" class="view-pill active px-2.5 py-1 rounded-lg text-xs">
+          Labels
+        </button>
+        <button id="btn-cutaway-toggle" class="view-pill px-2.5 py-1 rounded-lg text-xs">
+          Cutaway X-Ray
+        </button>
+        <button id="btn-graphs-toggle" class="view-pill active px-2.5 py-1 rounded-lg text-xs">
+          Telemetry
+        </button>
+      </div>
+    </div>
+
+    <!-- Explore Equipment / Camera Presets Dropdown -->
+    <div>
+      <label for="select-camera-preset" class="text-[11px] text-slate-400 font-medium block mb-1.5">Explore equipment</label>
+      <div class="relative">
+        <select id="select-camera-preset" class="w-full appearance-none bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium rounded-lg border border-slate-200/90 px-3 py-2 pr-8 outline-none cursor-pointer transition">
+          <option value="hero">Hero Studio 3/4</option>
+          <option value="coils">HV Cast Coils &amp; Tap Links</option>
+          <option value="core">CRGO Core &amp; LV Foil Cutaway</option>
+          <option value="bushings">6.6 kV Bushings &amp; Arresters</option>
+          <option value="fans">AF Tangential Fans &amp; PT100</option>
+        </select>
+        <svg class="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+    </div>
+
+    <!-- Operational Controls: Load, Off-Circuit Tap Changer, Cooling & Exploded View -->
+    <div class="space-y-2.5 pt-2 border-t border-slate-100">
+      <!-- Transformer Load Slider (0% to 125%) -->
+      <div>
+        <div class="flex justify-between items-center text-[11px] mb-1">
+          <span class="text-slate-500 font-medium">Transformer Load (S_load)</span>
+          <span id="val-load" class="mono text-slate-700 font-semibold">80% (2,000 kVA)</span>
+        </div>
+        <input id="slider-load" type="range" min="0" max="125" value="80" step="1">
+        <div class="flex justify-between text-[9px] text-slate-400 mt-0.5 mono">
+          <button id="btn-load-25" class="hover:text-slate-700">25% LIGHT</button>
+          <button id="btn-load-80" class="hover:text-slate-700">80% NOMINAL</button>
+          <button id="btn-load-120" class="hover:text-slate-700">120% AF PEAK</button>
+        </div>
+      </div>
+
+      <!-- Off-Circuit Tap Changer Selector (±2 × 2.5%) -->
+      <div>
+        <div class="flex justify-between items-center text-[11px] mb-1">
+          <span class="text-slate-500 font-medium">Off-Circuit Tap Links (±2×2.5%)</span>
+          <span id="val-tap-ratio" class="mono text-orange-700 font-semibold">N1/N2 = 25.98</span>
+        </div>
+        <select id="select-tap" class="w-full bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium rounded-lg border border-slate-200/90 px-2.5 py-1.5 outline-none cursor-pointer transition mono">
+          <option value="1">Tap 1 (+5.0% · 6,930 V / 462 V)</option>
+          <option value="2">Tap 2 (+2.5% · 6,765 V / 451 V)</option>
+          <option value="3" selected>Tap 3 (0.0% Nom · 6,600 V / 440 V)</option>
+          <option value="4">Tap 4 (-2.5% · 6,435 V / 429 V)</option>
+          <option value="5">Tap 5 (-5.0% · 6,270 V / 418 V)</option>
+        </select>
+      </div>
+
+      <!-- 3D Exploded Teardown Slider -->
+      <div>
+        <div class="flex justify-between items-center text-[11px] mb-1">
+          <span class="text-slate-500 font-medium">Exploded teardown</span>
+          <span id="val-explode" class="mono text-slate-700 font-semibold">0%</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btn-assemble-all" class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 transition">0%</button>
+          <input id="slider-explode" type="range" min="0" max="100" value="0" step="1">
+          <button id="btn-explode-all" class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 transition">100%</button>
+        </div>
+      </div>
+
+      <!-- 2x2 Operational Pushbuttons -->
+      <div class="grid grid-cols-2 gap-1.5 pt-0.5">
+        <button id="btn-toggle-energized" class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold shadow-sm transition flex items-center justify-center gap-1">
+          <span id="lbl-energized-btn">⚡ ENERGIZED (6.6kV)</span>
+        </button>
+        <button id="btn-toggle-cooling" class="px-2.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-[11px] font-semibold shadow-sm transition flex items-center justify-center gap-1">
+          <span id="lbl-cooling-btn">❄ AF FANS: ON</span>
+        </button>
+        <button id="btn-toggle-doors" class="px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-800 text-white text-[11px] font-medium shadow-sm transition flex items-center justify-center">
+          <span id="lbl-doors-btn">Close Front Doors</span>
+        </button>
+        <button id="btn-toggle-flux" class="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-semibold shadow-sm transition flex items-center justify-center">
+          <span id="lbl-flux-btn">Flux Vectors: ON</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Collapsible Live 2D Telemetry Drawer -->
+    <div id="telemetry-drawer" class="space-y-2 pt-2 border-t border-slate-100">
+      <!-- Canvas 1: Live Thermal Hot-Spot & Efficiency Curve -->
+      <div class="bg-slate-50/90 rounded-xl p-2 border border-slate-200/80">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Class F Hot-Spot &amp; Losses</span>
+          <span id="thermal-live-badge" class="text-[10px] mono font-semibold text-emerald-700">104.2 °C (AF)</span>
+        </div>
+        <canvas id="thermal-canvas" width="280" height="96" class="w-full block rounded bg-white border border-slate-200/60"></canvas>
+        <div class="grid grid-cols-3 gap-1 mt-1 text-center">
+          <div class="bg-white px-1 py-0.5 rounded border border-slate-200/60">
+            <span class="text-[8px] text-slate-400 block">Core Loss P_Fe</span>
+            <span id="val-pfe" class="text-[10px] font-semibold mono text-slate-800">4.20 kW</span>
+          </div>
+          <div class="bg-white px-1 py-0.5 rounded border border-slate-200/60">
+            <span class="text-[8px] text-slate-400 block">Load Loss P_Cu</span>
+            <span id="val-pcu" class="text-[10px] font-semibold mono text-slate-800">13.76 kW</span>
+          </div>
+          <div class="bg-white px-1 py-0.5 rounded border border-slate-200/60">
+            <span class="text-[8px] text-slate-400 block">Sec Current I_2</span>
+            <span id="val-i2" class="text-[10px] font-semibold mono text-orange-700">2,624 A</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Canvas 2: Dyn11 Primary (6.6 kV) vs Secondary (440 V, +30° Lead) Waveforms -->
+      <div class="bg-slate-50/90 rounded-xl p-2 border border-slate-200/80">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Dyn11 Waveforms (+30° Lead)</span>
+          <span id="wave-phase-badge" class="text-[10px] mono text-sky-700 font-semibold">V2 Leads V1 +30°</span>
+        </div>
+        <canvas id="ac-canvas" width="280" height="58" class="w-full block rounded bg-white border border-slate-200/60"></canvas>
+      </div>
+    </div>
+
+    <!-- Footer Row: Reset View & Zoom Buttons -->
+    <div class="flex items-center gap-1.5 pt-1 border-t border-slate-100">
+      <button id="btn-reset-cam" class="flex-1 py-1.5 px-3 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium border border-slate-200/90 shadow-sm transition text-center">
+        Reset view
+      </button>
+      <button id="btn-zoom-in" class="w-8 h-8 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium border border-slate-200/90 shadow-sm transition flex items-center justify-center" title="Zoom in">+</button>
+      <button id="btn-zoom-out" class="w-8 h-8 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium border border-slate-200/90 shadow-sm transition flex items-center justify-center" title="Zoom out">−</button>
+    </div>
+  </aside>
+
+  <!-- Mathematical Kinematic & IEC 60076-11 Proof Modal -->
+  <div id="modal-proof" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-2xl rounded-2xl p-6 border border-slate-200 shadow-2xl max-h-[85vh] overflow-y-auto text-slate-700">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-orange-600"></span>
+          <h2 class="text-base font-semibold text-slate-900">IEC 60076-11 &amp; IEC 60092-303 Electromagnetic &amp; Thermal Proof</h2>
+        </div>
+        <button id="btn-close-proof" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="mt-4 space-y-4 text-xs leading-relaxed">
+        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+          <h4 class="font-semibold text-slate-900 text-sm mb-1">1. Dyn11 Vector Group &amp; Off-Circuit Tap Turns Ratio</h4>
+          <p class="text-slate-600">Primary 6.6 kV winding is connected in Delta (D) and Secondary 440 V winding in Star with neutral (yn) at 11 o'clock (+30° phase advance):</p>
+          <div class="mono bg-white p-2.5 rounded-lg my-2 text-slate-800 border border-slate-200">
+            V_1φ = V_1L = 6,600 V × (1 + tap_pct)  |  V_2φ = V_2L / √3 = 440 / √3 = 254.034 V<br>
+            N_1 / N_2 = V_1φ / V_2φ = 25.9808 × (1 + tap_pct)  |  ∠V_2L = ∠V_1L + 30°
+          </div>
+        </div>
+
+        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+          <h4 class="font-semibold text-slate-900 text-sm mb-1">2. Core Loss, Copper Load Loss &amp; Class F Hot-Spot Thermal Model</h4>
+          <p class="text-slate-600">With CRGO step-lap core no-load loss P_Fe = 4.20 kW and rated 100% load loss P_Cu,rated = 21.50 kW (at 120 °C reference):</p>
+          <div class="mono bg-white p-2.5 rounded-lg my-2 text-slate-800 border border-slate-200">
+            P_Cu(L) = 21.50 kW × (L / 100)²  |  η = (S·cosφ) / (S·cosφ + P_Fe + P_Cu)<br>
+            T_hotspot = T_amb(45°C) + ΔT_Fe(18°C) + 82°C × (L / 100)^1.6 × k_AF  (k_AF = 0.72)
+          </div>
+        </div>
+
+        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+          <h4 class="font-semibold text-slate-900 text-sm mb-1">3. Live Electromagnetic &amp; Thermal Verification Table</h4>
+          <table class="w-full text-left mono text-[11px] mt-2">
+            <thead>
+              <tr class="text-slate-400 border-b border-slate-200">
+                <th class="py-1">Parameter</th>
+                <th>Formula / Standard</th>
+                <th>Current Live Value</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200/70">
+              <tr><td class="py-1.5 text-slate-600">Selected Tap Position</td><td>±2 × 2.5% Off-Circuit Links</td><td id="proof-tap" class="text-orange-600 font-semibold">Tap 3 (0.0% · N1/N2 = 25.98)</td></tr>
+              <tr><td class="py-1.5 text-slate-600">Primary / Secondary Current</td><td>I = S / (√3 · V_L)</td><td id="proof-currents" class="text-emerald-600 font-semibold">175.0 A / 2,624.3 A</td></tr>
+              <tr><td class="py-1.5 text-slate-600">Total Losses (P_Fe + P_Cu)</td><td>4.20 + 21.5 × (L/100)²</td><td id="proof-losses" class="text-sky-600 font-semibold">17.96 kW (η = 98.96%)</td></tr>
+              <tr><td class="py-1.5 text-slate-600">Winding Hot-Spot Temp</td><td>IEC 60076-11 Class F (155°C)</td><td id="proof-temp" class="text-indigo-600 font-semibold">104.2 °C (AF ON)</td></tr>
+              <tr><td class="py-1.5 text-slate-600">Core Peak Flux Density</td><td>B_max = V_1φ / (4.44·f·N_1·A_c)</td><td id="proof-flux" class="text-rose-600 font-semibold">1.62 Tesla (60.0 Hz)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Three.js Module Script (three@0.160.0) -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    const container = document.getElementById('canvas-container');
+    const calloutsContainer = document.getElementById('callouts-container');
+    const calloutsSvg = document.getElementById('callouts-svg');
+
+    function getViewportSize() {
+      const rect = container.getBoundingClientRect();
+      return {
+        width: rect.width || (window.innerWidth - 280),
+        height: rect.height || window.innerHeight,
+        left: rect.left || 280,
+        top: rect.top || 0
+      };
+    }
+
+    /* =====================================================================
+       1. SCENE, CAMERA, RENDERER & UNLOCKED 360° ORBIT + CUSTOM WHEEL ZOOM
+       ===================================================================== */
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf1f3f6);
+
+    const vp0 = getViewportSize();
+    const camera = new THREE.PerspectiveCamera(38, vp0.width / vp0.height, 0.05, 100);
+
+    let isCameraTweening = false;
+    const camTargetPos = new THREE.Vector3(3.45, 2.15, 3.65);
+    const camTargetLook = new THREE.Vector3(0, 1.05, 0.0);
+    camera.position.copy(camTargetPos);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
+    renderer.setSize(vp0.width, vp0.height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.copy(camTargetLook);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.enablePan = true;
+    controls.enableZoom = false; // Mandatory custom wheel zoom handler below
+    controls.minDistance = 0.85;
+    controls.maxDistance = 16.0;
+    controls.minAzimuthAngle = -Infinity;
+    controls.maxAzimuthAngle = Infinity;
+    controls.minPolarAngle = 0.05;
+    controls.maxPolarAngle = Math.PI * 0.495;
+    controls.update();
+
+    controls.addEventListener('start', () => {
+      isCameraTweening = false;
+    });
+
+    // Smooth, Non-Jumping Custom Wheel Zoom (4.2% per tick)
+    renderer.domElement.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.deltaY === 0) return;
+      isCameraTweening = false;
+      const offset = new THREE.Vector3().subVectors(camera.position, controls.target);
+      const dist = offset.length();
+      if (dist < 0.001) return;
+      const dir = e.deltaY > 0 ? 1 : -1;
+      const nextDist = Math.max(controls.minDistance, Math.min(controls.maxDistance, dist * (1 + dir * 0.042)));
+      offset.normalize().multiplyScalar(nextDist);
+      camera.position.copy(controls.target).add(offset);
+      controls.update();
+    }, { passive: false });
+
+    const raycaster = new THREE.Raycaster();
+    const mouseVec = new THREE.Vector2();
+
+    /* =====================================================================
+       2. UNIFIED LIGHT-STUDIO LIGHTING & TWO-TIER CONCRETE PLINTH
+       ===================================================================== */
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xdbe2ea, 1.25);
+    scene.add(hemiLight);
+
+    const mainLight = new THREE.DirectionalLight(0xfffdf9, 1.35);
+    mainLight.position.set(8, 14, 7);
+    mainLight.castShadow = true;
+    mainLight.shadow.mapSize.width = 2048;
+    mainLight.shadow.mapSize.height = 2048;
+    mainLight.shadow.bias = -0.0003;
+    mainLight.shadow.camera.near = 0.5;
+    mainLight.shadow.camera.far = 32;
+    mainLight.shadow.camera.left = -6.0;
+    mainLight.shadow.camera.right = 6.0;
+    mainLight.shadow.camera.top = 6.0;
+    mainLight.shadow.camera.bottom = -6.0;
+    scene.add(mainLight);
+
+    const fillLight = new THREE.DirectionalLight(0xe2e8f0, 0.85);
+    fillLight.position.set(-8, 7, -6);
+    scene.add(fillLight);
+
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.55);
+    rimLight.position.set(-4, 5, -9);
+    scene.add(rimLight);
+
+    // Expanded Two-Tier Architectural Concrete Studio Plinth (9.6 m wide × 6.8 m deep, y = 0.0, No Wireframe Grid)
+    const plinthGrp = new THREE.Group();
+    const padMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(9.6, 0.08, 6.8),
+      new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.85, metalness: 0.05 })
+    );
+    padMesh.position.set(0, -0.04, 0.0);
+    padMesh.receiveShadow = true;
+    plinthGrp.add(padMesh);
+
+    const curbMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(9.9, 0.10, 7.1),
+      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.80, metalness: 0.08 })
+    );
+    curbMesh.position.set(0, -0.09, 0.0);
+    curbMesh.receiveShadow = true;
+    plinthGrp.add(curbMesh);
+    scene.add(plinthGrp);
+
+    const groundShadow = new THREE.Mesh(
+      new THREE.PlaneGeometry(45, 45),
+      new THREE.ShadowMaterial({ opacity: 0.16 })
+    );
+    groundShadow.rotation.x = -Math.PI / 2;
+    groundShadow.position.y = 0.001;
+    groundShadow.receiveShadow = true;
+    scene.add(groundShadow);
+
+    /* =====================================================================
+       3. PROCEDURAL TEXTURES & SOFT INDUSTRIAL CAD MATERIAL PALETTE
+       ===================================================================== */
+    function createPowderCoatTexture() {
+      const c = document.createElement('canvas');
+      c.width = 128; c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#808080';
+      ctx.fillRect(0, 0, 128, 128);
+      for (let i = 0; i < 1400; i++) {
+        const v = 118 + Math.floor(Math.random() * 28);
+        ctx.fillStyle = `rgb(${v},${v},${v})`;
+        ctx.fillRect(Math.random() * 128, Math.random() * 128, 2, 2);
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(6, 6);
+      return tex;
+    }
+
+    function createCoreLaminationTexture() {
+      const c = document.createElement('canvas');
+      c.width = 64; c.height = 256;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#8796a5';
+      ctx.fillRect(0, 0, 64, 256);
+      for (let y = 0; y < 256; y += 4) {
+        ctx.fillStyle = (y % 8 === 0) ? '#738291' : '#9aa8b6';
+        ctx.fillRect(0, y, 64, 2);
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(2, 6);
+      return tex;
+    }
+
+    function createNameplateTexture() {
+      const c = document.createElement('canvas');
+      c.width = 512; c.height = 192;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#f4f6f8';
+      ctx.fillRect(0, 0, 512, 192);
+      ctx.strokeStyle = '#9aa8b6';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(6, 6, 500, 180);
+
+      ctx.fillStyle = '#b45309';
+      ctx.fillRect(20, 20, 472, 38);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 19px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('⚡ DANGER 6,600 V · CAST-RESIN TRANSFORMER', 256, 45);
+
+      ctx.fillStyle = '#334155';
+      ctx.font = 'bold 18px Inter, sans-serif';
+      ctx.fillText('TX A / TX B · 2,500 kVA · 6.6 kV / 440 V · 60 Hz', 256, 88);
+
+      ctx.fillStyle = '#475569';
+      ctx.font = '600 13px JetBrains Mono, monospace';
+      ctx.fillText('VECTOR GROUP: Dyn11  |  COOLING: AN/AF  |  INSULATION: CLASS F (155°C)', 256, 118);
+      ctx.fillText('IEC 60076-11 / IEC 60092-303  |  IMPEDANCE Zk = 6.25%  |  IP23 MARINE', 256, 144);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function createPt100ControllerTexture() {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 160;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#738291';
+      ctx.fillRect(0, 0, 256, 160);
+      ctx.strokeStyle = '#c9d2db';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(4, 4, 248, 152);
+
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(18, 18, 220, 74);
+
+      ctx.fillStyle = '#10b981';
+      ctx.font = 'bold 26px JetBrains Mono, monospace';
+      ctx.fillText('CH1: 104°C', 30, 54);
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 15px JetBrains Mono, monospace';
+      ctx.fillText('AF BLOWERS: RUN', 30, 80);
+
+      ctx.fillStyle = '#f4f6f8';
+      ctx.font = 'bold 12px Inter, sans-serif';
+      ctx.fillText('NT935 PT100 THERMAL MONITOR', 22, 118);
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = '11px JetBrains Mono, monospace';
+      ctx.fillText('ALARM 130°C  |  TRIP 155°C', 22, 138);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    const powderBump = createPowderCoatTexture();
+    const coreLamTex = createCoreLaminationTexture();
+    const nameplateTex = createNameplateTexture();
+    const pt100Tex = createPt100ControllerTexture();
+
+    // Mandatory Soft Industrial CAD Palette
+    const matCabinetSteel = new THREE.MeshStandardMaterial({
+      color: 0xc9d2db,
+      roughness: 0.42,
+      metalness: 0.16,
+      bumpMap: powderBump,
+      bumpScale: 0.0012
+    });
+    const matStructuralTrim = new THREE.MeshStandardMaterial({
+      color: 0x9aa8b6,
+      roughness: 0.45,
+      metalness: 0.22,
+      bumpMap: powderBump,
+      bumpScale: 0.0015
+    });
+    const matCoreSiliconSteel = new THREE.MeshStandardMaterial({
+      color: 0x8796a5,
+      roughness: 0.44,
+      metalness: 0.28,
+      bumpMap: coreLamTex,
+      bumpScale: 0.0025
+    });
+    const matYokeClampSteel = new THREE.MeshStandardMaterial({
+      color: 0x738291,
+      roughness: 0.46,
+      metalness: 0.26,
+      bumpMap: powderBump,
+      bumpScale: 0.0018
+    });
+    const matSageEnamel = new THREE.MeshStandardMaterial({
+      color: 0x3b6254,
+      roughness: 0.44,
+      metalness: 0.22
+    });
+    const matHvEpoxyResin = new THREE.MeshStandardMaterial({
+      color: 0xa6534c,
+      roughness: 0.36,
+      metalness: 0.10
+    });
+    const matPorcelainShed = new THREE.MeshStandardMaterial({
+      color: 0xb35d56,
+      roughness: 0.28,
+      metalness: 0.08
+    });
+    const matCopper = new THREE.MeshStandardMaterial({
+      color: 0xd47a42,
+      roughness: 0.28,
+      metalness: 0.80
+    });
+    const matBrass = new THREE.MeshStandardMaterial({
+      color: 0xd8b25c,
+      roughness: 0.28,
+      metalness: 0.78
+    });
+    const matPolishedSteel = new THREE.MeshStandardMaterial({
+      color: 0xe2e8f0,
+      roughness: 0.20,
+      metalness: 0.85
+    });
+    const matCtOchre = new THREE.MeshStandardMaterial({
+      color: 0xb8804c,
+      roughness: 0.38,
+      metalness: 0.14
+    });
+    const matPhaseU = new THREE.MeshStandardMaterial({ color: 0xd9534f, roughness: 0.34, metalness: 0.20 });
+    const matPhaseV = new THREE.MeshStandardMaterial({ color: 0xe6a23c, roughness: 0.34, metalness: 0.20 });
+    const matPhaseW = new THREE.MeshStandardMaterial({ color: 0x4a89dc, roughness: 0.34, metalness: 0.20 });
+    const matPrepregInsulation = new THREE.MeshStandardMaterial({
+      color: 0xe6ccb2,
+      roughness: 0.42,
+      metalness: 0.06
+    });
+    const matFiberglassStick = new THREE.MeshStandardMaterial({
+      color: 0xcbd5e1,
+      roughness: 0.36,
+      metalness: 0.10
+    });
+    const matNameplate = new THREE.MeshStandardMaterial({ map: nameplateTex, roughness: 0.35, metalness: 0.15 });
+    const matPt100Face = new THREE.MeshStandardMaterial({ map: pt100Tex, roughness: 0.35, metalness: 0.15 });
+
+    const matGlassCutaway = new THREE.MeshPhysicalMaterial({
+      color: 0x93c5fd,
+      transparent: true,
+      opacity: 0.22,
+      roughness: 0.08,
+      transmission: 0.85,
+      thickness: 0.25,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+
+    /* =====================================================================
+       4. SUBSYSTEM GROUPS & WIDE, NON-TOUCHING EXPLOSION VECTORS (y >= 0 STRICTLY)
+       ===================================================================== */
+    const subsystems = {
+      enclosure: new THREE.Group(),
+      magneticCore: new THREE.Group(),
+      lvWindings: new THREE.Group(),
+      hvWindings: new THREE.Group(),
+      bushingsTerminals: new THREE.Group(),
+      coolingFans: new THREE.Group(),
+      magneticFlux: new THREE.Group()
+    };
+
+    for (const key in subsystems) {
+      subsystems[key].userData.subsystemKey = key;
+      scene.add(subsystems[key]);
+    }
+
+    // Wide, Non-Touching Floor-Safe Explosion Vectors (Zero Overlap at 100%, y >= 0 strictly)
+    const explodeVectors = {
+      magneticCore: new THREE.Vector3(0, 0, 0),
+      lvWindings: new THREE.Vector3(-2.35, 0.12, 0.0),
+      hvWindings: new THREE.Vector3(2.35, 0.12, 0.0),
+      coolingFans: new THREE.Vector3(0.0, 0.02, 1.65),
+      bushingsTerminals: new THREE.Vector3(0.0, 0.35, -1.65),
+      magneticFlux: new THREE.Vector3(0.0, 1.75, 0.65),
+      enclosure: new THREE.Vector3(0.0, 2.55, -1.35)
+    };
+
+    const subsystemMeta = {
+      enclosure: {
+        code: 'ASSY-01',
+        sub: 'IP23 Drip-Proof Marine Housing (2100×1350×2200 mm)',
+        title: 'IP23 Marine Enclosure, Louvers & Viewing Doors',
+        desc: 'Bolted soft cool-slate (#c9d2db) steel housing with angled IP23 drip-proof canopy, slatted rain-hood louvers, extruded cutout viewing windows, and 6 anti-vibration rubber mounts.'
+      },
+      magneticCore: {
+        code: 'ASSY-02',
+        sub: '3-Limb Step-Lap Laminated Core',
+        title: 'CRGO Silicon-Steel Core & Clamping Yokes',
+        desc: 'Cold-Rolled Grain-Oriented (CRGO) step-lap laminated silicon-steel 3-limb core (#8796a5) with stepped circular cross-sections, C-channel yoke beams, tie rods, and silicone coil blocks.'
+      },
+      lvWindings: {
+        code: 'ASSY-03',
+        sub: '440 V Secondary Winding Assembly (3,280 A)',
+        title: 'Inner 440 V Copper Foil Coils & Star Neutral Bus',
+        desc: '3 concentric inner low-voltage copper foil windings (#d47a42) around the core limbs with axial cooling duct sticks, top star (y) neutral bar, and flexible braided copper shunts.'
+      },
+      hvWindings: {
+        code: 'ASSY-04',
+        sub: '6.6 kV Primary Winding Assembly (218.7 A)',
+        title: 'Outer 6.6 kV Vacuum-Cast Epoxy Coils & ±5% Taps',
+        desc: '3 outer vacuum-cast cycloaliphatic epoxy resin coils (#a6534c) with radial spacer pads, copper delta (D) phase links, and bolted brass off-circuit tap-changer links (Tap 1 to Tap 5).'
+      },
+      bushingsTerminals: {
+        code: 'ASSY-05',
+        sub: 'High/Low Voltage Termination Deck',
+        title: '6.6 kV Shedded Porcelain Bushings, Arresters & CTs',
+        desc: '3 top-mounted 6.6 kV shedded porcelain primary bushings (U1, V1, W1), 3 ZnO polymeric surge arresters, and 4 outgoing 440 V copper busbar flags (u, v, w, n) with toroidal CTs.'
+      },
+      coolingFans: {
+        code: 'ASSY-06',
+        sub: 'AN/AF Forced-Air Thermal System',
+        title: 'Cross-Flow AF Tangential Fans & PT100 Controller',
+        desc: 'Twin bottom-mounted cross-flow tangential blowers directing forced air upward through the HV-LV annular cooling ducts, controlled by an NT935 digital PT100 temperature monitor.'
+      },
+      magneticFlux: {
+        code: 'ASSY-07',
+        sub: 'Electromagnetic & Convective Field Visualization',
+        title: '3-Phase 120° Core Magnetic Flux & Thermal Airflow',
+        desc: 'Real-time visualization of the 120° phase-shifted magnetic flux loops (ΦA, ΦB, ΦC) inside the 3 core limbs and rising convective/forced-air cooling streamlines through the coils.'
+      }
+    };
+
+    // References for Cutaway & Kinematics
+    const cutawayMeshes = [];
+    const tapBridgeMeshes = [];
+    const fanRotorGroups = [];
+    const fluxBeadItems = [];
+    const airflowParticles = [];
+    let frontLeftDoorPivot = null;
+    let frontRightDoorPivot = null;
+
+    const limbXPositions = [-0.58, 0.0, 0.58];
+    const coilCenterY = 0.98;
+
+    /* =====================================================================
+       5. BUILD 7 PROCEDURAL MARINE CAD SUBSYSTEMS
+       ===================================================================== */
+
+    // 5.1 SUBSYSTEM: `magneticCore` (3-Limb Step-Lap CRGO Core & Clamping Yokes)
+    function buildMagneticCore() {
+      const grp = subsystems.magneticCore;
+
+      // 3 Vertical Stepped-Circular CRGO Core Limbs at x = -0.60, 0.0, +0.60 m (y = 0.28 m to 1.68 m)
+      limbXPositions.forEach((xLimb) => {
+        // Central cylindrical core limb body
+        const coreCyl = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.145, 0.145, 1.40, 28),
+          matCoreSiliconSteel
+        );
+        coreCyl.position.set(xLimb, coilCenterY, 0);
+        coreCyl.castShadow = true;
+        grp.add(coreCyl);
+
+        // Step-lap packet tiers around the limb
+        [
+          { w: 0.26, d: 0.14 },
+          { w: 0.22, d: 0.20 },
+          { w: 0.16, d: 0.25 }
+        ].forEach((step) => {
+          const pkt = new THREE.Mesh(
+            new THREE.BoxGeometry(step.w, 1.38, step.d),
+            matCoreSiliconSteel
+          );
+          pkt.position.set(xLimb, coilCenterY, 0);
+          pkt.castShadow = true;
+          grp.add(pkt);
+        });
+
+        // 8 Resilient Silicone/Epoxy Coil Support Blocks (Top & Bottom of each limb)
+        [0.40, 1.56].forEach((yPad) => {
+          for (let a = 0; a < 4; a++) {
+            const ang = (a / 4) * Math.PI * 2 + Math.PI / 4;
+            const pad = new THREE.Mesh(
+              new THREE.BoxGeometry(0.055, 0.042, 0.12),
+              matPorcelainShed
+            );
+            pad.position.set(xLimb + Math.cos(ang) * 0.21, yPad, Math.sin(ang) * 0.21);
+            pad.rotation.y = -ang;
+            grp.add(pad);
+          }
+        });
+      });
+
+      // Top & Bottom Horizontal Step-Lap Laminated Yokes
+      [0.28, 1.68].forEach((yYoke) => {
+        const yokeMain = new THREE.Mesh(
+          new THREE.BoxGeometry(1.62, 0.20, 0.26),
+          matCoreSiliconSteel
+        );
+        yokeMain.position.set(0, yYoke, 0);
+        yokeMain.castShadow = true;
+        grp.add(yokeMain);
+
+        const yokeStep = new THREE.Mesh(
+          new THREE.BoxGeometry(1.66, 0.14, 0.29),
+          matCoreSiliconSteel
+        );
+        yokeStep.position.set(0, yYoke, 0);
+        grp.add(yokeStep);
+
+        // Front & Rear Heavy C-Channel Yoke Clamping Beams (#738291)
+        [-0.17, 0.17].forEach((zClamp) => {
+          const clampBeam = new THREE.Mesh(
+            new THREE.BoxGeometry(1.76, 0.15, 0.045),
+            matYokeClampSteel
+          );
+          clampBeam.position.set(0, yYoke, zClamp);
+          clampBeam.castShadow = true;
+          grp.add(clampBeam);
+
+          // Clamping Tie Bolts through Yoke Beams
+          [-0.82, -0.30, 0.30, 0.82].forEach((xBolt) => {
+            const bolt = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.014, 0.014, 0.03, 6),
+              matPolishedSteel
+            );
+            bolt.rotation.x = Math.PI / 2;
+            bolt.position.set(xBolt, yYoke, zClamp + (zClamp > 0 ? 0.026 : -0.026));
+            grp.add(bolt);
+          });
+        });
+      });
+
+      // 4 Vertical High-Tensile Core Clamping Tie Rods connecting Bottom & Top Yoke Beams
+      [-0.31, 0.31].forEach((xRod) => {
+        [-0.17, 0.17].forEach((zRod) => {
+          const tieRod = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.012, 0.012, 1.54, 16),
+            matPolishedSteel
+          );
+          tieRod.position.set(xRod, coilCenterY, zRod);
+          grp.add(tieRod);
+        });
+      });
+
+      // 4 Forged Core Crane Lifting Lugs on Top Yoke Clamps
+      [-0.76, 0.76].forEach((xLug) => {
+        [-0.17, 0.17].forEach((zLug) => {
+          const lugPlate = new THREE.Mesh(
+            new THREE.BoxGeometry(0.08, 0.12, 0.022),
+            matYokeClampSteel
+          );
+          lugPlate.position.set(xLug, 1.79, zLug);
+          grp.add(lugPlate);
+
+          const lugEye = new THREE.Mesh(
+            new THREE.TorusGeometry(0.024, 0.007, 10, 20),
+            matPolishedSteel
+          );
+          lugEye.position.set(xLug, 1.84, zLug);
+          grp.add(lugEye);
+        });
+      });
+
+      // Lower Cross-Frame Foot Channels & Copper Core Earthing Strap
+      [-0.58, 0.0, 0.58].forEach((xFoot) => {
+        const footCross = new THREE.Mesh(
+          new THREE.BoxGeometry(0.14, 0.06, 0.74),
+          matYokeClampSteel
+        );
+        footCross.position.set(xFoot, 0.15, 0);
+        grp.add(footCross);
+      });
+    }
+
+    // 5.2 SUBSYSTEM: `lvWindings` (Dual-Concentric 440 V Foil Barrels, Dog-Bone Sticks, Braided Shunts & Star Bus)
+    function buildLvWindings() {
+      const grp = subsystems.lvWindings;
+      const phaseMats = [matPhaseU, matPhaseV, matPhaseW];
+
+      limbXPositions.forEach((xCoil, idx) => {
+        // Core-to-LV Base Phenolic/Prepreg Insulation Cylinder (r = 0.155 m, h = 1.12 m)
+        const baseInsCyl = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.155, 0.155, 1.12, 36, 1, true),
+          matPrepregInsulation
+        );
+        baseInsCyl.position.set(xCoil, coilCenterY, 0);
+        grp.add(baseInsCyl);
+
+        // 12 Inner Support Spacer Sticks against the Core Limb Insulation Cylinder (r = 0.160 m)
+        for (let s = 0; s < 12; s++) {
+          const sa = (s / 12) * Math.PI * 2;
+          const innerStick = new THREE.Mesh(
+            new THREE.BoxGeometry(0.009, 1.10, 0.012),
+            matFiberglassStick
+          );
+          innerStick.position.set(xCoil + Math.cos(sa) * 0.160, coilCenterY, Math.sin(sa) * 0.160);
+          innerStick.rotation.y = -sa;
+          grp.add(innerStick);
+        }
+
+        // Inner Concentric 440 V Copper Sheet/Foil Winding Barrel (r = 0.166 m to 0.183 m, h = 1.02 m)
+        const innerFoilBarrel = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.183, 0.183, 1.02, 40),
+          matCopper
+        );
+        innerFoilBarrel.position.set(xCoil, coilCenterY, 0);
+        innerFoilBarrel.castShadow = true;
+        grp.add(innerFoilBarrel);
+
+        // Outer Concentric 440 V Copper Sheet/Foil Winding Barrel (r = 0.195 m to 0.210 m, h = 1.02 m, open-ended annular cylinder)
+        const outerFoilOuter = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.210, 0.210, 1.02, 44, 1, true),
+          matCopper
+        );
+        outerFoilOuter.position.set(xCoil, coilCenterY, 0);
+        outerFoilOuter.castShadow = true;
+        grp.add(outerFoilOuter);
+
+        const outerFoilInner = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.195, 0.195, 1.02, 40, 1, true),
+          matCopper
+        );
+        outerFoilInner.position.set(xCoil, coilCenterY, 0);
+        grp.add(outerFoilInner);
+
+        // Visible Spiral Copper Foil Edge Turns & Prepreg Inter-Layer Insulation Collars at Top & Bottom Edges
+        const foilTurnRadii = [0.169, 0.174, 0.179, 0.198, 0.203, 0.208];
+        const prepregRadii = [0.1715, 0.1765, 0.2005, 0.2055];
+
+        [-0.512, 0.512].forEach((yEdge) => {
+          foilTurnRadii.forEach((rTurn) => {
+            const turnRing = new THREE.Mesh(
+              new THREE.TorusGeometry(rTurn, 0.0022, 8, 40),
+              matCopper
+            );
+            turnRing.rotation.x = Math.PI / 2;
+            turnRing.position.set(xCoil, coilCenterY + yEdge, 0);
+            grp.add(turnRing);
+          });
+
+          prepregRadii.forEach((rIns) => {
+            const insCollar = new THREE.Mesh(
+              new THREE.TorusGeometry(rIns, 0.0018, 8, 40),
+              matPrepregInsulation
+            );
+            insCollar.rotation.x = Math.PI / 2;
+            insCollar.position.set(xCoil, coilCenterY + yEdge + (yEdge > 0 ? 0.003 : -0.003), 0);
+            grp.add(insCollar);
+          });
+        });
+
+        // 16 Radial Fiberglass-Reinforced Dog-Bone Cooling Duct Spacer Sticks in Annular Duct (r = 0.189 m)
+        for (let d = 0; d < 16; d++) {
+          const da = (d / 16) * Math.PI * 2;
+          const dx = xCoil + Math.cos(da) * 0.189;
+          const dz = Math.sin(da) * 0.189;
+
+          const dogBoneCore = new THREE.Mesh(
+            new THREE.BoxGeometry(0.011, 1.09, 0.015),
+            matFiberglassStick
+          );
+          dogBoneCore.position.set(dx, coilCenterY, dz);
+          dogBoneCore.rotation.y = -da;
+          grp.add(dogBoneCore);
+
+          // Outer axial spacer ribs on LV exterior (r = 0.213 m)
+          const outerStick = new THREE.Mesh(
+            new THREE.BoxGeometry(0.010, 1.07, 0.012),
+            matCtOchre
+          );
+          outerStick.position.set(xCoil + Math.cos(da) * 0.213, coilCenterY, Math.sin(da) * 0.213);
+          outerStick.rotation.y = -da;
+          grp.add(outerStick);
+        }
+
+        // Stepped Epoxy-Glass End-Insulation Rings & 8 Radial Silicone-Elastomer Clamping Pads (Top & Bottom)
+        [-0.532, 0.532].forEach((yEnd) => {
+          const endRingInner = new THREE.Mesh(
+            new THREE.TorusGeometry(0.174, 0.010, 10, 36),
+            matCtOchre
+          );
+          endRingInner.rotation.x = Math.PI / 2;
+          endRingInner.position.set(xCoil, coilCenterY + yEnd, 0);
+          grp.add(endRingInner);
+
+          const endRingOuter = new THREE.Mesh(
+            new THREE.TorusGeometry(0.203, 0.010, 10, 36),
+            matCtOchre
+          );
+          endRingOuter.rotation.x = Math.PI / 2;
+          endRingOuter.position.set(xCoil, coilCenterY + yEnd, 0);
+          grp.add(endRingOuter);
+
+          // 8 Radial Silicone-Elastomer Clamping Blocks per End
+          for (let c = 0; c < 8; c++) {
+            const ca = (c / 8) * Math.PI * 2 + Math.PI / 8;
+            const clampPad = new THREE.Mesh(
+              new THREE.BoxGeometry(0.032, 0.028, 0.056),
+              matPorcelainShed
+            );
+            clampPad.position.set(
+              xCoil + Math.cos(ca) * 0.188,
+              coilCenterY + yEnd + (yEnd > 0 ? 0.018 : -0.018),
+              Math.sin(ca) * 0.188
+            );
+            clampPad.rotation.y = -ca;
+            grp.add(clampPad);
+          }
+        });
+
+        // Cold-Welded Flat Copper Foil Take-Off Flags emerging vertically from Inner & Outer Foil Barrels
+        [0.055, 0.095].forEach((xFlagOff, fIdx) => {
+          const zFlag = fIdx === 0 ? 0.14 : 0.16;
+          const foilFlag = new THREE.Mesh(
+            new THREE.BoxGeometry(0.032, 0.25, 0.012),
+            matCopper
+          );
+          foilFlag.position.set(xCoil + xFlagOff, 1.56, zFlag);
+          foilFlag.castShadow = true;
+          grp.add(foilFlag);
+
+          // M12 Stainless Steel Hex Bolts & Nuts clamping the Multi-Leaf Braided Shunt
+          [-0.012, 0.012].forEach((yb) => {
+            const hexBolt = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.006, 0.006, 0.028, 6),
+              matPolishedSteel
+            );
+            hexBolt.rotation.x = Math.PI / 2;
+            hexBolt.position.set(xCoil + xFlagOff, 1.65 + yb, zFlag);
+            grp.add(hexBolt);
+          });
+        });
+
+        // Multi-Leaf Tinned-Copper Flexible Braided Expansion Shunt Assembly (#e2e8f0)
+        for (let leaf = 0; leaf < 4; leaf++) {
+          const leafMesh = new THREE.Mesh(
+            new THREE.BoxGeometry(0.082, 0.048, 0.008),
+            matPolishedSteel
+          );
+          leafMesh.position.set(xCoil + 0.075, 1.68, 0.145 + leaf * 0.014);
+          grp.add(leafMesh);
+        }
+
+        // Copper Ferrule Clamps at ends of Braided Shunt
+        [0.14, 0.19].forEach((zf) => {
+          const ferrule = new THREE.Mesh(
+            new THREE.BoxGeometry(0.088, 0.036, 0.016),
+            matBrass
+          );
+          ferrule.position.set(xCoil + 0.075, 1.68, zf);
+          grp.add(ferrule);
+        });
+
+        // Outgoing Phase Copper Riser Stub with Phase Color Sleeve
+        const phaseRiserStub = new THREE.Mesh(
+          new THREE.BoxGeometry(0.076, 0.14, 0.016),
+          matCopper
+        );
+        phaseRiserStub.position.set(xCoil + 0.075, 1.74, 0.19);
+        grp.add(phaseRiserStub);
+
+        const phaseBand = new THREE.Mesh(
+          new THREE.BoxGeometry(0.080, 0.028, 0.020),
+          phaseMats[idx]
+        );
+        phaseBand.position.set(xCoil + 0.075, 1.76, 0.19);
+        grp.add(phaseBand);
+
+        // Rear Cold-Welded Neutral Take-Off Flag & M12 Bolted Clamp to Star (y) Neutral Busbar
+        const neutralFlag = new THREE.Mesh(
+          new THREE.BoxGeometry(0.068, 0.22, 0.014),
+          matCopper
+        );
+        neutralFlag.position.set(xCoil - 0.075, 1.55, -0.165);
+        grp.add(neutralFlag);
+
+        [-0.016, 0.016].forEach((xb) => {
+          const nBolt = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.007, 0.007, 0.042, 6),
+            matPolishedSteel
+          );
+          nBolt.rotation.x = Math.PI / 2;
+          nBolt.position.set(xCoil - 0.075 + xb, 1.62, -0.17);
+          grp.add(nBolt);
+        });
+      });
+
+      // Double-Bar Overhead Copper Star (y) Neutral Busbar (n) supported on Red DMC Standoff Insulators
+      [-0.162, -0.180].forEach((zBar) => {
+        const starNeutralBus = new THREE.Mesh(
+          new THREE.BoxGeometry(1.48, 0.064, 0.012),
+          matCopper
+        );
+        starNeutralBus.position.set(0.02, 1.62, zBar);
+        starNeutralBus.castShadow = true;
+        grp.add(starNeutralBus);
+      });
+
+      [-0.46, 0.0, 0.46].forEach((xIns) => {
+        const dmcIns = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.028, 0.036, 0.095, 20),
+          matPorcelainShed
+        );
+        dmcIns.position.set(xIns, 1.56, -0.17);
+        grp.add(dmcIns);
+      });
+    }
+
+    // 5.3 SUBSYSTEM: `hvWindings` (9-Disc Vacuum-Cast Epoxy Coils, Internal Copper Discs, Turret Taps & Delta Links)
+    function buildHvWindings() {
+      const grp = subsystems.hvWindings;
+      tapBridgeMeshes.length = 0;
+
+      // 9 Disc Vertical Offsets spanning the 1.08 m coil height
+      const discYOffsets = [-0.44, -0.33, -0.22, -0.11, 0.0, 0.11, 0.22, 0.33, 0.44];
+
+      limbXPositions.forEach((xCoil) => {
+        // 1. INTERNAL COPPER DISC WINDING STACK & QUARTZ-FIBER MESH (Visible when Cutaway X-Ray is ON!)
+        // Inner quartz-fiber / prepreg barrier cylinder (r = 0.228 m)
+        const innerQuartzCyl = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.228, 0.228, 1.06, 36, 1, true),
+          matPrepregInsulation
+        );
+        innerQuartzCyl.position.set(xCoil, coilCenterY, 0);
+        grp.add(innerQuartzCyl);
+
+        // 9 Precision-Wound Internal Copper Foil/Wire Disc Coils (#d47a42)
+        discYOffsets.forEach((dy, dIdx) => {
+          const cuDisc = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.252, 0.252, 0.074, 36),
+            matCopper
+          );
+          cuDisc.position.set(xCoil, coilCenterY + dy, 0);
+          grp.add(cuDisc);
+
+          // Quartz-fiber reinforcement tape rings on top/bottom of each internal copper disc
+          [-0.035, 0.035].forEach((rOff) => {
+            const qBand = new THREE.Mesh(
+              new THREE.TorusGeometry(0.253, 0.0035, 8, 36),
+              matPrepregInsulation
+            );
+            qBand.rotation.x = Math.PI / 2;
+            qBand.position.set(xCoil, coilCenterY + dy + rOff, 0);
+            grp.add(qBand);
+          });
+
+          // Inter-Disc Series Drop-Down Copper Crossover Jumper linking Disc dIdx to Disc dIdx+1
+          if (dIdx < discYOffsets.length - 1) {
+            const angJ = (dIdx % 2 === 0) ? 0.42 : -0.42;
+            const jx = xCoil + Math.sin(angJ) * 0.254;
+            const jz = Math.cos(angJ) * 0.254;
+            const jumper = new THREE.Mesh(
+              new THREE.BoxGeometry(0.014, 0.048, 0.008),
+              matCopper
+            );
+            jumper.position.set(jx, coilCenterY + dy + 0.055, jz);
+            jumper.rotation.y = angJ;
+            grp.add(jumper);
+          }
+        });
+
+        // 2. SEGMENTED 9-DISC VACUUM-CAST EPOXY RESIN OUTER ENCAPSULATION (#a6534c — Included in cutawayMeshes!)
+        const epoxyBaseBarrel = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.258, 0.258, 1.08, 40),
+          matHvEpoxyResin
+        );
+        epoxyBaseBarrel.position.set(xCoil, coilCenterY, 0);
+        epoxyBaseBarrel.castShadow = true;
+        grp.add(epoxyBaseBarrel);
+        cutawayMeshes.push(epoxyBaseBarrel);
+
+        // 9 Distinct Horizontal Cast Disc-Section Bands separated by Contoured Cooling Grooves
+        discYOffsets.forEach((dy) => {
+          const castDiscBand = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.272, 0.272, 0.082, 40),
+            matHvEpoxyResin
+          );
+          castDiscBand.position.set(xCoil, coilCenterY + dy, 0);
+          castDiscBand.castShadow = true;
+          grp.add(castDiscBand);
+          cutawayMeshes.push(castDiscBand);
+
+          // Contoured bevel lips on each cast disc band
+          [-0.039, 0.039].forEach((bLip) => {
+            const lipTorus = new THREE.Mesh(
+              new THREE.TorusGeometry(0.268, 0.0055, 10, 40),
+              matHvEpoxyResin
+            );
+            lipTorus.rotation.x = Math.PI / 2;
+            lipTorus.position.set(xCoil, coilCenterY + dy + bLip, 0);
+            grp.add(lipTorus);
+            cutawayMeshes.push(lipTorus);
+          });
+        });
+
+        // 8 Vertical Resin Stiffening Ribs / Flutes around the HV Circumference
+        for (let r = 0; r < 8; r++) {
+          const ra = (r / 8) * Math.PI * 2 + Math.PI / 8;
+          const flute = new THREE.Mesh(
+            new THREE.BoxGeometry(0.018, 1.04, 0.022),
+            matHvEpoxyResin
+          );
+          flute.position.set(xCoil + Math.cos(ra) * 0.266, coilCenterY, Math.sin(ra) * 0.266);
+          flute.rotation.y = -ra;
+          grp.add(flute);
+          cutawayMeshes.push(flute);
+        }
+
+        // Stepped Electrostatic Stress-Control End Collars at Top & Bottom of HV Cast Coil
+        [-0.525, 0.525].forEach((yCollar) => {
+          const collarStep1 = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.266, 0.266, 0.036, 40),
+            matHvEpoxyResin
+          );
+          collarStep1.position.set(xCoil, coilCenterY + yCollar, 0);
+          grp.add(collarStep1);
+          cutawayMeshes.push(collarStep1);
+
+          const collarStep2 = new THREE.Mesh(
+            new THREE.TorusGeometry(0.258, 0.012, 12, 40),
+            matPorcelainShed
+          );
+          collarStep2.rotation.x = Math.PI / 2;
+          collarStep2.position.set(xCoil, coilCenterY + yCollar + (yCollar > 0 ? 0.022 : -0.022), 0);
+          grp.add(collarStep2);
+          cutawayMeshes.push(collarStep2);
+        });
+
+        // 3. 16 RADIAL SILICONE/NOMEX CLAMPING BLOCKS WITH STAINLESS PRESSURE SHOES (8 Top + 8 Bottom)
+        [-0.565, 0.565].forEach((yBlock) => {
+          for (let c = 0; c < 8; c++) {
+            const ca = (c / 8) * Math.PI * 2;
+            const bx = xCoil + Math.cos(ca) * 0.246;
+            const bz = Math.sin(ca) * 0.246;
+
+            const siliconeBlock = new THREE.Mesh(
+              new THREE.BoxGeometry(0.038, 0.034, 0.068),
+              matPorcelainShed
+            );
+            siliconeBlock.position.set(bx, coilCenterY + yBlock, bz);
+            siliconeBlock.rotation.y = -ca;
+            grp.add(siliconeBlock);
+
+            const pressureShoe = new THREE.Mesh(
+              new THREE.BoxGeometry(0.042, 0.010, 0.072),
+              matPolishedSteel
+            );
+            pressureShoe.position.set(bx, coilCenterY + yBlock + (yBlock > 0 ? 0.022 : -0.022), bz);
+            pressureShoe.rotation.y = -ca;
+            grp.add(pressureShoe);
+
+            const jackBolt = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.006, 0.006, 0.055, 6),
+              matPolishedSteel
+            );
+            jackBolt.position.set(bx, coilCenterY + yBlock + (yBlock > 0 ? 0.045 : -0.045), bz);
+            grp.add(jackBolt);
+          }
+        });
+
+        // 4. DETAILED OFF-CIRCUIT TAP-CHANGER (±2 × 2.5%) TERMINAL TURRET & MOVING BRASS LINK BAR
+        const tapTurretBase = new THREE.Mesh(
+          new THREE.BoxGeometry(0.155, 0.46, 0.038),
+          matPorcelainShed
+        );
+        tapTurretBase.position.set(xCoil, coilCenterY, 0.274);
+        grp.add(tapTurretBase);
+
+        // Two Vertical Rows of 6 Raised Hexagonal Epoxy Tap Bosses with Machined Brass M10 Studs
+        for (let r = 0; r < 6; r++) {
+          const yBoss = coilCenterY + (2.5 - r) * 0.068;
+          [-0.042, 0.042].forEach((xStud) => {
+            const hexBoss = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.017, 0.021, 0.028, 6),
+              matHvEpoxyResin
+            );
+            hexBoss.rotation.x = Math.PI / 2;
+            hexBoss.position.set(xCoil + xStud, yBoss, 0.298);
+            grp.add(hexBoss);
+
+            const brassStud = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.0085, 0.0085, 0.026, 14),
+              matBrass
+            );
+            brassStud.rotation.x = Math.PI / 2;
+            brassStud.position.set(xCoil + xStud, yBoss, 0.314);
+            grp.add(brassStud);
+          });
+
+          // Miniature White Tap Number Plaque (1 to 5) between the two rows
+          if (r < 5) {
+            const yPlaque = coilCenterY + (2 - r) * 0.075;
+            const plaque = new THREE.Mesh(
+              new THREE.BoxGeometry(0.022, 0.018, 0.006),
+              matPolishedSteel
+            );
+            plaque.position.set(xCoil, yPlaque, 0.295);
+            grp.add(plaque);
+          }
+        }
+
+        // Movable Bolted Copper-Brass Jumper Link Bar with Knurled Lock-Nuts (Moves across Tap 1..5)
+        const tapBridge = new THREE.Group();
+        tapBridge.position.set(xCoil, coilCenterY, 0.318);
+        const bridgeBar = new THREE.Mesh(
+          new THREE.BoxGeometry(0.112, 0.028, 0.010),
+          matCopper
+        );
+        tapBridge.add(bridgeBar);
+
+        const bridgeStrip = new THREE.Mesh(
+          new THREE.BoxGeometry(0.096, 0.016, 0.012),
+          matBrass
+        );
+        tapBridge.add(bridgeStrip);
+
+        [-0.042, 0.042].forEach((xNut) => {
+          const washer = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.015, 0.015, 0.006, 20),
+            matPolishedSteel
+          );
+          washer.rotation.x = Math.PI / 2;
+          washer.position.set(xNut, 0, 0.007);
+          tapBridge.add(washer);
+
+          const knurledNut = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.012, 0.012, 0.016, 12),
+            matBrass
+          );
+          knurledNut.rotation.x = Math.PI / 2;
+          knurledNut.position.set(xNut, 0, 0.014);
+          tapBridge.add(knurledNut);
+        });
+        grp.add(tapBridge);
+        tapBridgeMeshes.push(tapBridge);
+
+        // Upper & Lower Cast Epoxy Delta Terminal Snouts with Ribbed Boots & Bolted Copper Lug Flags
+        [
+          { xOff:  0.09, ySnout: 1.44, zSnout: 0.24 },
+          { xOff: -0.09, ySnout: 0.52, zSnout: 0.24 }
+        ].forEach((sn) => {
+          const boot = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.022, 0.028, 0.075, 18),
+            matPorcelainShed
+          );
+          boot.rotation.x = Math.PI / 4;
+          boot.position.set(xCoil + sn.xOff, sn.ySnout, sn.zSnout);
+          grp.add(boot);
+
+          const lugFlag = new THREE.Mesh(
+            new THREE.BoxGeometry(0.034, 0.045, 0.010),
+            matCopper
+          );
+          lugFlag.position.set(xCoil + sn.xOff, sn.ySnout + (sn.ySnout > 1.0 ? 0.032 : -0.032), sn.zSnout + 0.032);
+          grp.add(lugFlag);
+        });
+      });
+
+      // 5. CONTOURED 3-PHASE DELTA (D) INTERCONNECTION BUS TUBES (U2-V1, V2-W1, W2-U1)
+      const deltaPairs = [
+        { x1: -0.58, x2:  0.00, y: 1.38, z: 0.33, mat: matPhaseU },
+        { x1:  0.00, x2:  0.58, y: 1.32, z: 0.35, mat: matPhaseV },
+        { x1:  0.58, x2: -0.58, y: 1.25, z: 0.38, mat: matPhaseW }
+      ];
+      deltaPairs.forEach((dp) => {
+        const curve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(dp.x1 + 0.09, 1.46, 0.27),
+          new THREE.Vector3(dp.x1 + 0.09, dp.y, dp.z),
+          new THREE.Vector3(dp.x2 - 0.09, dp.y, dp.z),
+          new THREE.Vector3(dp.x2 - 0.09, 0.50, 0.27)
+        ]);
+        const deltaTube = new THREE.Mesh(
+          new THREE.TubeGeometry(curve, 32, 0.0135, 14, false),
+          dp.mat
+        );
+        deltaTube.castShadow = true;
+        grp.add(deltaTube);
+      });
+    }
+
+    // 5.4 SUBSYSTEM: `bushingsTerminals` (6.6 kV Shedded Porcelain Bushings, ZnO Arresters & 440 V Flags)
+    function buildBushingsTerminals() {
+      const grp = subsystems.bushingsTerminals;
+      const phaseMats = [matPhaseU, matPhaseV, matPhaseW];
+
+      // 3 Top-Mounted 6.6 kV Shedded Porcelain Primary Bushings (U1, V1, W1) & ZnO Surge Arresters
+      limbXPositions.forEach((xB, idx) => {
+        const bushAssy = new THREE.Group();
+        bushAssy.position.set(xB, 1.82, -0.24);
+        grp.add(bushAssy);
+
+        // Porcelain insulator core
+        const porcCore = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.036, 0.048, 0.28, 24),
+          matPorcelainShed
+        );
+        bushAssy.add(porcCore);
+
+        // 5 Anti-Creepage Shed Skirts
+        for (let s = 0; s < 5; s++) {
+          const shed = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.072, 0.052, 0.022, 24),
+            matPorcelainShed
+          );
+          shed.position.y = -0.09 + s * 0.046;
+          bushAssy.add(shed);
+        }
+
+        // Brass terminal stem & bolted copper palm flag
+        const stem = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.014, 0.014, 0.11, 16),
+          matBrass
+        );
+        stem.position.y = 0.18;
+        bushAssy.add(stem);
+
+        const palm = new THREE.Mesh(
+          new THREE.BoxGeometry(0.048, 0.085, 0.012),
+          matCopper
+        );
+        palm.position.y = 0.23;
+        bushAssy.add(palm);
+
+        const phaseRing = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.022, 0.022, 0.018, 16),
+          phaseMats[idx]
+        );
+        phaseRing.position.y = 0.145;
+        bushAssy.add(phaseRing);
+
+        // Copper Riser Lead from HV Bushing Bottom to HV Cast-Resin Coil Top Terminal
+        const riserCurve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(xB, 1.70, -0.24),
+          new THREE.Vector3(xB, 1.56, -0.24),
+          new THREE.Vector3(xB, 1.48, -0.18)
+        ]);
+        const riserTube = new THREE.Mesh(
+          new THREE.TubeGeometry(riserCurve, 14, 0.012, 10, false),
+          matCopper
+        );
+        grp.add(riserTube);
+
+        // Polymeric Zinc-Oxide (ZnO) 6.6 kV Surge Arrester alongside each Primary Bushing
+        const arrX = xB + 0.15;
+        const arrZ = -0.34;
+        const arrCore = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.032, 0.032, 0.22, 20),
+          matStructuralTrim
+        );
+        arrCore.position.set(arrX, 1.80, arrZ);
+        grp.add(arrCore);
+
+        for (let as = 0; as < 4; as++) {
+          const aShed = new THREE.Mesh(
+            new THREE.TorusGeometry(0.044, 0.008, 10, 20),
+            matStructuralTrim
+          );
+          aShed.rotation.x = Math.PI / 2;
+          aShed.position.set(arrX, 1.73 + as * 0.045, arrZ);
+          grp.add(aShed);
+        }
+
+        // Copper jumper from Bushing to Surge Arrester top
+        const arrJumper = new THREE.Mesh(
+          new THREE.BoxGeometry(0.16, 0.008, 0.020),
+          matCopper
+        );
+        arrJumper.position.set(xB + 0.075, 1.93, -0.29);
+        arrJumper.rotation.y = 0.55;
+        grp.add(arrJumper);
+      });
+
+      // Surge Arrester Mounting Steel Support Bar & Copper PE Ground Busbar
+      const arrBracket = new THREE.Mesh(
+        new THREE.BoxGeometry(1.56, 0.035, 0.045),
+        matYokeClampSteel
+      );
+      arrBracket.position.set(0.08, 1.68, -0.34);
+      grp.add(arrBracket);
+
+      // 4 Outgoing 440 V Secondary Copper Busbar Flags (u, v, w, n) with Toroidal CTs
+      const lvFlagX = [-0.52, 0.08, 0.68, 0.82];
+      lvFlagX.forEach((xf, idx) => {
+        const flagRiser = new THREE.Mesh(
+          new THREE.BoxGeometry(0.08, 0.34, 0.018),
+          matCopper
+        );
+        flagRiser.position.set(xf, 1.82, 0.18);
+        flagRiser.castShadow = true;
+        grp.add(flagRiser);
+
+        // Multi-hole NEMA/IEC Secondary Busbar Terminal Palm at Top
+        const flagPalm = new THREE.Mesh(
+          new THREE.BoxGeometry(0.095, 0.12, 0.022),
+          matPolishedSteel
+        );
+        flagPalm.position.set(xf, 1.98, 0.18);
+        grp.add(flagPalm);
+
+        // Toroidal Protection/Metering Current Transformer (CT) on phases u, v, w
+        if (idx < 3) {
+          const ctToroid = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.072, 0.072, 0.065, 28),
+            matCtOchre
+          );
+          ctToroid.position.set(xf, 1.80, 0.18);
+          grp.add(ctToroid);
+        }
+      });
+    }
+
+    // 5.5 SUBSYSTEM: `coolingFans` (Cross-Flow AF Tangential Cooling Fans & PT100 Monitor)
+    function buildCoolingFans() {
+      const grp = subsystems.coolingFans;
+      fanRotorGroups.length = 0;
+
+      // 2 Bottom-Mounted Cross-Flow Tangential Forced-Air (AF) Blowers (Front z=+0.34m, Rear z=-0.34m, y=0.22m)
+      [-0.34, 0.34].forEach((zFan) => {
+        const blowerHousing = new THREE.Group();
+        blowerHousing.position.set(0, 0.22, zFan);
+        grp.add(blowerHousing);
+
+        // Outer sheet-metal scroll plenum directing air upward into coil ducts
+        const scrollPlenum = new THREE.Mesh(
+          new THREE.BoxGeometry(1.58, 0.11, 0.13),
+          matSageEnamel
+        );
+        scrollPlenum.castShadow = true;
+        blowerHousing.add(scrollPlenum);
+
+        // Left & Right Drive Motor & Bearing End Housings
+        [-0.84, 0.84].forEach((xEnd) => {
+          const motorCasing = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.062, 0.062, 0.12, 24),
+            matYokeClampSteel
+          );
+          motorCasing.rotation.z = Math.PI / 2;
+          motorCasing.position.set(xEnd, 0, 0);
+          blowerHousing.add(motorCasing);
+        });
+
+        // Concentric Rotating Tangential Impeller Parent Group (Aligned along X-axis — Zero Wobble!)
+        const rotorGrp = new THREE.Group();
+        rotorGrp.position.set(0, 0.01, 0);
+        blowerHousing.add(rotorGrp);
+        fanRotorGroups.push(rotorGrp);
+
+        const centerShaft = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.014, 0.014, 1.56, 16),
+          matPolishedSteel
+        );
+        centerShaft.rotation.z = Math.PI / 2;
+        rotorGrp.add(centerShaft);
+
+        // 12 Long Tangential Impeller Blades & 5 Circular Disc Rings
+        for (let b = 0; b < 12; b++) {
+          const ba = (b / 12) * Math.PI * 2;
+          const blade = new THREE.Mesh(
+            new THREE.BoxGeometry(1.50, 0.014, 0.005),
+            matPolishedSteel
+          );
+          blade.position.set(0, Math.cos(ba) * 0.042, Math.sin(ba) * 0.042);
+          blade.rotation.x = ba + 0.35;
+          rotorGrp.add(blade);
+        }
+
+        [-0.60, -0.30, 0.0, 0.30, 0.60].forEach((xDisc) => {
+          const disc = new THREE.Mesh(
+            new THREE.RingGeometry(0.022, 0.048, 20),
+            matBrass
+          );
+          disc.rotation.y = Math.PI / 2;
+          disc.position.x = xDisc;
+          rotorGrp.add(disc);
+        });
+
+        // Protective Finger-Guard Mesh Grille Bars on top of Blower Nozzle
+        for (let g = -0.70; g <= 0.70; g += 0.10) {
+          const guardBar = new THREE.Mesh(
+            new THREE.BoxGeometry(0.006, 0.012, 0.12),
+            matPolishedSteel
+          );
+          guardBar.position.set(g, 0.06, 0);
+          blowerHousing.add(guardBar);
+        }
+      });
+
+      // Digital PT100 Winding Temperature Controller (NT935 Unit) & 3-Phase Sensor Capillaries
+      const pt100Box = new THREE.Mesh(
+        new THREE.BoxGeometry(0.24, 0.16, 0.08),
+        matYokeClampSteel
+      );
+      pt100Box.position.set(-0.82, 1.62, 0.56);
+      grp.add(pt100Box);
+
+      const pt100Screen = new THREE.Mesh(
+        new THREE.BoxGeometry(0.22, 0.14, 0.008),
+        matPt100Face
+      );
+      pt100Screen.position.set(-0.82, 1.62, 0.602);
+      grp.add(pt100Screen);
+
+      // 3-Phase PT100 Thermal Probe Capillaries routed from NT935 into top of the 3 LV Windings
+      limbXPositions.forEach((xTarget, idx) => {
+        const capCurve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(-0.74, 1.62, 0.54),
+          new THREE.Vector3(-0.70, 1.66, 0.25),
+          new THREE.Vector3(xTarget, 1.64, 0.19),
+          new THREE.Vector3(xTarget, 1.50, 0.19)
+        ]);
+        const capTube = new THREE.Mesh(
+          new THREE.TubeGeometry(capCurve, 20, 0.005, 8, false),
+          idx === 0 ? matPhaseU : idx === 1 ? matPhaseV : matPhaseW
+        );
+        grp.add(capTube);
+      });
+    }
+
+    // 5.6 SUBSYSTEM: `enclosure` (IP23 Marine Drip-Proof Enclosure, Louvers & Extruded Cutout Doors)
+    function buildEnclosure() {
+      const grp = subsystems.enclosure;
+
+      // Heavy Base Skid Channels (#738291) & 6 Marine Anti-Vibration Rubber Mounts
+      [-0.56, 0.56].forEach((zSkid) => {
+        const skidBeam = new THREE.Mesh(
+          new THREE.BoxGeometry(2.12, 0.08, 0.12),
+          matYokeClampSteel
+        );
+        skidBeam.position.set(0, 0.06, zSkid);
+        skidBeam.castShadow = true; skidBeam.receiveShadow = true;
+        grp.add(skidBeam);
+
+        // 3 Resilient Anti-Vibration Mounts per Skid (6 total)
+        [-0.88, 0.0, 0.88].forEach((xMount) => {
+          const rubberPad = new THREE.Mesh(
+            new THREE.BoxGeometry(0.16, 0.024, 0.14),
+            matYokeClampSteel
+          );
+          rubberPad.position.set(xMount, 0.012, zSkid);
+          grp.add(rubberPad);
+
+          const holdBolt = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.012, 0.012, 0.06, 6),
+            matBrass
+          );
+          holdBolt.position.set(xMount, 0.035, zSkid);
+          grp.add(holdBolt);
+        });
+      });
+
+      // Copper Frame Earthing Bosses at Front-Left and Rear-Right Base Corners
+      [[-1.02, 0.56], [1.02, -0.56]].forEach(([xe, ze]) => {
+        const earthBoss = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.018, 0.018, 0.05, 6),
+          matCopper
+        );
+        earthBoss.rotation.z = Math.PI / 2;
+        earthBoss.position.set(xe, 0.06, ze);
+        grp.add(earthBoss);
+      });
+
+      // 4 Corner Vertical Structural Posts (Width 2.10 m, Depth 1.35 m, Height 2.12 m)
+      const postGeo = new THREE.BoxGeometry(0.05, 2.04, 0.05);
+      [
+        [-1.025, -0.65], [1.025, -0.65],
+        [-1.025,  0.65], [1.025,  0.65]
+      ].forEach(([px, pz]) => {
+        const post = new THREE.Mesh(postGeo, matStructuralTrim);
+        post.position.set(px, 1.10, pz);
+        post.castShadow = true;
+        grp.add(post);
+      });
+
+      // Top & Bottom Horizontal Frame Headers
+      [-0.65, 0.65].forEach((zh) => {
+        const topHeader = new THREE.Mesh(
+          new THREE.BoxGeometry(2.10, 0.08, 0.045),
+          matStructuralTrim
+        );
+        topHeader.position.set(0, 2.08, zh);
+        grp.add(topHeader);
+      });
+
+      // Left & Right Side Panels with Slatted IP23 Rain-Hood Ventilation Louvers
+      [-1.04, 1.04].forEach((xSide) => {
+        const sidePanel = new THREE.Mesh(
+          new THREE.BoxGeometry(0.018, 1.98, 1.26),
+          matCabinetSteel
+        );
+        sidePanel.position.set(xSide, 1.08, 0);
+        sidePanel.castShadow = true;
+        grp.add(sidePanel);
+        cutawayMeshes.push(sidePanel);
+
+        // Upper & Lower IP23 Rain-Shielded Louver Slat Banks
+        [0.42, 1.68].forEach((yBank) => {
+          for (let l = -3; l <= 3; l++) {
+            const slat = new THREE.Mesh(
+              new THREE.BoxGeometry(0.028, 0.016, 0.84),
+              matStructuralTrim
+            );
+            slat.position.set(xSide + (xSide > 0 ? 0.012 : -0.012), yBank + l * 0.036, 0);
+            slat.rotation.z = xSide > 0 ? -0.35 : 0.35;
+            grp.add(slat);
+            cutawayMeshes.push(slat);
+          }
+        });
+      });
+
+      // Rear Enclosure Panel with 3 True Extruded Cutout Inspection Windows (Zero Z-Fighting!)
+      const rearShape = new THREE.Shape();
+      rearShape.moveTo(-1.00, -0.98);
+      rearShape.lineTo(1.00, -0.98);
+      rearShape.lineTo(1.00, 0.98);
+      rearShape.lineTo(-1.00, 0.98);
+      rearShape.closePath();
+
+      limbXPositions.forEach((wx) => {
+        const hole = new THREE.Path();
+        hole.moveTo(wx - 0.16, -0.32);
+        hole.lineTo(wx + 0.16, -0.32);
+        hole.lineTo(wx + 0.16, 0.36);
+        hole.lineTo(wx - 0.16, 0.36);
+        hole.closePath();
+        rearShape.holes.push(hole);
+      });
+
+      const rearGeo = new THREE.ExtrudeGeometry(rearShape, { depth: 0.020, bevelEnabled: false });
+      rearGeo.translate(0, 0, -0.010);
+      const rearWall = new THREE.Mesh(rearGeo, matCabinetSteel);
+      rearWall.position.set(0, 1.08, -0.66);
+      rearWall.castShadow = true;
+      grp.add(rearWall);
+      cutawayMeshes.push(rearWall);
+
+      // Front Double Hinged Inspection Doors with 3 True Extruded Cutout Viewing Windows (Zero Z-Fighting!)
+      // Left Door (-1.00 m to 0.00 m) hinges at x = -1.00, z = +0.66
+      // Right Door (0.00 m to +1.00 m) hinges at x = +1.00, z = +0.66
+      frontLeftDoorPivot = new THREE.Group();
+      frontLeftDoorPivot.position.set(-1.00, 1.08, 0.66);
+      grp.add(frontLeftDoorPivot);
+
+      frontRightDoorPivot = new THREE.Group();
+      frontRightDoorPivot.position.set(1.00, 1.08, 0.66);
+      grp.add(frontRightDoorPivot);
+
+      function createExtrudedDoorLeaf(isLeft) {
+        const leafW = 0.995, leafH = 1.94, leafD = 0.022;
+        const shape = new THREE.Shape();
+        shape.moveTo(-leafW / 2, -leafH / 2);
+        shape.lineTo(leafW / 2, -leafH / 2);
+        shape.lineTo(leafW / 2, leafH / 2);
+        shape.lineTo(-leafW / 2, leafH / 2);
+        shape.closePath();
+
+        // Cut viewing window aperture(s)
+        const winCentersX = isLeft ? [-0.10] : [-0.495, 0.10];
+        winCentersX.forEach((cx) => {
+          const hPath = new THREE.Path();
+          const hw = 0.155, hh = 0.35, cy = 0.04;
+          hPath.moveTo(cx - hw, cy - hh);
+          hPath.lineTo(cx + hw, cy - hh);
+          hPath.lineTo(cx + hw, cy + hh);
+          hPath.lineTo(cx - hw, cy + hh);
+          hPath.closePath();
+          shape.holes.push(hPath);
+        });
+
+        const geo = new THREE.ExtrudeGeometry(shape, { depth: leafD, bevelEnabled: false });
+        geo.translate(0, 0, -leafD / 2);
+        const doorMesh = new THREE.Mesh(geo, matCabinetSteel);
+        const xOffset = isLeft ? leafW / 2 : -leafW / 2;
+        doorMesh.position.set(xOffset, 0, 0);
+        doorMesh.castShadow = true;
+        cutawayMeshes.push(doorMesh);
+
+        const leafGroup = new THREE.Group();
+        leafGroup.add(doorMesh);
+
+        // Hollow Window Bezel Frames & Polycarbonate Glass Panes inside cutouts
+        winCentersX.forEach((cx) => {
+          const hw = 0.155, hh = 0.35, cy = 0.04;
+          const bShape = new THREE.Shape();
+          const bw = hw + 0.022, bh = hh + 0.022;
+          bShape.moveTo(-bw, -bh);
+          bShape.lineTo(bw, -bh);
+          bShape.lineTo(bw, bh);
+          bShape.lineTo(-bw, bh);
+          bShape.closePath();
+
+          const bHole = new THREE.Path();
+          bHole.moveTo(-hw, -hh);
+          bHole.lineTo(hw, -hh);
+          bHole.lineTo(hw, hh);
+          bHole.lineTo(-hw, hh);
+          bHole.closePath();
+          bShape.holes.push(bHole);
+
+          const bGeo = new THREE.ExtrudeGeometry(bShape, { depth: 0.032, bevelEnabled: false });
+          bGeo.translate(0, 0, -0.016);
+          const bezel = new THREE.Mesh(bGeo, matYokeClampSteel);
+          bezel.position.set(xOffset + cx, cy, 0);
+          leafGroup.add(bezel);
+          cutawayMeshes.push(bezel);
+
+          const pane = new THREE.Mesh(
+            new THREE.BoxGeometry(hw * 2, hh * 2, 0.006),
+            matGlassCutaway
+          );
+          pane.position.set(xOffset + cx, cy, 0);
+          leafGroup.add(pane);
+        });
+
+        // Chrome Swing-Handle Latch & Engraved Nameplate on Door
+        const handleX = isLeft ? 0.92 : -0.92;
+        const handle = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.014, 0.014, 0.16, 16),
+          matPolishedSteel
+        );
+        handle.position.set(handleX, -0.05, 0.026);
+        leafGroup.add(handle);
+
+        if (isLeft) {
+          const plate = new THREE.Mesh(
+            new THREE.BoxGeometry(0.46, 0.18, 0.008),
+            matNameplate
+          );
+          plate.position.set(0.42, 0.62, 0.016);
+          leafGroup.add(plate);
+        }
+
+        return leafGroup;
+      }
+
+      frontLeftDoorPivot.add(createExtrudedDoorLeaf(true));
+      frontRightDoorPivot.add(createExtrudedDoorLeaf(false));
+
+      // IP23 Marine Drip-Proof Angled Canopy Roof & Raised Ventilation Hood (y = 2.12 m to 2.22 m)
+      const roofCanopy = new THREE.Mesh(
+        new THREE.BoxGeometry(2.18, 0.035, 1.44),
+        matCabinetSteel
+      );
+      roofCanopy.position.set(0, 2.13, 0);
+      roofCanopy.castShadow = true;
+      grp.add(roofCanopy);
+      cutawayMeshes.push(roofCanopy);
+
+      const ventHood = new THREE.Mesh(
+        new THREE.BoxGeometry(1.76, 0.065, 0.92),
+        matStructuralTrim
+      );
+      ventHood.position.set(0, 2.18, 0);
+      grp.add(ventHood);
+      cutawayMeshes.push(ventHood);
+
+      // 4 Rooftop Forged Crane Lifting Eye Lugs
+      [
+        [-0.96, -0.58], [0.96, -0.58],
+        [-0.96,  0.58], [0.96,  0.58]
+      ].forEach(([lx, lz]) => {
+        const eye = new THREE.Mesh(
+          new THREE.TorusGeometry(0.032, 0.008, 10, 20),
+          matPolishedSteel
+        );
+        eye.position.set(lx, 2.17, lz);
+        grp.add(eye);
+      });
+    }
+
+    // 5.7 SUBSYSTEM: `magneticFlux` (Animated 3-Phase 120° Core Magnetic Flux & Thermal Airflow Vectors)
+    function buildMagneticFlux() {
+      const grp = subsystems.magneticFlux;
+      fluxBeadItems.length = 0;
+      airflowParticles.length = 0;
+
+      // 3-Phase Closed Magnetic Flux Loops inside/around the 3 Core Limbs (ΦA Red, ΦB Amber, ΦC Blue)
+      const phaseColors = [0xd9534f, 0xe6a23c, 0x4a89dc];
+      const phaseOffsets = [0, (2 * Math.PI) / 3, (4 * Math.PI) / 3];
+
+      limbXPositions.forEach((xLimb, pIdx) => {
+        // Vertical Flux Loop Path through Limb & Yoke Return
+        const loopXReturn = pIdx === 0 ? -0.30 : pIdx === 1 ? 0.30 : 0.30;
+        const loopCurve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(xLimb, 0.34, 0.0),
+          new THREE.Vector3(xLimb, 0.98, 0.0),
+          new THREE.Vector3(xLimb, 1.64, 0.0),
+          new THREE.Vector3((xLimb + loopXReturn) / 2, 1.68, 0.0),
+          new THREE.Vector3(loopXReturn, 1.64, 0.0),
+          new THREE.Vector3(loopXReturn, 0.98, 0.0),
+          new THREE.Vector3(loopXReturn, 0.34, 0.0),
+          new THREE.Vector3((xLimb + loopXReturn) / 2, 0.28, 0.0)
+        ], true);
+
+        const guideMat = new THREE.MeshBasicMaterial({
+          color: phaseColors[pIdx],
+          transparent: true,
+          opacity: 0.32
+        });
+        const guideTube = new THREE.Mesh(
+          new THREE.TubeGeometry(loopCurve, 48, 0.008, 8, true),
+          guideMat
+        );
+        grp.add(guideTube);
+
+        // 8 Animated Magnetic Flux Rings/Beads circulating along each phase loop
+        for (let b = 0; b < 8; b++) {
+          const beadMat = new THREE.MeshBasicMaterial({
+            color: phaseColors[pIdx],
+            transparent: true,
+            opacity: 0.90
+          });
+          const bead = new THREE.Mesh(
+            new THREE.TorusGeometry(0.155, 0.007, 8, 24),
+            beadMat
+          );
+          bead.rotation.x = Math.PI / 2;
+          bead.position.set(xLimb, 0.45 + (b / 8) * 1.05, 0);
+          grp.add(bead);
+          fluxBeadItems.push({
+            mesh: bead,
+            xLimb,
+            baseT: b / 8,
+            phaseOffset: phaseOffsets[pIdx]
+          });
+        }
+      });
+
+      // Rising Convective / Forced-Air Thermal Streamlines through the Annular HV-LV Cooling Ducts
+      limbXPositions.forEach((xCoil) => {
+        for (let a = 0; a < 8; a++) {
+          const ang = (a / 8) * Math.PI * 2;
+          const rDuct = 0.214; // Annular duct between LV foil (0.202m) and HV cast coil (0.226m)
+          const px = xCoil + Math.cos(ang) * rDuct;
+          const pz = Math.sin(ang) * rDuct;
+
+          for (let k = 0; k < 3; k++) {
+            const pMat = new THREE.MeshBasicMaterial({
+              color: 0x38bdf8,
+              transparent: true,
+              opacity: 0.78
+            });
+            const arrowCone = new THREE.Mesh(
+              new THREE.ConeGeometry(0.012, 0.042, 10),
+              pMat
+            );
+            arrowCone.position.set(px, 0.42 + ((a * 0.13 + k * 0.33) % 1.0) * 1.15, pz);
+            grp.add(arrowCone);
+            airflowParticles.push({
+              mesh: arrowCone,
+              tOffset: (a * 0.13 + k * 0.33) % 1.0
+            });
+          }
+        }
+      });
+    }
+
+    buildMagneticCore();
+    buildLvWindings();
+    buildHvWindings();
+    buildBushingsTerminals();
+    buildCoolingFans();
+    buildEnclosure();
+    buildMagneticFlux();
+
+    /* =====================================================================
+       6. NATIVE-COLOR GHOST-OPACITY ISOLATION & EXPLODE CENTERLINES
+       ===================================================================== */
+    const explodeGuideLines = [];
+
+    function prepareSubsystemMaterials() {
+      for (const key in subsystems) {
+        const grp = subsystems[key];
+        const origCloneMap = new Map();
+        const ghostCloneMap = new Map();
+
+        grp.traverse((obj) => {
+          if (obj.isMesh && obj.material) {
+            if (!origCloneMap.has(obj.material)) {
+              const origClone = obj.material.clone();
+              const ghostClone = origClone.clone();
+              ghostClone.transparent = true;
+              ghostClone.opacity = 0.14;
+              ghostClone.depthWrite = false;
+              origCloneMap.set(obj.material, origClone);
+              ghostCloneMap.set(obj.material, ghostClone);
+            }
+            obj.userData.origMaterial = origCloneMap.get(obj.material);
+            obj.userData.ghostMaterial = ghostCloneMap.get(obj.material);
+            obj.userData.subsystemKey = key;
+            obj.material = obj.userData.origMaterial;
+          }
+        });
+      }
+    }
+
+    function buildExplodeGuidelines() {
+      const lineMat = new THREE.LineDashedMaterial({
+        color: 0xc25b2a,
+        dashSize: 0.08,
+        gapSize: 0.05,
+        transparent: true,
+        opacity: 0.0
+      });
+      const anchors = {
+        enclosure: new THREE.Vector3(0, 1.10, 0),
+        lvWindings: new THREE.Vector3(0, 0.98, 0),
+        hvWindings: new THREE.Vector3(0, 0.98, 0),
+        bushingsTerminals: new THREE.Vector3(0, 1.82, -0.24),
+        coolingFans: new THREE.Vector3(0, 0.22, 0.34),
+        magneticFlux: new THREE.Vector3(0, 0.98, 0)
+      };
+      for (const key in anchors) {
+        const pts = [anchors[key].clone(), anchors[key].clone()];
+        const geo = new THREE.BufferGeometry().setFromPoints(pts);
+        const line = new THREE.Line(geo, lineMat.clone());
+        line.computeLineDistances();
+        scene.add(line);
+        explodeGuideLines.push({ key, line, base: anchors[key], vec: explodeVectors[key] });
+      }
+    }
+
+    prepareSubsystemMaterials();
+    buildExplodeGuidelines();
+
+    function warmShaders() {
+      try {
+        renderer.compile(scene, camera);
+        cutawayMeshes.forEach(m => { m.material = matGlassCutaway; });
+        renderer.compile(scene, camera);
+        cutawayMeshes.forEach(m => { m.material = m.userData.origMaterial; });
+      } catch (e) {
+        console.warn('Warmup notice:', e);
+      }
+    }
+    warmShaders();
+
+    /* =====================================================================
+       7. STATE MACHINE, ELECTROMAGNETIC & THERMAL MODEL (IEC 60076-11)
+       ===================================================================== */
+    const state = {
+      loadPct: 80.0,            // 0% to 125% (default 80% = 2,000 kVA)
+      tapPosition: 3,           // Tap 1 (+5%) to Tap 5 (-5%), default Tap 3 (0.0%)
+      isEnergized: true,        // Energized 6.6 kV vs De-energized (interlocks tap changer)
+      afCoolingOn: true,        // AN vs AF forced-air cooling fans
+      isDoorsOpen: true,        // Front hinged inspection doors open so coils & tap links are visible
+      doorAngle: (102 * Math.PI) / 180,
+      fluxVisible: true,
+      explodeFactor: 0.0,
+      targetExplodeFactor: 0.0,
+      cutawayGlass: false,
+      labelsVisible: true,
+      showGraphs: true,
+      activeSubsystem: null,
+      time: 0,
+      autoTourActive: false,
+      idleTimer: 0,
+      tourStep: 0,
+      tourStepTimer: 0
+    };
+
+    const TAP_CONFIGS = {
+      1: { pct:  0.050, v1: 6930, v2: 462.0, label: 'Tap 1 (+5.0%)', yOffset:  0.150 },
+      2: { pct:  0.025, v1: 6765, v2: 451.0, label: 'Tap 2 (+2.5%)', yOffset:  0.075 },
+      3: { pct:  0.000, v1: 6600, v2: 440.0, label: 'Tap 3 (0.0% Nom)', yOffset: 0.000 },
+      4: { pct: -0.025, v1: 6435, v2: 429.0, label: 'Tap 4 (-2.5%)', yOffset: -0.075 },
+      5: { pct: -0.050, v1: 6270, v2: 418.0, label: 'Tap 5 (-5.0%)', yOffset: -0.150 }
+    };
+
+    function computeElectromagneticModel() {
+      const tap = TAP_CONFIGS[state.tapPosition];
+      const v1Line = state.isEnergized ? 6600.0 : 0.0;
+      const v2PhaseNominal = 440.0 / Math.sqrt(3);
+      const turnsRatio = (6600.0 * (1 + tap.pct)) / v2PhaseNominal; // 25.9808 at Tap 3
+      const v2LineActual = state.isEnergized ? (440.0 / (1 + tap.pct)) : 0.0;
+
+      const sKva = state.isEnergized ? (2500.0 * (state.loadPct / 100.0)) : 0.0;
+      const pf = 0.85;
+      const pKw = sKva * pf;
+
+      const i1Amps = state.isEnergized ? (sKva * 1000.0) / (Math.sqrt(3) * 6600.0) : 0.0;
+      const i2Amps = state.isEnergized ? (sKva * 1000.0) / (Math.sqrt(3) * v2LineActual) : 0.0;
+
+      const pFeKw = state.isEnergized ? 4.20 : 0.0;
+      const pCuKw = state.isEnergized ? 21.50 * Math.pow(state.loadPct / 100.0, 2) : 0.0;
+      const totalLossKw = pFeKw + pCuKw;
+      const effPct = (pKw > 0.1) ? ((pKw / (pKw + totalLossKw)) * 100.0) : 0.0;
+
+      // IEC 60076-11 Class F (155°C) Hot-Spot Temperature Model
+      const tAmb = 45.0;
+      const dTFe = state.isEnergized ? 18.0 : 0.0;
+      const kAf = state.afCoolingOn ? 0.72 : 1.00;
+      const dTCu = state.isEnergized ? (82.0 * Math.pow(state.loadPct / 100.0, 1.6) * kAf) : 0.0;
+      const tHotspot = tAmb + dTFe + dTCu;
+
+      return {
+        tap,
+        turnsRatio,
+        v1Line,
+        v2LineActual,
+        sKva,
+        i1Amps,
+        i2Amps,
+        pFeKw,
+        pCuKw,
+        totalLossKw,
+        effPct,
+        tHotspot
+      };
+    }
+
+    function showInterlockToast(msg) {
+      const toast = document.getElementById('interlock-toast');
+      const txt = document.getElementById('interlock-msg');
+      txt.textContent = msg;
+      toast.classList.remove('opacity-0', 'translate-y-[-10px]');
+      toast.classList.add('opacity-100', 'translate-y-0');
+      clearTimeout(toast._timeout);
+      toast._timeout = setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-[-10px]');
+      }, 2500);
+    }
+
+    function applyIsolationAndCutaway() {
+      for (const key in subsystems) {
+        const grp = subsystems[key];
+        grp.visible = (key === 'magneticFlux') ? state.fluxVisible : true;
+        const isIsolatedTarget = (state.activeSubsystem === null || state.activeSubsystem === key);
+
+        grp.traverse((obj) => {
+          if (!obj.isMesh || !obj.userData.origMaterial) return;
+          if (obj.material === matGlassCutaway && !cutawayMeshes.includes(obj)) return;
+
+          if (isIsolatedTarget) {
+            if (state.cutawayGlass && cutawayMeshes.includes(obj)) {
+              obj.material = matGlassCutaway;
+            } else {
+              obj.material = obj.userData.origMaterial;
+            }
+          } else {
+            obj.material = obj.userData.ghostMaterial;
+          }
+        });
+      }
+    }
+
+    function selectSubsystem(subKey) {
+      if (state.activeSubsystem === subKey) {
+        state.activeSubsystem = null;
+      } else {
+        state.activeSubsystem = subKey;
+      }
+
+      document.querySelectorAll('.subsystem-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.sub === state.activeSubsystem);
+      });
+
+      calloutItems.forEach((item) => {
+        item.el.classList.toggle('isolated', item.sub === state.activeSubsystem);
+      });
+
+      if (state.activeSubsystem && subsystemMeta[state.activeSubsystem]) {
+        const m = subsystemMeta[state.activeSubsystem];
+        document.getElementById('info-code').textContent = m.code;
+        document.getElementById('info-subsystem').textContent = m.sub;
+        document.getElementById('info-title').textContent = m.title;
+        document.getElementById('info-desc').textContent = m.desc;
+      } else {
+        document.getElementById('info-code').textContent = 'ASSY-00';
+        document.getElementById('info-subsystem').textContent = 'Transformer Overview';
+        document.getElementById('info-title').textContent = 'Follow the power';
+        document.getElementById('info-desc').textContent = '2,500 kVA dry-type vacuum-cast epoxy resin marine distribution transformer stepping 6.6 kV primary delta down to 440 V secondary star (Dyn11, +30° lead).';
+      }
+
+      applyIsolationAndCutaway();
+    }
+
+    /* =====================================================================
+       8. LEFT & RIGHT DIVIDED CALLOUT COLUMNS WITH LONG SVG LEADER LINES
+       ===================================================================== */
+    const calloutDefs = [
+      // Left Column (4 Callouts)
+      { code: 'EN', label: 'IP23 Drip-Proof Enclosure', side: 'left', pos: new THREE.Vector3(-1.02, 1.88, 0.35), sub: 'enclosure' },
+      { code: 'HV', label: '6.6 kV Cast-Resin Coils',   side: 'left', pos: new THREE.Vector3(-0.58, 1.24, 0.27), sub: 'hvWindings' },
+      { code: 'LV', label: '440 V Foil Windings',       side: 'left', pos: new THREE.Vector3(-0.58, 0.82, 0.20), sub: 'lvWindings' },
+      { code: 'CF', label: 'AF Tangential Cooling Fans',side: 'left', pos: new THREE.Vector3(-0.48, 0.22, 0.34), sub: 'coolingFans' },
+      // Right Column (3 Callouts)
+      { code: 'BT', label: '6.6 kV Bushings & Arresters', side: 'right', pos: new THREE.Vector3(0.58, 1.96, -0.24), sub: 'bushingsTerminals' },
+      { code: 'MC', label: 'CRGO Silicon-Steel Core',     side: 'right', pos: new THREE.Vector3(0.58, 1.48, 0.00),  sub: 'magneticCore' },
+      { code: 'MF', label: 'Dyn11 Core Flux & Tap Links', side: 'right', pos: new THREE.Vector3(0.58, 0.98, 0.31),  sub: 'magneticFlux' }
+    ];
+
+    const calloutItems = [];
+    calloutDefs.forEach((def) => {
+      const el = document.createElement('div');
+      el.className = 'callout-pill absolute px-2.5 py-1 rounded-lg text-[11px] font-medium whitespace-nowrap flex items-center gap-1.5 cursor-pointer';
+      el.style.transform = def.side === 'left' ? 'translate(-100%, -50%)' : 'translate(0%, -50%)';
+      el.innerHTML = `<span class="px-1 py-0.5 rounded bg-slate-100 text-slate-500 mono text-[9px] font-semibold">${def.code}</span><span>${def.label}</span><span class="text-slate-400 text-[10px]">↗</span>`;
+      el.addEventListener('click', () => {
+        selectSubsystem(def.sub);
+        resetIdleTimer();
+      });
+      calloutsContainer.appendChild(el);
+
+      const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      polyline.setAttribute('fill', 'none');
+      polyline.setAttribute('stroke', '#94a3b8');
+      polyline.setAttribute('stroke-width', '1.2');
+      calloutsSvg.appendChild(polyline);
+
+      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('r', '2.6');
+      dot.setAttribute('fill', '#c25b2a');
+      calloutsSvg.appendChild(dot);
+
+      calloutItems.push({ ...def, el, polyline, dot, anchorX: 0, anchorY: 0, y: 0, visible: true });
+    });
+
+    function resolveVerticalSpacing(items, minY, maxY, minGap) {
+      if (items.length === 0) return;
+      items.sort((a, b) => a.y - b.y);
+      items[0].y = Math.max(minY, items[0].y);
+      for (let i = 1; i < items.length; i++) {
+        if (items[i].y - items[i - 1].y < minGap) {
+          items[i].y = items[i - 1].y + minGap;
+        }
+      }
+      const last = items[items.length - 1];
+      if (last.y > maxY) {
+        last.y = maxY;
+        for (let i = items.length - 2; i >= 0; i--) {
+          if (items[i + 1].y - items[i].y < minGap) {
+            items[i].y = Math.max(minY, items[i + 1].y - minGap);
+          }
+        }
+      }
+    }
+
+    function updateCallouts() {
+      if (!state.labelsVisible) {
+        calloutItems.forEach((c) => {
+          c.el.style.display = 'none';
+          c.polyline.style.display = 'none';
+          c.dot.style.display = 'none';
+        });
+        return;
+      }
+
+      const vp = getViewportSize();
+      const centerX = vp.left + (vp.width - 330) * 0.48;
+      const baseLeftColX = Math.max(vp.left + 215, centerX - Math.min(290, vp.width * 0.25));
+      const baseRightColX = Math.min(window.innerWidth - 355 - 215, centerX + Math.min(270, vp.width * 0.23));
+
+      const leftGroup = [];
+      const rightGroup = [];
+      const tempV = new THREE.Vector3();
+
+      calloutItems.forEach((c) => {
+        tempV.copy(c.pos);
+        if (c.sub && explodeVectors[c.sub]) {
+          tempV.addScaledVector(explodeVectors[c.sub], state.explodeFactor);
+        }
+        tempV.project(camera);
+        if (tempV.z > 1.0) {
+          c.visible = false;
+          c.el.style.display = 'none';
+          c.polyline.style.display = 'none';
+          c.dot.style.display = 'none';
+        } else {
+          c.visible = true;
+          c.anchorX = vp.left + (tempV.x * 0.5 + 0.5) * vp.width;
+          c.anchorY = vp.top + (-(tempV.y * 0.5) + 0.5) * vp.height;
+          c.y = c.anchorY;
+          if (c.side === 'left') leftGroup.push(c);
+          else rightGroup.push(c);
+        }
+      });
+
+      resolveVerticalSpacing(leftGroup, 92, window.innerHeight - 76, 48);
+      resolveVerticalSpacing(rightGroup, 92, window.innerHeight - 76, 48);
+
+      calloutItems.forEach((c) => {
+        if (!c.visible) return;
+        const colX = c.side === 'left'
+          ? Math.min(baseLeftColX, c.anchorX - 42)
+          : Math.max(baseRightColX, c.anchorX + 42);
+        const elbowX = c.side === 'left' ? colX + 16 : colX - 16;
+
+        c.el.style.display = 'flex';
+        c.el.style.left = `${colX}px`;
+        c.el.style.top = `${c.y}px`;
+
+        const isIsolated = (state.activeSubsystem === c.sub);
+        c.polyline.style.display = 'block';
+        c.polyline.setAttribute('points', `${c.anchorX},${c.anchorY} ${elbowX},${c.y} ${colX},${c.y}`);
+        c.polyline.setAttribute('stroke', isIsolated ? '#ea580c' : '#94a3b8');
+        c.polyline.setAttribute('stroke-width', isIsolated ? '1.8' : '1.2');
+
+        c.dot.style.display = 'block';
+        c.dot.setAttribute('cx', `${c.anchorX}`);
+        c.dot.setAttribute('cy', `${c.anchorY}`);
+      });
+    }
+
+    /* =====================================================================
+       9. KINEMATIC UPDATE LOOP (TAP LINKS, AF BLOWERS, FLUX & DOORS)
+       ===================================================================== */
+    function updateKinematics(deltaSec) {
+      state.time += deltaSec;
+      state.explodeFactor += (state.targetExplodeFactor - state.explodeFactor) * 0.12;
+
+      const model = computeElectromagneticModel();
+
+      // Auto-start AF Cooling Blowers if Hot-Spot Temp >= 110 °C
+      if (model.tHotspot >= 110.0 && !state.afCoolingOn) {
+        state.afCoolingOn = true;
+        document.getElementById('lbl-cooling-btn').textContent = '❄ AF FANS: ON';
+      }
+
+      // 1. Shift Off-Circuit Tap-Changer Bolted Brass Bridge Links on all 3 HV Coils
+      const targetTapY = coilCenterY + model.tap.yOffset;
+      tapBridgeMeshes.forEach((bridge) => {
+        bridge.position.y += (targetTapY - bridge.position.y) * 0.18;
+      });
+
+      // 2. Spin Cross-Flow Tangential AF Cooling Impellers around their concentric X-axis
+      if (state.afCoolingOn && state.isEnergized) {
+        fanRotorGroups.forEach((rGrp) => {
+          rGrp.rotation.x += deltaSec * 22.0;
+        });
+      }
+
+      // 3. Animate 3-Phase 120° Core Magnetic Flux Rings & Thermal Airflow Streamlines
+      fluxBeadItems.forEach((fb) => {
+        if (!state.isEnergized) {
+          fb.mesh.material.opacity = 0.12;
+          return;
+        }
+        const wave = Math.cos(state.time * 6.0 - fb.phaseOffset);
+        const tPos = (fb.baseT + state.time * 0.35) % 1.0;
+        fb.mesh.position.y = 0.40 + tPos * 1.15;
+        fb.mesh.material.opacity = 0.25 + 0.70 * Math.abs(wave);
+        const s = 0.96 + 0.08 * Math.abs(wave);
+        fb.mesh.scale.set(s, s, 1.0);
+      });
+
+      const airSpeed = state.isEnergized ? (state.afCoolingOn ? 0.85 : 0.32) : 0.05;
+      airflowParticles.forEach((ap) => {
+        ap.tOffset = (ap.tOffset + deltaSec * airSpeed) % 1.0;
+        ap.mesh.position.y = 0.42 + ap.tOffset * 1.15;
+        // Color transitions from cool sky-blue at bottom intake (t=0) to warm orange at top exhaust (t=1)
+        const heatRatio = Math.min(1.0, (state.loadPct / 115.0) * ap.tOffset);
+        ap.mesh.material.color.setHSL(0.55 * (1.0 - heatRatio) + 0.06 * heatRatio, 0.85, 0.54);
+      });
+
+      // 4. Front Double Hinged Inspection Doors Swing
+      const targetDoorRad = state.isDoorsOpen ? (102 * Math.PI) / 180 : 0.0;
+      state.doorAngle += (targetDoorRad - state.doorAngle) * Math.min(1, deltaSec * 8);
+      if (frontLeftDoorPivot && frontRightDoorPivot) {
+        frontLeftDoorPivot.rotation.y = -state.doorAngle;
+        frontRightDoorPivot.rotation.y = state.doorAngle;
+      }
+
+      // 5. Apply Floor-Safe Subsystem Explosion Offsets & Dashed Centerlines
+      for (const key in subsystems) {
+        const vec = explodeVectors[key];
+        subsystems[key].position.set(
+          vec.x * state.explodeFactor,
+          vec.y * state.explodeFactor,
+          vec.z * state.explodeFactor
+        );
+      }
+
+      explodeGuideLines.forEach((g) => {
+        if (state.explodeFactor > 0.02) {
+          const posArr = g.line.geometry.attributes.position.array;
+          posArr[0] = g.base.x;
+          posArr[1] = g.base.y;
+          posArr[2] = g.base.z;
+          posArr[3] = g.base.x + g.vec.x * state.explodeFactor;
+          posArr[4] = g.base.y + g.vec.y * state.explodeFactor;
+          posArr[5] = g.base.z + g.vec.z * state.explodeFactor;
+          g.line.geometry.attributes.position.needsUpdate = true;
+          g.line.computeLineDistances();
+          g.line.material.opacity = Math.min(0.65, state.explodeFactor * 0.85);
+        } else {
+          g.line.material.opacity = 0.0;
+        }
+      });
+
+      updateHUD(model);
+      updateProofValues(model);
+      renderGraphs(model);
+    }
+
+    /* =====================================================================
+       10. HUD & LIVE 2D TELEMETRY CANVASES
+       ===================================================================== */
+    function updateHUD(m) {
+      document.getElementById('tel-ratio').textContent = `${m.tap.v1} / ${Math.round(m.v2LineActual)} V`;
+      document.getElementById('tel-kva').textContent = `${Math.round(m.sKva).toLocaleString()} kVA`;
+      document.getElementById('tel-temp').textContent = `${m.tHotspot.toFixed(1)} °C`;
+      document.getElementById('tel-temp').className = m.tHotspot >= 130
+        ? 'text-xs font-semibold mono text-red-600'
+        : m.tHotspot >= 110
+          ? 'text-xs font-semibold mono text-amber-600'
+          : 'text-xs font-semibold mono text-emerald-700';
+      document.getElementById('tel-eff').textContent = state.isEnergized ? `${m.effPct.toFixed(2)}%` : '0.00%';
+
+      document.getElementById('val-tap-ratio').textContent = `N1/N2 = ${m.turnsRatio.toFixed(2)}`;
+      document.getElementById('val-pfe').textContent = `${m.pFeKw.toFixed(2)} kW`;
+      document.getElementById('val-pcu').textContent = `${m.pCuKw.toFixed(2)} kW`;
+      document.getElementById('val-i2').textContent = `${Math.round(m.i2Amps).toLocaleString()} A`;
+
+      const coolTag = state.afCoolingOn ? 'AF' : 'AN';
+      const thBadge = document.getElementById('thermal-live-badge');
+      thBadge.textContent = `${m.tHotspot.toFixed(1)} °C (${coolTag})`;
+      thBadge.className = m.tHotspot >= 130
+        ? 'text-[10px] mono font-semibold text-red-600'
+        : 'text-[10px] mono font-semibold text-emerald-700';
+
+      document.getElementById('lbl-doors-btn').textContent = state.isDoorsOpen ? 'Close Front Doors' : 'Open Front Doors';
+    }
+
+    function updateProofValues(m) {
+      const elTap = document.getElementById('proof-tap');
+      if (!elTap) return;
+      elTap.textContent = `${m.tap.label} · N1/N2 = ${m.turnsRatio.toFixed(2)}`;
+      document.getElementById('proof-currents').textContent = `${m.i1Amps.toFixed(1)} A / ${m.i2Amps.toFixed(1)} A`;
+      document.getElementById('proof-losses').textContent = `${m.totalLossKw.toFixed(2)} kW (η = ${m.effPct.toFixed(2)}%)`;
+      document.getElementById('proof-temp').textContent = `${m.tHotspot.toFixed(1)} °C (${state.afCoolingOn ? 'AF ON' : 'AN NATURAL'})`;
+      const fluxTesla = state.isEnergized ? (1.62 / (1 + m.tap.pct)).toFixed(2) : '0.00';
+      document.getElementById('proof-flux').textContent = `${fluxTesla} Tesla (60.0 Hz)`;
+    }
+
+    const thermalCanvas = document.getElementById('thermal-canvas');
+    const thermalCtx = thermalCanvas.getContext('2d');
+    const acCanvas = document.getElementById('ac-canvas');
+    const acCtx = acCanvas.getContext('2d');
+
+    function renderGraphs(m) {
+      if (!state.showGraphs) return;
+
+      // Canvas 1: Live Thermal Hot-Spot & Class F Limit Curve (T_hotspot vs Load %)
+      const tw = thermalCanvas.width;
+      const th = thermalCanvas.height;
+      thermalCtx.clearRect(0, 0, tw, th);
+
+      const padL = 30, padR = 10, padT = 10, padB = 16;
+      const plotW = tw - padL - padR;
+      const plotH = th - padT - padB;
+
+      // Grid & Class F 130°C Alarm / 155°C Trip threshold lines
+      [60, 110, 155].forEach((deg) => {
+        const y = padT + plotH - ((deg - 40) / 125) * plotH;
+        thermalCtx.strokeStyle = deg === 155 ? 'rgba(220, 38, 38, 0.45)' : 'rgba(203, 213, 225, 0.65)';
+        thermalCtx.lineWidth = 1;
+        thermalCtx.beginPath();
+        thermalCtx.moveTo(padL, y);
+        thermalCtx.lineTo(tw - padR, y);
+        thermalCtx.stroke();
+        thermalCtx.fillStyle = deg === 155 ? '#dc2626' : '#94a3b8';
+        thermalCtx.font = '8px JetBrains Mono';
+        thermalCtx.fillText(`${deg}°`, 2, y + 3);
+      });
+
+      // Draw AN curve (dashed amber) and active AN/AF curve (solid terracotta)
+      const kAf = state.afCoolingOn ? 0.72 : 1.00;
+      thermalCtx.strokeStyle = '#c25b2a';
+      thermalCtx.lineWidth = 1.8;
+      thermalCtx.beginPath();
+      for (let x = 0; x <= plotW; x++) {
+        const loadP = (x / plotW) * 125.0;
+        const temp = 45.0 + 18.0 + 82.0 * Math.pow(loadP / 100.0, 1.6) * kAf;
+        const px = padL + x;
+        const py = padT + plotH - ((temp - 40) / 125) * plotH;
+        if (x === 0) thermalCtx.moveTo(px, py);
+        else thermalCtx.lineTo(px, py);
+      }
+      thermalCtx.stroke();
+
+      // Current Operating Point Dot
+      const dotX = padL + (state.loadPct / 125.0) * plotW;
+      const dotY = padT + plotH - ((m.tHotspot - 40) / 125) * plotH;
+      thermalCtx.fillStyle = m.tHotspot >= 130 ? '#dc2626' : '#16a34a';
+      thermalCtx.beginPath();
+      thermalCtx.arc(dotX, dotY, 4.2, 0, Math.PI * 2);
+      thermalCtx.fill();
+
+      // Canvas 2: Dyn11 Primary (6.6 kV) vs Secondary (440 V, +30° Phase Lead) 3-Phase Waveforms
+      const aw = acCanvas.width;
+      const ah = acCanvas.height;
+      acCtx.clearRect(0, 0, aw, ah);
+
+      const midY = ah / 2;
+      acCtx.strokeStyle = 'rgba(203, 213, 225, 0.7)';
+      acCtx.lineWidth = 1;
+      acCtx.beginPath();
+      acCtx.moveTo(0, midY);
+      acCtx.lineTo(aw, midY);
+      acCtx.stroke();
+
+      const colors = ['#dc2626', '#eab308', '#2563eb'];
+      const phaseShifts = [0, (2 * Math.PI) / 3, (4 * Math.PI) / 3];
+      const dyn11LeadRad = Math.PI / 6; // +30° Secondary Phase Advance (11 o'clock)
+
+      phaseShifts.forEach((pShift, idx) => {
+        // Primary 6.6 kV wave (solid)
+        acCtx.strokeStyle = colors[idx];
+        acCtx.lineWidth = state.isEnergized ? 1.6 : 0.8;
+        acCtx.setLineDash([]);
+        acCtx.beginPath();
+        for (let x = 0; x < aw; x++) {
+          const rad = (x / aw) * Math.PI * 4.5 + state.time * 6.5 - pShift;
+          const amp = state.isEnergized ? (ah * 0.38) : (ah * 0.06);
+          const y = midY - Math.sin(rad) * amp;
+          if (x === 0) acCtx.moveTo(x, y);
+          else acCtx.lineTo(x, y);
+        }
+        acCtx.stroke();
+
+        // Secondary 440 V Dyn11 wave (+30° leading, dashed)
+        if (state.isEnergized && idx === 0) {
+          acCtx.strokeStyle = '#0284c7';
+          acCtx.lineWidth = 1.4;
+          acCtx.setLineDash([3, 2]);
+          acCtx.beginPath();
+          for (let x = 0; x < aw; x++) {
+            const rad = (x / aw) * Math.PI * 4.5 + state.time * 6.5 - pShift + dyn11LeadRad;
+            const amp = ah * 0.30 * (state.loadPct / 100.0 + 0.2);
+            const y = midY - Math.sin(rad) * Math.min(ah * 0.38, amp);
+            if (x === 0) acCtx.moveTo(x, y);
+            else acCtx.lineTo(x, y);
+          }
+          acCtx.stroke();
+          acCtx.setLineDash([]);
+        }
+      });
+    }
+
+    /* =====================================================================
+       11. CAMERA PRESETS & UI EVENT BINDINGS
+       ===================================================================== */
+    function moveCameraTo(presetKey) {
+      const presets = {
+        hero:     { pos: new THREE.Vector3(3.45, 2.15, 3.65), target: new THREE.Vector3(0, 1.05, 0.0) },
+        coils:    { pos: new THREE.Vector3(0.25, 1.08, 2.15), target: new THREE.Vector3(0, 0.98, 0.25) },
+        core:     { pos: new THREE.Vector3(-1.65, 1.28, 2.05), target: new THREE.Vector3(-0.30, 1.02, 0.0) },
+        bushings: { pos: new THREE.Vector3(1.15, 2.35, -1.75), target: new THREE.Vector3(0, 1.82, -0.24) },
+        fans:     { pos: new THREE.Vector3(0.85, 0.58, 1.85), target: new THREE.Vector3(-0.20, 0.45, 0.35) }
+      };
+
+      if (presetKey === 'core' && !state.cutawayGlass) {
+        toggleCutaway();
+      }
+      if ((presetKey === 'coils' || presetKey === 'fans') && !state.isDoorsOpen) {
+        state.isDoorsOpen = true;
+      }
+
+      const p = presets[presetKey] || presets.hero;
+      camTargetPos.copy(p.pos);
+      camTargetLook.copy(p.target);
+      isCameraTweening = true;
+
+      const sel = document.getElementById('select-camera-preset');
+      if (sel && sel.value !== presetKey) sel.value = presetKey;
+    }
+
+    function updateCameraTween() {
+      if (isCameraTweening) {
+        camera.position.lerp(camTargetPos, 0.10);
+        controls.target.lerp(camTargetLook, 0.10);
+        if (camera.position.distanceTo(camTargetPos) < 0.03 && controls.target.distanceTo(camTargetLook) < 0.03) {
+          isCameraTweening = false;
+        }
+      }
+      controls.update();
+    }
+
+    function toggleCutaway() {
+      state.cutawayGlass = !state.cutawayGlass;
+      document.getElementById('btn-cutaway-toggle').classList.toggle('active', state.cutawayGlass);
+      applyIsolationAndCutaway();
+    }
+
+    // Bind Subsystem Isolation Buttons
+    document.querySelectorAll('.subsystem-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        selectSubsystem(btn.dataset.sub);
+        resetIdleTimer();
+      });
+    });
+
+    document.getElementById('btn-show-all').addEventListener('click', () => {
+      state.activeSubsystem = null;
+      selectSubsystem(null);
+      resetIdleTimer();
+    });
+
+    document.getElementById('select-camera-preset').addEventListener('change', (e) => {
+      moveCameraTo(e.target.value);
+      resetIdleTimer();
+    });
+
+    document.getElementById('btn-cutaway-toggle').addEventListener('click', () => {
+      toggleCutaway();
+      resetIdleTimer();
+    });
+
+    document.getElementById('btn-labels-toggle').addEventListener('click', () => {
+      state.labelsVisible = !state.labelsVisible;
+      document.getElementById('btn-labels-toggle').classList.toggle('active', state.labelsVisible);
+      resetIdleTimer();
+    });
+
+    function toggleTelemetryDrawer() {
+      state.showGraphs = !state.showGraphs;
+      document.getElementById('btn-graphs-toggle').classList.toggle('active', state.showGraphs);
+      document.getElementById('telemetry-drawer').classList.toggle('hidden', !state.showGraphs);
+    }
+    document.getElementById('btn-graphs-toggle').addEventListener('click', toggleTelemetryDrawer);
+    document.getElementById('btn-collapse-telemetry').addEventListener('click', toggleTelemetryDrawer);
+
+    // Load Slider & Quick Buttons
+    const sliderLoad = document.getElementById('slider-load');
+    function setTransformerLoad(pct) {
+      state.loadPct = pct;
+      sliderLoad.value = pct;
+      const kva = Math.round(2500 * (pct / 100));
+      document.getElementById('val-load').textContent = `${pct}% (${kva.toLocaleString()} kVA)`;
+      resetIdleTimer();
+    }
+    sliderLoad.addEventListener('input', (e) => setTransformerLoad(parseFloat(e.target.value)));
+    document.getElementById('btn-load-25').addEventListener('click', () => setTransformerLoad(25));
+    document.getElementById('btn-load-80').addEventListener('click', () => setTransformerLoad(80));
+    document.getElementById('btn-load-120').addEventListener('click', () => setTransformerLoad(120));
+
+    // Off-Circuit Tap Changer Selector (Interlock-Protected!)
+    const selectTap = document.getElementById('select-tap');
+    selectTap.addEventListener('change', (e) => {
+      if (state.isEnergized) {
+        selectTap.value = String(state.tapPosition);
+        showInterlockToast('Interlock: De-energize transformer before changing off-circuit tap links!');
+        return;
+      }
+      state.tapPosition = parseInt(e.target.value, 10);
+      moveCameraTo('coils');
+      resetIdleTimer();
+    });
+
+    // Energized / De-Energized Toggle
+    document.getElementById('btn-toggle-energized').addEventListener('click', () => {
+      state.isEnergized = !state.isEnergized;
+      const btn = document.getElementById('btn-toggle-energized');
+      const lbl = document.getElementById('lbl-energized-btn');
+      const statusTxt = document.getElementById('tel-status-txt');
+      const statusDot = document.getElementById('tel-status-dot');
+      const statusPill = document.getElementById('tel-status-pill');
+
+      if (state.isEnergized) {
+        btn.className = 'px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold shadow-sm transition flex items-center justify-center gap-1';
+        lbl.textContent = '⚡ ENERGIZED (6.6kV)';
+        statusTxt.textContent = 'ENERGIZED';
+        statusDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse';
+        statusPill.className = 'flex items-center gap-1 text-emerald-600 font-semibold';
+      } else {
+        btn.className = 'px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-semibold shadow-sm transition flex items-center justify-center gap-1';
+        lbl.textContent = '🔒 DE-ENERGIZED (TAP OK)';
+        statusTxt.textContent = 'ISOLATED';
+        statusDot.className = 'w-1.5 h-1.5 rounded-full bg-amber-500';
+        statusPill.className = 'flex items-center gap-1 text-amber-600 font-semibold';
+      }
+      resetIdleTimer();
+    });
+
+    // AF Cooling Toggle
+    document.getElementById('btn-toggle-cooling').addEventListener('click', () => {
+      state.afCoolingOn = !state.afCoolingOn;
+      document.getElementById('lbl-cooling-btn').textContent = state.afCoolingOn ? '❄ AF FANS: ON' : '🌡 AN NATURAL AIR';
+      resetIdleTimer();
+    });
+
+    // Doors Toggle
+    document.getElementById('btn-toggle-doors').addEventListener('click', () => {
+      state.isDoorsOpen = !state.isDoorsOpen;
+      resetIdleTimer();
+    });
+
+    // Exploded View Slider (with Smooth Wide-Framing Camera Pullback)
+    const sliderExplode = document.getElementById('slider-explode');
+    function setExplodeTarget(factor) {
+      state.targetExplodeFactor = factor;
+      sliderExplode.value = Math.round(factor * 100);
+      document.getElementById('val-explode').textContent = `${Math.round(factor * 100)}%`;
+
+      // Smoothly pull back camera so all 7 wide-spaced subsystems fit clearly in view
+      camTargetPos.set(
+        3.45 + factor * 2.55,
+        2.15 + factor * 1.45,
+        3.65 + factor * 2.85
+      );
+      camTargetLook.set(0, 1.05 + factor * 0.35, 0.0);
+      isCameraTweening = true;
+      resetIdleTimer();
+    }
+
+    sliderExplode.addEventListener('input', (e) => {
+      setExplodeTarget(parseFloat(e.target.value) / 100);
+    });
+    document.getElementById('btn-assemble-all').addEventListener('click', () => {
+      setExplodeTarget(0.0);
+    });
+    document.getElementById('btn-explode-all').addEventListener('click', () => {
+      setExplodeTarget(1.0);
+    });
+
+    // Reset View & Zoom Buttons
+    document.getElementById('btn-reset-cam').addEventListener('click', () => {
+      moveCameraTo('hero');
+      state.targetExplodeFactor = 0.0;
+      sliderExplode.value = 0;
+      document.getElementById('val-explode').textContent = '0%';
+      state.activeSubsystem = null;
+      selectSubsystem(null);
+      resetIdleTimer();
+    });
+
+    document.getElementById('btn-zoom-in').addEventListener('click', () => {
+      isCameraTweening = false;
+      const dir = new THREE.Vector3().subVectors(controls.target, camera.position).normalize();
+      camera.position.addScaledVector(dir, 0.55);
+      controls.update();
+    });
+
+    document.getElementById('btn-zoom-out').addEventListener('click', () => {
+      isCameraTweening = false;
+      const dir = new THREE.Vector3().subVectors(controls.target, camera.position).normalize();
+      camera.position.addScaledVector(dir, -0.55);
+      controls.update();
+    });
+
+    // Proof Modal
+    const modalProof = document.getElementById('modal-proof');
+    document.getElementById('btn-math-proof').addEventListener('click', () => {
+      modalProof.classList.remove('hidden');
+      resetIdleTimer();
+    });
+    document.getElementById('btn-close-proof').addEventListener('click', () => {
+      modalProof.classList.add('hidden');
+    });
+
+    // 3D Raycaster Click Inspection
+    const downPos = { x: 0, y: 0 };
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      downPos.x = e.clientX;
+      downPos.y = e.clientY;
+    });
+    renderer.domElement.addEventListener('pointerup', (e) => {
+      if (Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y) > 5) return;
+      const vp = getViewportSize();
+      mouseVec.x = ((e.clientX - vp.left) / vp.width) * 2 - 1;
+      mouseVec.y = -((e.clientY - vp.top) / vp.height) * 2 + 1;
+      raycaster.setFromCamera(mouseVec, camera);
+      const meshes = [];
+      for (const k in subsystems) {
+        subsystems[k].traverse((o) => { if (o.isMesh && o.userData.subsystemKey) meshes.push(o); });
+      }
+      const hits = raycaster.intersectObjects(meshes, false);
+      if (hits.length > 0) {
+        const subKey = hits[0].object.userData.subsystemKey;
+        if (subKey && subsystemMeta[subKey]) {
+          selectSubsystem(subKey);
+        }
+      }
+    });
+
+    /* =====================================================================
+       12. AUTO-TOUR SYSTEM
+       ===================================================================== */
+    function resetIdleTimer() {
+      state.idleTimer = 0;
+    }
+
+    function startAutoTour() {
+      state.autoTourActive = true;
+      state.tourStep = 0;
+      state.tourStepTimer = 0;
+      document.getElementById('tour-pointer').classList.remove('hidden');
+    }
+
+    function stopAutoTour() {
+      state.autoTourActive = false;
+      document.getElementById('tour-pointer').classList.add('hidden');
+      state.activeSubsystem = null;
+      selectSubsystem(null);
+    }
+
+    document.getElementById('btn-start-tour').addEventListener('click', () => {
+      if (state.autoTourActive) stopAutoTour(); else startAutoTour();
+    });
+
+    ['pointerdown', 'wheel', 'keydown', 'touchstart'].forEach((evt) => {
+      window.addEventListener(evt, () => {
+        if (state.autoTourActive) stopAutoTour();
+        resetIdleTimer();
+      }, { passive: true });
+    });
+
+    function updateAutoTour(deltaSec) {
+      if (!state.autoTourActive) {
+        state.idleTimer += deltaSec;
+        if (state.idleTimer >= 28.0) {
+          startAutoTour();
+        }
+        return;
+      }
+
+      state.tourStepTimer += deltaSec;
+      const tourKeys = ['enclosure', 'magneticCore', 'lvWindings', 'hvWindings', 'bushingsTerminals', 'coolingFans', 'magneticFlux'];
+      const tourCams = ['hero', 'core', 'core', 'coils', 'bushings', 'fans', 'hero'];
+
+      if (state.tourStepTimer >= 4.2) {
+        state.tourStepTimer = 0;
+        state.tourStep = (state.tourStep + 1) % (tourKeys.length + 1);
+
+        if (state.tourStep < tourKeys.length) {
+          const key = tourKeys[state.tourStep];
+          state.activeSubsystem = null;
+          selectSubsystem(key);
+          moveCameraTo(tourCams[state.tourStep]);
+
+          const btn = document.querySelector(`.subsystem-btn[data-sub="${key}"]`);
+          const ptr = document.getElementById('tour-pointer');
+          if (btn && ptr) {
+            const rect = btn.getBoundingClientRect();
+            ptr.style.left = `${rect.right + 16}px`;
+            ptr.style.top = `${rect.top + rect.height / 2}px`;
+            document.getElementById('tour-tag').textContent = subsystemMeta[key].title;
+          }
+        } else {
+          state.activeSubsystem = null;
+          selectSubsystem(null);
+          moveCameraTo('hero');
+          state.targetExplodeFactor = 0.70;
+          sliderExplode.value = 70;
+          document.getElementById('val-explode').textContent = '70%';
+          setTimeout(() => {
+            state.targetExplodeFactor = 0.0;
+            sliderExplode.value = 0;
+            document.getElementById('val-explode').textContent = '0%';
+          }, 2600);
+        }
+      }
+    }
+
+    /* =====================================================================
+       13. MAIN ANIMATION LOOP & RESPONSIVE RESIZE
+       ===================================================================== */
+    let lastTimestamp = performance.now();
+
+    function animate(timestamp) {
+      requestAnimationFrame(animate);
+      const deltaSec = Math.min((timestamp - lastTimestamp) / 1000, 0.1);
+      lastTimestamp = timestamp;
+
+      updateKinematics(deltaSec);
+      updateCameraTween();
+      updateCallouts();
+      updateAutoTour(deltaSec);
+
+      renderer.render(scene, camera);
+    }
+
+    function onWindowResize() {
+      const vp = getViewportSize();
+      camera.aspect = vp.width / vp.height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(vp.width, vp.height);
+    }
+    window.addEventListener('resize', onWindowResize);
+
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

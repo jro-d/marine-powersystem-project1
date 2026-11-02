@@ -1,0 +1,2917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>440 V / 75 kW Marine Centrifugal Pump & TEFC Motor Skid — 3D Digital Twin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #f2f4f7;
+      color: #0f172a;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    #canvas-container {
+      position: absolute;
+      inset: 0;
+      left: 280px;
+      width: calc(100% - 280px);
+      height: 100%;
+      z-index: 1;
+      background: radial-gradient(circle at 50% 45%, #f8fafc 0%, #eaedf1 100%);
+    }
+    @media (max-width: 768px) {
+      #canvas-container {
+        left: 0;
+        width: 100%;
+      }
+    }
+    .inspector-card {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 5px;
+      background: #e2e8f0;
+      border-radius: 9999px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: #c88a32;
+      cursor: pointer;
+      border: 2px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+      transition: transform 0.15s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+    .subsystem-btn {
+      transition: all 0.16s ease;
+    }
+    .subsystem-btn:hover {
+      background: #f8fafc;
+    }
+    .subsystem-btn.active {
+      background: #fff7ed !important;
+      border-color: #fdba74 !important;
+    }
+    .subsystem-btn.active .sub-badge {
+      background: #ea580c !important;
+      color: #ffffff !important;
+    }
+    .view-pill {
+      transition: all 0.15s ease;
+      background: #f8fafc;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+    }
+    .view-pill.active {
+      background: #faeee7;
+      color: #9a3412;
+      border-color: #f3c6b1;
+      font-weight: 500;
+    }
+    /* Auto Tour Pointer */
+    #tour-pointer {
+      pointer-events: none;
+      position: absolute;
+      z-index: 99;
+      transform: translate(-50%, -50%);
+      transition: top 1.0s cubic-bezier(0.2, 0.8, 0.2, 1), left 1.0s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    /* Divided Left/Right Callout Pills */
+    .callout-pill {
+      pointer-events: auto;
+      transition: opacity 0.18s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid rgba(203, 213, 225, 0.92);
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+      color: #334155;
+      width: 204px;
+    }
+    .callout-pill:hover {
+      border-color: #94a3b8;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+      color: #0f172a;
+    }
+    .callout-pill.isolated {
+      border-color: #ea580c;
+      background: #fff7ed;
+      color: #9a3412;
+    }
+    #interlock-toast {
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  </style>
+</head>
+<body class="w-screen h-screen relative select-none overflow-hidden">
+
+  <!-- 3D WebGL Canvas Host -->
+  <div id="canvas-container"></div>
+
+  <!-- Divided Left/Right Callouts & Long SVG Leader Lines Container -->
+  <div id="callouts-container" class="pointer-events-none fixed inset-0 z-10 overflow-hidden">
+    <svg id="callouts-svg" class="w-full h-full block"></svg>
+  </div>
+
+  <!-- Auto Tour Cursor Indicator -->
+  <div id="tour-pointer" class="hidden">
+    <div class="relative flex items-center gap-2">
+      <div class="w-5 h-5 rounded-full bg-orange-500/60 border-2 border-white shadow animate-ping absolute"></div>
+      <div class="w-5 h-5 rounded-full bg-orange-600 border-2 border-white shadow-md flex items-center justify-center text-[8px] text-white font-bold">●</div>
+      <div id="tour-tag" class="px-2.5 py-1 rounded-md bg-white/95 border border-slate-300 text-slate-800 text-[11px] font-medium whitespace-nowrap shadow-md">Tour Active</div>
+    </div>
+  </div>
+
+  <!-- Floating Status / Interlock Toast -->
+  <div id="interlock-toast" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 translate-y-[-10px] transition duration-200">
+    <div class="px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-300 shadow-xl flex items-center gap-2.5 text-amber-900 text-xs font-semibold">
+      <svg class="w-4 h-4 text-amber-600 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+      <span id="interlock-msg">SOLAS Reg. II-2/10 Fire Main &amp; Sea Water Cooling Interlock</span>
+    </div>
+  </div>
+
+  <!-- Left Minimal Equipment Sidebar (280px wide) -->
+  <aside class="fixed top-0 left-0 bottom-0 w-[280px] bg-white border-r border-slate-200/90 z-20 flex flex-col justify-between p-4 overflow-y-auto">
+    <div>
+      <!-- Top Domain Pill -->
+      <div class="flex items-center justify-between px-2.5 py-2 rounded-lg border border-slate-200/90 bg-slate-50/60 text-xs font-medium text-slate-700 mb-4">
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded bg-orange-100 text-orange-700 flex items-center justify-center text-[10px] font-bold mono">SW</span>
+          <span>Auxiliary Machinery</span>
+        </div>
+        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+
+      <!-- Title & Spec Subtitle -->
+      <div class="px-1 mb-4">
+        <h1 class="text-base font-semibold text-slate-900 tracking-tight leading-snug">440 V Marine Centrifugal Pump &amp; Motor Skid</h1>
+        <p class="text-[11px] text-slate-400 mt-0.5">75 kW End-Suction Volute · Sea Water &amp; Fire Main · 180 m³/h @ 8.5 bar</p>
+      </div>
+
+      <!-- Equipment Header -->
+      <div class="flex items-center justify-between px-1 mb-2">
+        <span class="text-[11px] font-semibold text-slate-500">Equipment</span>
+        <button id="btn-show-all" class="text-[11px] text-orange-700 hover:text-orange-800 font-medium">Show all</button>
+      </div>
+
+      <!-- 7 Subsystem Isolation Buttons (Native-Color Ghost-Opacity Isolation) -->
+      <div class="flex flex-col gap-1" id="subsystem-buttons">
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="pump_skid">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">SK</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">Fabricated Steel Baseplate Skid</div>
+              <div class="text-[11px] text-slate-400">Drip coaming · 6 rubber mounts</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">›</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="drive_motor">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">MO</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">440 V 75 kW TEFC Drive Motor</div>
+              <div class="text-[11px] text-slate-400">24 cooling fins · IP56 terminal box</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">›</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="shaft_coupling">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">SH</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">316L Shaft, Coupling &amp; Guard</div>
+              <div class="text-[11px] text-slate-400">Pin-bush coupling · Oiler bottle</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">›</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="mechanical_seal">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">SL</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">Cartridge Mechanical Shaft Seal</div>
+              <div class="text-[11px] text-slate-400">SiC/TC faces · Plan 11 flush line</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">›</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="impeller">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">IM</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">Enclosed Bronze Impeller</div>
+              <div class="text-[11px] text-slate-400">6 backward vanes · NAB CuAl10Ni5</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">›</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-center justify-between" data-sub="volute_casing">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">VC</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">Spiral Cast-Bronze Volute</div>
+              <div class="text-[11px] text-slate-400">16 casing bolts · Cutwater scroll</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">›</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="suction_discharge">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">SD</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">Suction &amp; Discharge Nozzles</div>
+              <div class="text-[11px] text-slate-400">DIN/JIS flanges · Pigtail gauges</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">›</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Bottom 2x2 Nameplate & Live Telemetry Strip -->
+    <div class="pt-3 border-t border-slate-100">
+      <div class="flex items-center justify-between text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-2 px-1">
+        <span>Live Telemetry</span>
+        <span id="tel-status-pill" class="flex items-center gap-1 text-emerald-600 font-semibold">
+          <span id="tel-status-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="tel-status-txt">1760 RPM DUTY</span>
+        </span>
+      </div>
+      <div class="grid grid-cols-2 gap-1.5 text-left">
+        <div class="bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1.5">
+          <span class="text-[10px] text-slate-400 block">Flow Rate Q</span>
+          <span id="tel-flow" class="text-xs font-semibold mono text-slate-800">180 m³/h</span>
+        </div>
+        <div class="bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1.5">
+          <span class="text-[10px] text-slate-400 block">Total Head H</span>
+          <span id="tel-head" class="text-xs font-semibold mono text-emerald-700">85.0 mLC · 8.5bar</span>
+        </div>
+        <div class="bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1.5">
+          <span class="text-[10px] text-slate-400 block">Motor Load / I</span>
+          <span id="tel-current" class="text-xs font-semibold mono text-slate-800">118 A @ 440V</span>
+        </div>
+        <div class="bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1.5">
+          <span class="text-[10px] text-slate-400 block">NPSHa / Seal T</span>
+          <span id="tel-npsh" class="text-xs font-semibold mono text-sky-700">7.8 m · 41°C</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Top-Left Floating Header & Pill Toolbar -->
+  <div class="fixed top-4 left-[296px] z-20 flex flex-wrap items-center gap-2">
+    <button id="btn-math-proof" class="px-3 py-1.5 rounded-lg inspector-card hover:bg-white text-slate-600 hover:text-slate-900 text-xs font-medium transition flex items-center gap-1.5">
+      <span>Kinematic &amp; affinity proof</span>
+    </button>
+    <button id="btn-top-reset" class="px-3 py-1.5 rounded-lg inspector-card hover:bg-white text-slate-600 hover:text-slate-900 text-xs font-medium transition">
+      Reset View
+    </button>
+    <button id="btn-top-autorotate" class="px-3 py-1.5 rounded-lg inspector-card hover:bg-white text-slate-600 hover:text-slate-900 text-xs font-medium transition">
+      Auto-Rotate
+    </button>
+    <button id="btn-top-labels" class="px-3 py-1.5 rounded-lg inspector-card hover:bg-white text-orange-700 font-semibold text-xs transition">
+      Toggle Labels
+    </button>
+    <button id="btn-top-xray" class="px-3 py-1.5 rounded-lg inspector-card hover:bg-white text-orange-700 font-semibold text-xs transition">
+      X-Ray Volute
+    </button>
+  </div>
+
+  <!-- Right Floating Inspector Card (330px wide) -->
+  <aside class="fixed top-4 right-4 z-20 w-[330px] inspector-card rounded-2xl p-4 flex flex-col gap-3 max-h-[calc(100vh-32px)] overflow-y-auto">
+    <!-- Inspector Top Bar -->
+    <div class="flex items-center justify-between text-slate-500 border-b border-slate-100 pb-2">
+      <div class="flex items-center gap-2 text-xs font-medium text-slate-700">
+        <svg class="w-3.5 h-3.5 text-slate-400" fill="currentColor" viewBox="0 0 16 16">
+          <circle cx="3" cy="3" r="1.4"/><circle cx="8" cy="3" r="1.4"/><circle cx="13" cy="3" r="1.4"/>
+          <circle cx="3" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="13" cy="8" r="1.4"/>
+        </svg>
+        <span>Inspector</span>
+        <span id="info-code" class="text-[10px] mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">ASSY-00</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <button id="btn-start-tour" class="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition" title="Auto-Tour">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        </button>
+        <button id="btn-collapse-telemetry" class="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition" title="Toggle Telemetry Drawer">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Component Title & Description -->
+    <div>
+      <span id="info-subsystem" class="text-[10px] font-semibold uppercase tracking-wider text-orange-700 block mb-0.5">Sea Water &amp; Fire Main Pump Overview</span>
+      <h2 id="info-title" class="text-sm font-semibold text-slate-900 leading-snug">180 m³/h @ 85 mLC (8.5 bar) Centrifugal Skid</h2>
+      <p id="info-desc" class="text-xs text-slate-500 mt-1 leading-relaxed">440 V, 3-Phase, 60 Hz, 75 kW TEFC squirrel-cage induction motor driving an enclosed 6-vane Nickel-Aluminum-Bronze impeller inside a spiral bronze volute casing with Plan 11 cartridge mechanical seal flush.</p>
+    </div>
+
+    <!-- View Section (Labels, Cutaway, Telemetry Pills) -->
+    <div>
+      <span class="text-[11px] text-slate-400 font-medium block mb-1.5">View</span>
+      <div class="flex flex-wrap items-center gap-1.5">
+        <button id="btn-labels-toggle" class="view-pill active px-2.5 py-1 rounded-lg text-xs">
+          Labels
+        </button>
+        <button id="btn-cutaway-toggle" class="view-pill active px-2.5 py-1 rounded-lg text-xs">
+          X-Ray Volute
+        </button>
+        <button id="btn-graphs-toggle" class="view-pill active px-2.5 py-1 rounded-lg text-xs">
+          Telemetry
+        </button>
+      </div>
+    </div>
+
+    <!-- Explore Equipment / Camera Presets Dropdown -->
+    <div>
+      <label for="select-camera-preset" class="text-[11px] text-slate-400 font-medium block mb-1.5">Explore equipment</label>
+      <div class="relative">
+        <select id="select-camera-preset" class="w-full appearance-none bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium rounded-lg border border-slate-200/90 px-3 py-2 pr-8 outline-none cursor-pointer transition">
+          <option value="hero">Hero Pump &amp; Motor Skid 3/4 View</option>
+          <option value="impeller">Volute Cutaway · 6-Vane Bronze Impeller</option>
+          <option value="seal">Stuffing Box · Cartridge Mechanical Seal</option>
+          <option value="coupling">Bearing Bracket, Oiler &amp; Pin Coupling</option>
+          <option value="nozzles">End-Suction &amp; Top-Discharge Gauges</option>
+          <option value="motor">440 V 75 kW TEFC Induction Motor</option>
+          <option value="skid">Fabricated Channel Skid &amp; Mounts</option>
+        </select>
+        <svg class="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+    </div>
+
+    <!-- Operational Controls: Impeller Speed Slider, Discharge Valve Opening & Exploded View -->
+    <div class="space-y-2.5 pt-2 border-t border-slate-100">
+      <!-- Master Input 1: Impeller Speed Slider (0 RPM to 1800 RPM, default 1760 RPM) -->
+      <div>
+        <div class="flex justify-between items-center text-[11px] mb-1">
+          <span class="text-slate-500 font-medium">Impeller Speed (n_rpm)</span>
+          <span id="val-rpm-slider" class="mono text-emerald-700 font-semibold">1,760 RPM (60 Hz)</span>
+        </div>
+        <input id="slider-rpm" type="range" min="0" max="1800" value="1760" step="10">
+        <div class="flex justify-between text-[9px] text-slate-400 mt-0.5 mono">
+          <button id="btn-rpm-stop" class="hover:text-slate-700">0 STOP</button>
+          <button id="btn-rpm-slow" class="hover:text-slate-700">900 IDLE</button>
+          <button id="btn-rpm-rated" class="hover:text-slate-700">1760 RATED</button>
+          <button id="btn-rpm-sync" class="hover:text-slate-700">1800 MAX</button>
+        </div>
+      </div>
+
+      <!-- Master Input 2: Discharge Valve Opening (20% Throttled to 120% Runout, Default 100% BEP) -->
+      <div>
+        <div class="flex justify-between items-center text-[11px] mb-1">
+          <span class="text-slate-500 font-medium">Discharge Valve Trim (% BEP)</span>
+          <span id="val-valve-slider" class="mono text-sky-700 font-semibold">100% BEP (180 m³/h)</span>
+        </div>
+        <input id="slider-valve" type="range" min="25" max="120" value="100" step="1">
+      </div>
+
+      <!-- 3D Explode Assembly Slider (0% to 100%) -->
+      <div>
+        <div class="flex justify-between items-center text-[11px] mb-1">
+          <span class="text-slate-500 font-medium">Explode Assembly</span>
+          <span id="val-explode" class="mono text-slate-700 font-semibold">0%</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btn-assemble-all" class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 transition">0%</button>
+          <input id="slider-explode" type="range" min="0" max="100" value="0" step="1">
+          <button id="btn-explode-all" class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 transition">100%</button>
+        </div>
+      </div>
+
+      <!-- Operational Pushbuttons -->
+      <div class="grid grid-cols-2 gap-1.5 pt-0.5">
+        <button id="btn-toggle-guard" class="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-semibold shadow-sm transition flex items-center justify-center gap-1">
+          <span id="lbl-guard-btn">🛡️ GUARD: FITTED</span>
+        </button>
+        <button id="btn-service-mode" class="px-2.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-[11px] font-semibold shadow-sm transition flex items-center justify-center gap-1">
+          <span id="lbl-service-btn">🌊 SW COOLING</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Collapsible Live 2D Telemetry Drawer -->
+    <div id="telemetry-drawer" class="space-y-2 pt-2 border-t border-slate-100">
+      <!-- Canvas 1: Pump H-Q Characteristic Curve, System Resistance Curve & Efficiency η -->
+      <div class="bg-slate-50/90 rounded-xl p-2 border border-slate-200/80">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">H-Q Curve (mLC vs m³/h) &amp; BEP</span>
+          <span id="hq-live-badge" class="text-[10px] mono font-semibold text-orange-700">180 m³/h · 85.0 mLC</span>
+        </div>
+        <canvas id="hq-canvas" width="280" height="90" class="w-full block rounded bg-white border border-slate-200/60"></canvas>
+        <div class="grid grid-cols-3 gap-1 mt-1 text-center">
+          <div class="bg-white px-1 py-0.5 rounded border border-slate-200/60">
+            <span class="text-[8px] text-slate-400 block">Pump Eff η_p</span>
+            <span id="val-eff" class="text-[10px] font-semibold mono text-emerald-700">81.4%</span>
+          </div>
+          <div class="bg-white px-1 py-0.5 rounded border border-slate-200/60">
+            <span class="text-[8px] text-slate-400 block">Shaft Power</span>
+            <span id="val-pbrake" class="text-[10px] font-semibold mono text-slate-800">68.2 kW</span>
+          </div>
+          <div class="bg-white px-1 py-0.5 rounded border border-slate-200/60">
+            <span class="text-[8px] text-slate-400 block">Suction P_s</span>
+            <span id="val-psuc" class="text-[10px] font-semibold mono text-sky-700">+0.35 bar</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Canvas 2: 440 V 3-Phase 60 Hz Motor Current & Suction/Discharge Pressure Differential -->
+      <div class="bg-slate-50/90 rounded-xl p-2 border border-slate-200/80">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">440 V 3-Phase I_ABC &amp; ΔP</span>
+          <span id="wave-live-badge" class="text-[10px] mono text-sky-700 font-semibold">118 A · 8.50 bar</span>
+        </div>
+        <canvas id="wave-canvas" width="280" height="58" class="w-full block rounded bg-white border border-slate-200/60"></canvas>
+      </div>
+    </div>
+
+    <!-- Footer Row: Reset View & Zoom Buttons -->
+    <div class="flex items-center gap-1.5 pt-1 border-t border-slate-100">
+      <button id="btn-reset-cam" class="flex-1 py-1.5 px-3 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium border border-slate-200/90 shadow-sm transition text-center">
+        Reset view
+      </button>
+      <button id="btn-zoom-in" class="w-8 h-8 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium border border-slate-200/90 shadow-sm transition flex items-center justify-center" title="Zoom in">+</button>
+      <button id="btn-zoom-out" class="w-8 h-8 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium border border-slate-200/90 shadow-sm transition flex items-center justify-center" title="Zoom out">−</button>
+    </div>
+  </aside>
+
+  <!-- Mathematical Kinematic & Centrifugal Pump Affinity Laws Proof Modal -->
+  <div id="modal-proof" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-2xl rounded-2xl p-6 border border-slate-200 shadow-2xl max-h-[85vh] overflow-y-auto text-slate-700">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-orange-600"></span>
+          <h2 class="text-base font-semibold text-slate-900">ISO 9906 / SOLAS II-2 &amp; Centrifugal Pump Affinity Laws Proof</h2>
+        </div>
+        <button id="btn-close-proof" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="mt-4 space-y-4 text-xs leading-relaxed">
+        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+          <h4 class="font-semibold text-slate-900 text-sm mb-1">1. Euler Turbomachinery Head &amp; Centrifugal Affinity Laws</h4>
+          <p class="text-slate-600">For an enclosed 6-vane backward-curved Nickel-Aluminum-Bronze impeller ($D_2 = 560\text{ mm}$, rated $n_0 = 1,760\text{ RPM}$ at 60 Hz, 4-pole TEFC motor with $2.2\%$ slip):</p>
+          <div class="mono bg-white p-2.5 rounded-lg my-2 text-slate-800 border border-slate-200">
+            Q(n) = Q_0 · (n / n_0) = 180.0 m³/h × (n / 1760)<br>
+            H(Q, n) = H_shutoff · (n / n_0)² − k_imp · Q² = 85.0 mLC (8.55 bar) at BEP<br>
+            P_hyd = (ρ_sw · g · Q · H) / 3600 = (1025 × 9.81 × 180 × 85) / 3.6×10⁶ = 42.74 kW
+          </div>
+        </div>
+
+        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+          <h4 class="font-semibold text-slate-900 text-sm mb-1">2. 440 V 3-Phase 60 Hz TEFC Motor Current &amp; API Plan 11 Seal Flush</h4>
+          <p class="text-slate-600">Shaft brake power $P_{brake} = P_{hyd} / \eta_p$ drives the 440 V squirrel-cage induction motor ($\eta_m = 93.5\%, \cos\phi = 0.86$), while high-pressure seawater from the volute discharge throat flushes the SiC/TC mechanical seal faces:</p>
+          <div class="mono bg-white p-2.5 rounded-lg my-2 text-slate-800 border border-slate-200">
+            I_line = P_elec / (√3 · 440 V · cosφ) = 118.0 A RMS at 180 m³/h @ 8.5 bar<br>
+            Q_flush (API Plan 11) = C_d · A_orifice · √(2 · ΔP / ρ_sw) ≈ 6.4 L/min
+          </div>
+        </div>
+
+        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+          <h4 class="font-semibold text-slate-900 text-sm mb-1">3. Live Marine Centrifugal Pump Verification Table</h4>
+          <table class="w-full text-left mono text-[11px] mt-2">
+            <thead>
+              <tr class="text-slate-400 border-b border-slate-200">
+                <th class="py-1">Parameter</th>
+                <th>Formula / Standard</th>
+                <th>Current Live Value</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200/70">
+              <tr><td class="py-1.5 text-slate-600">Impeller Speed &amp; Slip</td><td>4-Pole 60 Hz (1,800 sync)</td><td id="proof-rpm" class="text-orange-600 font-semibold">1,760 RPM · s = 2.2%</td></tr>
+              <tr><td class="py-1.5 text-slate-600">Volumetric Flow &amp; Head</td><td>Affinity Law Q ∝ n, H ∝ n²</td><td id="proof-qh" class="text-emerald-600 font-semibold">180.0 m³/h · 85.0 mLC (8.5 bar)</td></tr>
+              <tr><td class="py-1.5 text-slate-600">Hydraulic &amp; Shaft Power</td><td>P_brake = ρgQH / η_p</td><td id="proof-power" class="text-sky-600 font-semibold">P_brake = 68.2 kW · η_p = 81.4%</td></tr>
+              <tr><td class="py-1.5 text-slate-600">440 V 3-Phase Line Current</td><td>I = P_in / (√3·440·cosφ)</td><td id="proof-current" class="text-indigo-600 font-semibold">118.0 A RMS @ 440 V AC</td></tr>
+              <tr><td class="py-1.5 text-slate-600">NPSHa &amp; Plan 11 Seal Flush</td><td>SiC/TC Cartridge Seal</td><td id="proof-seal" class="text-rose-600 font-semibold">NPSHa = 7.8 m · T_seal = 41.2 °C</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Three.js Module Script (three@0.160.0) -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+    const container = document.getElementById('canvas-container');
+    const calloutsContainer = document.getElementById('callouts-container');
+    const calloutsSvg = document.getElementById('callouts-svg');
+
+    function getViewportSize() {
+      const rect = container.getBoundingClientRect();
+      return {
+        width: rect.width || (window.innerWidth - 280),
+        height: rect.height || window.innerHeight,
+        left: rect.left || 280,
+        top: rect.top || 0
+      };
+    }
+
+    /* =====================================================================
+       1. SCENE, CAMERA, RENDERER, PMREM ENVIRONMENT & SMOOTH CLAMPED ZOOM
+       ===================================================================== */
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf2f4f7);
+
+    const vp0 = getViewportSize();
+    const camera = new THREE.PerspectiveCamera(35, vp0.width / vp0.height, 0.1, 100);
+
+    let isCameraTweening = false;
+    const camTargetPos = new THREE.Vector3(-2.8, 2.0, 3.6);
+    const camTargetLook = new THREE.Vector3(0.0, 0.75, 0.0);
+    camera.position.copy(camTargetPos);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(vp0.width, vp0.height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    container.appendChild(renderer.domElement);
+
+    // PMREMGenerator RoomEnvironment for realistic metallic bronze & stainless reflections
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.copy(camTargetLook);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.enablePan = true;
+    controls.enableZoom = false; // Mandatory custom non-jumping wheel zoom below
+    controls.minDistance = 1.6;
+    controls.maxDistance = 10.0;
+    controls.minAzimuthAngle = -Infinity;
+    controls.maxAzimuthAngle = Infinity;
+    controls.minPolarAngle = 0.05;
+    controls.maxPolarAngle = Math.PI * 0.495;
+    controls.update();
+
+    controls.addEventListener('start', () => {
+      isCameraTweening = false;
+    });
+
+    // Smooth Clamped Wheel Zoom (4.2% per scroll notch, clamped 1.6 m to 10.0 m)
+    renderer.domElement.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const clampedDelta = THREE.MathUtils.clamp(e.deltaY, -100, 100);
+      if (clampedDelta === 0) return;
+      isCameraTweening = false;
+      const zoomFactor = 1 + (clampedDelta > 0 ? 0.042 : -0.042) * (Math.abs(clampedDelta) / 100);
+      const offset = camera.position.clone().sub(controls.target);
+      const newDist = THREE.MathUtils.clamp(offset.length() * zoomFactor, controls.minDistance, controls.maxDistance);
+      offset.setLength(newDist);
+      camera.position.copy(controls.target).add(offset);
+      controls.update();
+    }, { passive: false });
+
+    const raycaster = new THREE.Raycaster();
+    const mouseVec = new THREE.Vector2();
+
+    /* =====================================================================
+       2. UNIFIED LIGHT-STUDIO LIGHTING & TWO-TIER CONCRETE STUDIO PLINTH
+       ===================================================================== */
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xdde2e8, 1.15);
+    scene.add(hemiLight);
+
+    const mainLight = new THREE.DirectionalLight(0xfffefa, 1.35);
+    mainLight.position.set(5.5, 11.0, 6.5);
+    mainLight.castShadow = true;
+    mainLight.shadow.mapSize.width = 2048;
+    mainLight.shadow.mapSize.height = 2048;
+    mainLight.shadow.bias = -0.0003;
+    mainLight.shadow.camera.near = 0.5;
+    mainLight.shadow.camera.far = 30;
+    mainLight.shadow.camera.left = -5.5;
+    mainLight.shadow.camera.right = 5.5;
+    mainLight.shadow.camera.top = 5.5;
+    mainLight.shadow.camera.bottom = -5.5;
+    scene.add(mainLight);
+
+    const fillLight = new THREE.DirectionalLight(0xe8ecf0, 0.85);
+    fillLight.position.set(-6.0, 6.0, -5.0);
+    scene.add(fillLight);
+
+    // Wide Two-Tier Architectural Concrete Studio Plinth (8.8 m × 6.8 m with subtle drafting edge lines)
+    const plinthGrp = new THREE.Group();
+    const padGeo = new THREE.BoxGeometry(8.4, 0.06, 6.4);
+    const padMesh = new THREE.Mesh(
+      padGeo,
+      new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.82, metalness: 0.04 })
+    );
+    padMesh.position.set(0, -0.03, 0);
+    padMesh.receiveShadow = true;
+    plinthGrp.add(padMesh);
+
+    const padEdges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(padGeo),
+      new THREE.LineBasicMaterial({ color: 0xdde2e8, transparent: true, opacity: 0.85 })
+    );
+    padEdges.position.copy(padMesh.position);
+    plinthGrp.add(padEdges);
+
+    const curbGeo = new THREE.BoxGeometry(8.8, 0.08, 6.8);
+    const curbMesh = new THREE.Mesh(
+      curbGeo,
+      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.78, metalness: 0.06 })
+    );
+    curbMesh.position.set(0, -0.08, 0);
+    curbMesh.receiveShadow = true;
+    plinthGrp.add(curbMesh);
+
+    const curbEdges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(curbGeo),
+      new THREE.LineBasicMaterial({ color: 0xcbd5e1, transparent: true, opacity: 0.75 })
+    );
+    curbEdges.position.copy(curbMesh.position);
+    plinthGrp.add(curbEdges);
+    scene.add(plinthGrp);
+
+    const groundShadow = new THREE.Mesh(
+      new THREE.PlaneGeometry(36, 36),
+      new THREE.ShadowMaterial({ opacity: 0.14 })
+    );
+    groundShadow.rotation.x = -Math.PI / 2;
+    groundShadow.position.y = 0.001;
+    groundShadow.receiveShadow = true;
+    scene.add(groundShadow);
+
+    /* =====================================================================
+       3. PROCEDURAL TEXTURES & PHYSICALLY BASED MATERIAL PALETTE
+       ===================================================================== */
+    function createCastMetalBumpTexture() {
+      const c = document.createElement('canvas');
+      c.width = 128; c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#808080';
+      ctx.fillRect(0, 0, 128, 128);
+      for (let i = 0; i < 1400; i++) {
+        const v = 120 + Math.floor(Math.random() * 28);
+        ctx.fillStyle = `rgb(${v},${v},${v})`;
+        ctx.fillRect(Math.random() * 128, Math.random() * 128, 2, 2);
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(5, 5);
+      return tex;
+    }
+
+    function createPerforatedGuardTexture() {
+      const c = document.createElement('canvas');
+      c.width = 128; c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#eab308';
+      ctx.fillRect(0, 0, 128, 128);
+      ctx.fillStyle = '#713f12';
+      for (let y = 12; y < 128; y += 20) {
+        for (let x = 12; x < 128; x += 20) {
+          ctx.beginPath();
+          ctx.arc(x, y, 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(3, 2);
+      return tex;
+    }
+
+    function createGaugeDialTexture(title, unit, minVal, maxVal, accentColor) {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 256;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(128, 128, 122, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 8;
+      ctx.stroke();
+
+      // Scale ticks
+      for (let i = 0; i <= 20; i++) {
+        const ang = (Math.PI * 0.75) + (i / 20) * (Math.PI * 1.5);
+        const r1 = i % 5 === 0 ? 86 : 96;
+        const r2 = 108;
+        ctx.strokeStyle = i >= 16 ? '#dc2626' : '#1e293b';
+        ctx.lineWidth = i % 5 === 0 ? 4 : 2;
+        ctx.beginPath();
+        ctx.moveTo(128 + Math.cos(ang) * r1, 128 + Math.sin(ang) * r1);
+        ctx.lineTo(128 + Math.cos(ang) * r2, 128 + Math.sin(ang) * r2);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 22px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(title, 128, 92);
+
+      ctx.fillStyle = accentColor;
+      ctx.font = 'bold 20px Inter, sans-serif';
+      ctx.fillText(unit, 128, 178);
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = 'bold 16px JetBrains Mono, monospace';
+      ctx.fillText(`${minVal}`, 72, 198);
+      ctx.fillText(`${maxVal}`, 184, 198);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function createNameplateTexture(badge, title, sub, spec) {
+      const c = document.createElement('canvas');
+      c.width = 512; c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, 512, 128);
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(4, 4, 504, 120);
+
+      ctx.fillStyle = '#c88a32';
+      ctx.fillRect(16, 16, 108, 36);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 18px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(badge, 70, 40);
+
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 20px Inter, sans-serif';
+      ctx.fillText(title, 136, 40);
+
+      ctx.fillStyle = '#334155';
+      ctx.font = '600 14px JetBrains Mono, monospace';
+      ctx.fillText(sub, 20, 82);
+
+      ctx.fillStyle = '#b45309';
+      ctx.font = 'bold 12px Inter, sans-serif';
+      ctx.fillText(spec, 20, 108);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    const castBump = createCastMetalBumpTexture();
+    const guardTex = createPerforatedGuardTexture();
+    const suctionDialTex = createGaugeDialTexture('COMPOUND', '-1..+3 bar', '-1', '+3', '#0284c7');
+    const dischargeDialTex = createGaugeDialTexture('DISCHARGE', '0..16 bar', '0', '16', '#ea580c');
+
+    // Physically Based Material Palette (MeshStandardMaterial as specified)
+    const matSkidSteel = new THREE.MeshStandardMaterial({
+      color: 0x2c3a47,
+      roughness: 0.50,
+      metalness: 0.45,
+      bumpMap: castBump,
+      bumpScale: 0.0015
+    });
+    const matMotorBlueTeal = new THREE.MeshStandardMaterial({
+      color: 0x266478,
+      roughness: 0.36,
+      metalness: 0.32,
+      bumpMap: castBump,
+      bumpScale: 0.0012
+    });
+    const matNabBronze = new THREE.MeshStandardMaterial({
+      color: 0xc88a32,
+      roughness: 0.25,
+      metalness: 0.85,
+      bumpMap: castBump,
+      bumpScale: 0.0010
+    });
+    const matImpellerPolishedBronze = new THREE.MeshStandardMaterial({
+      color: 0xd4963a,
+      roughness: 0.20,
+      metalness: 0.88
+    });
+    const matStainlessSteel = new THREE.MeshStandardMaterial({
+      color: 0xd0d7de,
+      roughness: 0.18,
+      metalness: 0.88
+    });
+    const matSiliconCarbideDark = new THREE.MeshStandardMaterial({
+      color: 0x1e242b,
+      roughness: 0.28,
+      metalness: 0.65
+    });
+    const matSealGoldBrass = new THREE.MeshStandardMaterial({
+      color: 0xd4af37,
+      roughness: 0.28,
+      metalness: 0.65
+    });
+    const matSafetyYellowGuard = new THREE.MeshStandardMaterial({
+      color: 0xeab308,
+      map: guardTex,
+      roughness: 0.35,
+      metalness: 0.25,
+      side: THREE.DoubleSide
+    });
+    const matCopperFlushTube = new THREE.MeshStandardMaterial({
+      color: 0xc86d3b,
+      roughness: 0.24,
+      metalness: 0.85
+    });
+    const matBearingBracketIron = new THREE.MeshStandardMaterial({
+      color: 0x3b4d5e,
+      roughness: 0.42,
+      metalness: 0.40,
+      bumpMap: castBump,
+      bumpScale: 0.0012
+    });
+    const matOilerGlass = new THREE.MeshPhysicalMaterial({
+      color: 0xfef08a,
+      transparent: true,
+      opacity: 0.55,
+      roughness: 0.10,
+      transmission: 0.65,
+      depthWrite: false
+    });
+    const matVoluteXrayGlass = new THREE.MeshPhysicalMaterial({
+      color: 0xd8b278,
+      transparent: true,
+      opacity: 0.22,
+      roughness: 0.10,
+      transmission: 0.82,
+      thickness: 0.16,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+
+    /* =====================================================================
+       4. SEVEN COHESIVE FUNCTIONAL SUB-ASSEMBLIES (`parts` REGISTRY)
+       ===================================================================== */
+    const PUMP_Y = 0.72; // Horizontal shaftline elevation above studio plinth
+
+    const subsystems = {
+      pump_skid:         new THREE.Group(),
+      drive_motor:       new THREE.Group(),
+      shaft_coupling:    new THREE.Group(),
+      mechanical_seal:   new THREE.Group(),
+      impeller:          new THREE.Group(),
+      volute_casing:     new THREE.Group(),
+      suction_discharge: new THREE.Group()
+    };
+
+    const parts = subsystems;
+
+    for (const key in subsystems) {
+      subsystems[key].userData.partId = key;
+      subsystems[key].userData.subsystemKey = key;
+      scene.add(subsystems[key]);
+    }
+
+    // Disjoint, Non-Touching 3D Explosion Vectors (Zero touching parts at 100%, floor-safe above plinth)
+    // - pump_skid (SK):         remains anchored on the studio plinth at [0, 0, 0]
+    // - drive_motor (MO):       explodes left & up [-1.35, 0.32, 0.00]
+    // - shaft_coupling (SH):    explodes up & aft-left [-0.35, 1.05, -0.85]
+    // - mechanical_seal (SL):   explodes forward-left & up [-0.05, 0.65, 1.15]
+    // - impeller (IM):          explodes forward-right & up [0.85, 0.42, 1.25] (curved bronze vanes in full clear view!)
+    // - volute_casing (VC):     explodes aft & right [0.68, 0.22, -1.15]
+    // - suction_discharge (SD): explodes far right & up [1.75, 0.58, 0.00]
+    const explodeVectors = {
+      pump_skid:         new THREE.Vector3( 0.00, 0.00,  0.00),
+      drive_motor:       new THREE.Vector3(-1.35, 0.32,  0.00),
+      shaft_coupling:    new THREE.Vector3(-0.35, 1.05, -0.85),
+      mechanical_seal:   new THREE.Vector3(-0.05, 0.65,  1.15),
+      impeller:          new THREE.Vector3( 0.85, 0.42,  1.25),
+      volute_casing:     new THREE.Vector3( 0.68, 0.22, -1.15),
+      suction_discharge: new THREE.Vector3( 1.75, 0.58,  0.00)
+    };
+
+    const subsystemMeta = {
+      pump_skid: {
+        code: 'ASSY-SK',
+        sub: 'Fabricated Channel-Steel Baseplate Skid (2400×1000×180 mm)',
+        title: 'Welded Steel Baseplate Skid, Pedestals & Anti-Vibration Mounts',
+        desc: 'Rigid welded channel-steel bedplate (2.40 m × 1.00 m × 0.18 m) with raised machined mounting pedestals for the motor (X = -0.60 m) and volute casing (X = +0.65 m), perimeter drip coaming, brass drain cock, and 6 resilient rubber vibration isolators.'
+      },
+      drive_motor: {
+        code: 'ASSY-MO',
+        sub: '440 V · 3-Phase · 60 Hz · 75 kW · 1,760 RPM (IE3 Marine)',
+        title: '440 V 75 kW TEFC Squirrel-Cage Induction Motor',
+        desc: 'Cylindrical cast-iron frame (R = 0.34 m, L = 0.95 m) with 24 radial longitudinal cooling fins, heavy mounting feet, NDE louvered fan cowl (X = -1.12 m), internal cooling fan blades, and top-mounted IP56 440 V terminal box with brass cable glands.'
+      },
+      shaft_coupling: {
+        code: 'ASSY-SH',
+        sub: '316L Stainless Pump Shaft · Bearing Bracket · Pin-Bush Coupling',
+        title: 'Stainless Shaft, Flexible Pin-Bush Coupling & Safety Guard',
+        desc: 'Precision-ground 316L stainless-steel pump shaft (R = 0.055 m) supported by a heavy-duty cast-iron bearing bracket (X = +0.25 m) with bullseye sight glass and constant-level oiler bottle, driven via an 8-pin elastomeric coupling under a perforated safety-yellow guard.'
+      },
+      mechanical_seal: {
+        code: 'ASSY-SL',
+        sub: 'API Plan 11 Recirculation Flush · SiC vs Tungsten-Carbide',
+        title: 'Cartridge Mechanical Shaft Seal & Stuffing Box Cover',
+        desc: 'Rear casing stuffing-box cover plate (R = 0.36 m) housing a balanced cartridge mechanical shaft seal with silicon-carbide/tungsten-carbide seal rings, stainless wave spring collar, 4-stud bronze gland follower, and braided copper Plan 11 flush line.'
+      },
+      impeller: {
+        code: 'ASSY-IM',
+        sub: 'Cast Nickel-Aluminum-Bronze (CuAl10Ni5) · Ø560 mm',
+        title: 'Enclosed 6-Vane Backward-Curved Bronze Centrifugal Impeller',
+        desc: 'Cast nickel-aluminum-bronze enclosed centrifugal impeller (R = 0.28 m) with 6 sculpted 3D backward-curved hydrodynamic vanes between front and rear shrouds, replaceable wear rings, keyed hub bore, and locked nose cap nut.'
+      },
+      volute_casing: {
+        code: 'ASSY-VC',
+        sub: 'Logarithmic Spiral Scroll · PN16 Hydro-Tested Cast Bronze',
+        title: 'Spiral Cast-Bronze Volute Casing & Cutwater Scroll',
+        desc: 'Thick-walled expanding spiral volute scroll casing (CuAl10Ni5 seawater-resistant bronze) with 16 perimeter casing flange bolts, bottom casing drain plug, top air-release vent cock, and cast pedestal support foot.'
+      },
+      suction_discharge: {
+        code: 'ASSY-SD',
+        sub: 'DN200 End-Suction & DN150 Top-Discharge DIN/JIS Flanges',
+        title: 'End-Suction & Top-Discharge Marine Flanged Nozzles & Gauges',
+        desc: 'Axial end-suction reducer spool (X = +1.05 m) with 8-bolt marine flange and compound gauge (-1 to +3 bar), paired with vertical top-discharge throat (X = +0.68 m, Y = 1.25 m) with 12-bolt flange and glycerin-filled 0–16 bar gauge on a brass pigtail siphon.'
+      }
+    };
+
+    // Registries for Cutaway, Coaxial Shaft Rotation & Flow Beads
+    const cutawayMeshes = [];
+    const coaxialSpinGroups = []; // Holds rotating groups in MO, SH, and IM at Y = 0.72 m
+    const flowStreamBeads = [];
+    let safetyGuardMeshGroup = null;
+    let suctionNeedleGroup = null;
+    let dischargeNeedleGroup = null;
+
+    /* =====================================================================
+       5. BUILD 7 PROCEDURAL MARINE CAD SUB-ASSEMBLIES
+       ===================================================================== */
+
+    // 5.1 SUB-ASSEMBLY 1: `pump_skid` — Fabricated Steel Baseplate Skid & Anti-Vibration Mounts (`SK`)
+    function buildPumpSkid() {
+      const grp = subsystems.pump_skid;
+
+      // 1. Main Fabricated Channel-Steel Bedplate (2.40 m long along X × 0.14 m high × 1.00 m wide)
+      // Sits on 6 resilient rubber vibration isolators (Y = 0.00 to 0.04 m), bedplate top at Y = 0.18 m
+      const mainDeck = new THREE.Mesh(
+        new THREE.BoxGeometry(2.40, 0.12, 1.00),
+        matSkidSteel
+      );
+      mainDeck.position.set(0.0, 0.10, 0.0);
+      mainDeck.castShadow = true;
+      mainDeck.receiveShadow = true;
+      grp.add(mainDeck);
+
+      // Perimeter Welded Drip-Pan Coaming Lip (2.42 m × 1.02 m)
+      [-0.49, 0.49].forEach((zLip) => {
+        const sideBeam = new THREE.Mesh(
+          new THREE.BoxGeometry(2.42, 0.16, 0.035),
+          matSkidSteel
+        );
+        sideBeam.position.set(0.0, 0.11, zLip);
+        sideBeam.castShadow = true;
+        grp.add(sideBeam);
+      });
+      [-1.19, 1.19].forEach((xLip) => {
+        const endBeam = new THREE.Mesh(
+          new THREE.BoxGeometry(0.035, 0.16, 1.02),
+          matSkidSteel
+        );
+        endBeam.position.set(xLip, 0.11, 0.0);
+        endBeam.castShadow = true;
+        grp.add(endBeam);
+      });
+
+      // 4 Transverse Structural Stiffener Ribs & Grout Holes on Skid Deck
+      [-0.95, -0.20, 0.42, 0.98].forEach((xRib) => {
+        const crossMember = new THREE.Mesh(
+          new THREE.BoxGeometry(0.045, 0.025, 0.92),
+          matBearingBracketIron
+        );
+        crossMember.position.set(xRib, 0.165, 0.0);
+        grp.add(crossMember);
+      });
+
+      // 2. Raised Machined Motor Mounting Pedestals at X = -0.60 m (Y = 0.16 to 0.36 m)
+      [-0.28, 0.28].forEach((zPed) => {
+        const motorPed = new THREE.Mesh(
+          new THREE.BoxGeometry(0.76, 0.18, 0.18),
+          matSkidSteel
+        );
+        motorPed.position.set(-0.60, 0.25, zPed);
+        motorPed.castShadow = true;
+        grp.add(motorPed);
+
+        // Machined Stainless Soleplate Shim Pad on top of Motor Pedestal
+        const machinedPad = new THREE.Mesh(
+          new THREE.BoxGeometry(0.72, 0.022, 0.16),
+          matStainlessSteel
+        );
+        machinedPad.position.set(-0.60, 0.35, zPed);
+        grp.add(machinedPad);
+      });
+
+      // 3. Raised Machined Pedestals for Bearing Bracket (X = +0.25 m) and Volute Casing Foot (X = +0.65 m)
+      const brgPedestal = new THREE.Mesh(
+        new THREE.BoxGeometry(0.32, 0.16, 0.54),
+        matSkidSteel
+      );
+      brgPedestal.position.set(0.25, 0.24, 0.0);
+      brgPedestal.castShadow = true;
+      grp.add(brgPedestal);
+
+      const brgShim = new THREE.Mesh(
+        new THREE.BoxGeometry(0.28, 0.02, 0.50),
+        matStainlessSteel
+      );
+      brgShim.position.set(0.25, 0.33, 0.0);
+      grp.add(brgShim);
+
+      const volutePedestal = new THREE.Mesh(
+        new THREE.BoxGeometry(0.36, 0.14, 0.62),
+        matSkidSteel
+      );
+      volutePedestal.position.set(0.65, 0.23, 0.0);
+      volutePedestal.castShadow = true;
+      grp.add(volutePedestal);
+
+      const voluteShim = new THREE.Mesh(
+        new THREE.BoxGeometry(0.32, 0.02, 0.58),
+        matStainlessSteel
+      );
+      voluteShim.position.set(0.65, 0.31, 0.0);
+      grp.add(voluteShim);
+
+      // 4. 6 Resilient Marine Anti-Vibration Rubber Mounts & Stainless Foundation Anchor Bolts
+      [-1.02, 0.0, 1.02].forEach((xMount) => {
+        [-0.44, 0.44].forEach((zMount) => {
+          const outriggerLug = new THREE.Mesh(
+            new THREE.BoxGeometry(0.16, 0.035, 0.14),
+            matSkidSteel
+          );
+          outriggerLug.position.set(xMount, 0.055, zMount);
+          grp.add(outriggerLug);
+
+          const rubberIsolator = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.052, 0.062, 0.04, 20),
+            matSiliconCarbideDark
+          );
+          rubberIsolator.position.set(xMount, 0.02, zMount);
+          grp.add(rubberIsolator);
+
+          const anchorBolt = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.014, 0.014, 0.11, 12),
+            matStainlessSteel
+          );
+          anchorBolt.position.set(xMount, 0.055, zMount);
+          grp.add(anchorBolt);
+
+          const hexNut = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.026, 0.026, 0.022, 6),
+            matSealGoldBrass
+          );
+          hexNut.position.set(xMount, 0.085, zMount);
+          grp.add(hexNut);
+        });
+      });
+
+      // 5. Drip-Rim Coaming Brass Drain Plug & Valve at Front Right (+X, +Z) plus 4 Skid Lifting Lugs
+      const drainPlug = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.018, 0.018, 0.08, 12),
+        matSealGoldBrass
+      );
+      drainPlug.rotation.x = Math.PI / 2;
+      drainPlug.position.set(1.08, 0.09, 0.53);
+      grp.add(drainPlug);
+
+      [-1.12, 1.12].forEach((xl) => {
+        [-0.48, 0.48].forEach((zl) => {
+          const padEye = new THREE.Mesh(
+            new THREE.TorusGeometry(0.034, 0.009, 10, 20),
+            matSealGoldBrass
+          );
+          padEye.position.set(xl, 0.19, zl);
+          grp.add(padEye);
+        });
+      });
+    }
+
+    // 5.2 SUB-ASSEMBLY 2: `drive_motor` — 440 V 75 kW TEFC Squirrel-Cage Induction Motor (`MO`)
+    function buildDriveMotor() {
+      const grp = subsystems.drive_motor;
+      const mx = -0.60; // Motor axial center at X = -0.60 m, Y = 0.72 m
+
+      // 1. Cylindrical Cast-Iron Ribbed Stator Frame (R = 0.34 m, L = 0.82 m)
+      const statorBarrel = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.32, 0.32, 0.80, 36),
+        matMotorBlueTeal
+      );
+      statorBarrel.rotation.z = Math.PI / 2;
+      statorBarrel.position.set(mx, PUMP_Y, 0.0);
+      statorBarrel.castShadow = true;
+      statorBarrel.receiveShadow = true;
+      grp.add(statorBarrel);
+
+      // 24 Radial Longitudinal Cooling Fins around Stator Barrel (outer R = 0.355 m)
+      for (let f = 0; f < 24; f++) {
+        const ang = (f / 24) * Math.PI * 2;
+        // Leave space at top crown for terminal box mounting neck
+        if (Math.sin(ang) > 0.88) continue;
+        const fin = new THREE.Mesh(
+          new THREE.BoxGeometry(0.76, 0.048, 0.012),
+          matMotorBlueTeal
+        );
+        fin.position.set(mx, PUMP_Y + Math.sin(ang) * 0.33, Math.cos(ang) * 0.33);
+        fin.rotation.x = -ang;
+        fin.castShadow = true;
+        grp.add(fin);
+      }
+
+      // 2. Drive-End (DE at X = -0.18 m) & Non-Drive-End (NDE at X = -1.00 m) Cast End-Shields
+      [-0.98, -0.20].forEach((xShield) => {
+        const shield = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.335, 0.335, 0.055, 36),
+          matMotorBlueTeal
+        );
+        shield.rotation.z = Math.PI / 2;
+        shield.position.set(xShield, PUMP_Y, 0.0);
+        shield.castShadow = true;
+        grp.add(shield);
+
+        // Bearing Cap & Brass Grease Nipple at Center of End-Shield
+        const brgCap = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.115, 0.115, 0.04, 24),
+          matBearingBracketIron
+        );
+        brgCap.rotation.z = Math.PI / 2;
+        brgCap.position.set(xShield + (xShield > -0.5 ? 0.035 : -0.035), PUMP_Y, 0.0);
+        grp.add(brgCap);
+      });
+
+      // 3. Non-Drive-End (NDE) Louvered Sheet-Metal Fan Cowl (X = -1.12 m)
+      const fanCowlBody = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.325, 0.34, 0.24, 36),
+        matMotorBlueTeal
+      );
+      fanCowlBody.rotation.z = Math.PI / 2;
+      fanCowlBody.position.set(-1.10, PUMP_Y, 0.0);
+      fanCowlBody.castShadow = true;
+      grp.add(fanCowlBody);
+
+      // Concentric NDE Air-Intake Grille Rings on Rear Face (X = -1.225 m)
+      [0.08, 0.14, 0.20, 0.26].forEach((rGrille) => {
+        const gRing = new THREE.Mesh(
+          new THREE.TorusGeometry(rGrille, 0.006, 8, 28),
+          matBearingBracketIron
+        );
+        gRing.rotation.y = Math.PI / 2;
+        gRing.position.set(-1.222, PUMP_Y, 0.0);
+        grp.add(gRing);
+      });
+
+      // Internal Rotating Motor Shaft Stub & NDE Cooling Fan Blades (Coaxial at Y = 0.72 m)
+      const motorSpinGrp = new THREE.Group();
+      motorSpinGrp.position.set(0.0, PUMP_Y, 0.0);
+      grp.add(motorSpinGrp);
+      coaxialSpinGroups.push(motorSpinGrp);
+
+      const motorShaftExtension = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.052, 0.052, 1.12, 28),
+        matStainlessSteel
+      );
+      motorShaftExtension.rotation.z = Math.PI / 2;
+      motorShaftExtension.position.set(-0.58, 0.0, 0.0);
+      motorSpinGrp.add(motorShaftExtension);
+
+      // 10-Blade Cooling Fan inside NDE Cowl (X = -1.08 m)
+      for (let b = 0; b < 10; b++) {
+        const ba = (b / 10) * Math.PI * 2;
+        const blade = new THREE.Mesh(
+          new THREE.BoxGeometry(0.035, 0.22, 0.008),
+          matSealGoldBrass
+        );
+        blade.position.set(-1.08, Math.sin(ba) * 0.15, Math.cos(ba) * 0.15);
+        blade.rotation.x = -ba;
+        motorSpinGrp.add(blade);
+      }
+
+      // 4. Heavy Cast Motor Mounting Feet bolted to Skid Pedestals (Y = 0.36 to 0.44 m)
+      [-0.28, 0.28].forEach((zFoot) => {
+        const footBlock = new THREE.Mesh(
+          new THREE.BoxGeometry(0.68, 0.06, 0.14),
+          matMotorBlueTeal
+        );
+        footBlock.position.set(mx, 0.39, zFoot);
+        footBlock.castShadow = true;
+        grp.add(footBlock);
+
+        // Vertical Web Gussets connecting Stator Barrel to Mounting Feet
+        [-0.22, 0.22].forEach((xWeb) => {
+          const web = new THREE.Mesh(
+            new THREE.BoxGeometry(0.04, 0.22, 0.10),
+            matMotorBlueTeal
+          );
+          web.position.set(mx + xWeb, 0.50, zFoot * 0.85);
+          grp.add(web);
+
+          const holdBolt = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.015, 0.015, 0.09, 8),
+            matStainlessSteel
+          );
+          holdBolt.position.set(mx + xWeb, 0.41, zFoot);
+          grp.add(holdBolt);
+        });
+      });
+
+      // 5. Top-Mounted IP56 440 V Terminal Box ([-0.55, 1.15, 0]) with Brass Cable Glands & Earthing Stud
+      const tBoxNeck = new THREE.Mesh(
+        new THREE.BoxGeometry(0.22, 0.10, 0.22),
+        matMotorBlueTeal
+      );
+      tBoxNeck.position.set(-0.55, 1.06, 0.0);
+      grp.add(tBoxNeck);
+
+      const tBoxBody = new THREE.Mesh(
+        new THREE.BoxGeometry(0.30, 0.18, 0.28),
+        matMotorBlueTeal
+      );
+      tBoxBody.position.set(-0.55, 1.17, 0.0);
+      tBoxBody.castShadow = true;
+      grp.add(tBoxBody);
+
+      const tBoxLid = new THREE.Mesh(
+        new THREE.BoxGeometry(0.32, 0.025, 0.30),
+        matBearingBracketIron
+      );
+      tBoxLid.position.set(-0.55, 1.27, 0.0);
+      grp.add(tBoxLid);
+
+      // Dual Brass Armored Cable Glands & Earthing Stud on Front (+Z) of Terminal Box
+      [-0.06, 0.06].forEach((xGland) => {
+        const gland = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.024, 0.028, 0.065, 6),
+          matSealGoldBrass
+        );
+        gland.rotation.x = Math.PI / 2;
+        gland.position.set(-0.55 + xGland, 1.15, 0.165);
+        grp.add(gland);
+      });
+
+      const earthStud = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.012, 0.012, 0.045, 12),
+        matSealGoldBrass
+      );
+      earthStud.rotation.x = Math.PI / 2;
+      earthStud.position.set(-0.42, 1.12, 0.15);
+      grp.add(earthStud);
+
+      // Forged Steel Motor Lifting Eye Lug
+      const motorEye = new THREE.Mesh(
+        new THREE.TorusGeometry(0.042, 0.011, 10, 20),
+        matStainlessSteel
+      );
+      motorEye.position.set(-0.82, 1.09, 0.0);
+      grp.add(motorEye);
+
+      // Engraved 440 V 75 kW Marine Motor Rating Nameplate on Front Stator Flank
+      const npTex = createNameplateTexture(
+        '75 kW',
+        '440 V 60 Hz TEFC MARINE MOTOR',
+        '1,760 RPM · 118 A · IP56 · INS. CLASS F · S1 DUTY',
+        '⚡ IEC 60034-1 / IACS E10 · SEA WATER & FIRE PUMP DRIVE'
+      );
+      const npPlate = new THREE.Mesh(
+        new THREE.BoxGeometry(0.38, 0.11, 0.012),
+        new THREE.MeshStandardMaterial({ map: npTex, roughness: 0.32 })
+      );
+      npPlate.position.set(mx, PUMP_Y + 0.04, 0.352);
+      grp.add(npPlate);
+    }
+
+    // 5.3 SUB-ASSEMBLY 3: `shaft_coupling` — Stainless Pump Shaft, Pin-Bush Coupling, Bearing Bracket & Safety Guard (`SH`)
+    function buildShaftCoupling() {
+      const grp = subsystems.shaft_coupling;
+
+      // 1. Coaxial Rotating Group for 316L Stainless Pump Shaft & Flexible Pin-Bush Coupling (Y = 0.72 m)
+      const shaftSpinGrp = new THREE.Group();
+      shaftSpinGrp.position.set(0.0, PUMP_Y, 0.0);
+      grp.add(shaftSpinGrp);
+      coaxialSpinGroups.push(shaftSpinGrp);
+
+      // Precision-Ground 316L Stainless-Steel Pump Shaft (R = 0.055 m, spanning X = -0.05 m to +0.68 m)
+      const pumpShaft = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.055, 0.055, 0.76, 32),
+        matStainlessSteel
+      );
+      pumpShaft.rotation.z = Math.PI / 2;
+      pumpShaft.position.set(0.32, 0.0, 0.0);
+      pumpShaft.castShadow = true;
+      shaftSpinGrp.add(pumpShaft);
+
+      // Hardened Chrome-Oxide Shaft Sleeve through Mechanical Seal Region (X = +0.42 m to +0.58 m)
+      const shaftSleeve = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.064, 0.064, 0.18, 32),
+        matSealGoldBrass
+      );
+      shaftSleeve.rotation.z = Math.PI / 2;
+      shaftSleeve.position.set(0.49, 0.0, 0.0);
+      shaftSpinGrp.add(shaftSleeve);
+
+      // Flexible Elastomeric Pin-and-Bush Shaft Coupling at X = -0.05 m
+      // Driver Half (X = -0.095 m) & Driven Half (X = -0.005 m)
+      [-0.095, -0.005].forEach((xHalf) => {
+        const cFlange = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.135, 0.135, 0.038, 32),
+          matStainlessSteel
+        );
+        cFlange.rotation.z = Math.PI / 2;
+        cFlange.position.set(xHalf, 0.0, 0.0);
+        cFlange.castShadow = true;
+        shaftSpinGrp.add(cFlange);
+
+        const cHub = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.082, 0.082, 0.065, 28),
+          matStainlessSteel
+        );
+        cHub.rotation.z = Math.PI / 2;
+        cHub.position.set(xHalf + (xHalf < -0.05 ? -0.03 : 0.03), 0.0, 0.0);
+        shaftSpinGrp.add(cHub);
+      });
+
+      // 8 Brass Coupling Drive Pins & Black Nitrile Elastomer Buffer Bushes around R = 0.102 m
+      for (let p = 0; p < 8; p++) {
+        const ang = (p / 8) * Math.PI * 2;
+        const py = Math.sin(ang) * 0.102;
+        const pz = Math.cos(ang) * 0.102;
+
+        const pin = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.011, 0.011, 0.12, 14),
+          matSealGoldBrass
+        );
+        pin.rotation.z = Math.PI / 2;
+        pin.position.set(-0.05, py, pz);
+        shaftSpinGrp.add(pin);
+
+        const bush = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.020, 0.020, 0.048, 16),
+          matSiliconCarbideDark
+        );
+        bush.rotation.z = Math.PI / 2;
+        bush.position.set(-0.05, py, pz);
+        shaftSpinGrp.add(bush);
+      }
+
+      // 2. Heavy-Duty Cast-Iron Bearing Bracket Pedestal at X = +0.25 m (Stationary)
+      const brgBarrel = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.145, 0.155, 0.34, 32),
+        matBearingBracketIron
+      );
+      brgBarrel.rotation.z = Math.PI / 2;
+      brgBarrel.position.set(0.25, PUMP_Y, 0.0);
+      brgBarrel.castShadow = true;
+      grp.add(brgBarrel);
+
+      // 4 Radial Cooling Ribs on Bearing Housing
+      for (let r = -1; r <= 1; r++) {
+        const ribRing = new THREE.Mesh(
+          new THREE.TorusGeometry(0.155, 0.010, 10, 32),
+          matBearingBracketIron
+        );
+        ribRing.rotation.y = Math.PI / 2;
+        ribRing.position.set(0.25 + r * 0.08, PUMP_Y, 0.0);
+        grp.add(ribRing);
+      }
+
+      // Forward & Aft Brass Labyrinth Bearing Isolator Seals (X = +0.08 m and +0.42 m)
+      [0.08, 0.42].forEach((xLab) => {
+        const isolator = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.095, 0.095, 0.025, 24),
+          matSealGoldBrass
+        );
+        isolator.rotation.z = Math.PI / 2;
+        isolator.position.set(xLab, PUMP_Y, 0.0);
+        grp.add(isolator);
+      });
+
+      // Bearing Bracket Support Pedestal Leg bolted to Skid at X = +0.25 m (Y = 0.34 to 0.60 m)
+      const supportWeb = new THREE.Mesh(
+        new THREE.BoxGeometry(0.22, 0.28, 0.28),
+        matBearingBracketIron
+      );
+      supportWeb.position.set(0.25, 0.48, 0.0);
+      supportWeb.castShadow = true;
+      grp.add(supportWeb);
+
+      const supportFoot = new THREE.Mesh(
+        new THREE.BoxGeometry(0.26, 0.04, 0.46),
+        matBearingBracketIron
+      );
+      supportFoot.position.set(0.25, 0.36, 0.0);
+      grp.add(supportFoot);
+
+      // Bullseye Oil Level Sight Glass & Constant-Level Glass Oiler Bottle on Front (+Z) of Bearing Bracket
+      const sightBezel = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.028, 0.028, 0.024, 20),
+        matSealGoldBrass
+      );
+      sightBezel.rotation.x = Math.PI / 2;
+      sightBezel.position.set(0.20, PUMP_Y - 0.04, 0.155);
+      grp.add(sightBezel);
+
+      // Constant-Level Oiler Arm & Transparent Amber Oil Reservoir Bottle
+      const oilerStem = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.010, 0.010, 0.12, 12),
+        matSealGoldBrass
+      );
+      oilerStem.rotation.x = Math.PI / 2;
+      oilerStem.position.set(0.31, PUMP_Y - 0.06, 0.18);
+      grp.add(oilerStem);
+
+      const oilerBottle = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.036, 0.032, 0.11, 20),
+        matOilerGlass
+      );
+      oilerBottle.position.set(0.31, PUMP_Y + 0.01, 0.23);
+      grp.add(oilerBottle);
+
+      const oilerCap = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.038, 0.038, 0.016, 20),
+        matSealGoldBrass
+      );
+      oilerCap.position.set(0.31, PUMP_Y + 0.07, 0.23);
+      grp.add(oilerCap);
+
+      // 3. Removable Perforated Safety-Yellow Steel Coupling Guard (`0xeab308` at X = -0.05 m)
+      safetyGuardMeshGroup = new THREE.Group();
+      grp.add(safetyGuardMeshGroup);
+
+      const guardArch = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.185, 0.185, 0.22, 32, 1, true, -Math.PI * 0.15, Math.PI * 1.3),
+        matSafetyYellowGuard
+      );
+      guardArch.rotation.z = Math.PI / 2;
+      guardArch.position.set(-0.05, PUMP_Y, 0.0);
+      guardArch.castShadow = true;
+      safetyGuardMeshGroup.add(guardArch);
+      cutawayMeshes.push(guardArch);
+
+      [-0.18, 0.18].forEach((zLeg) => {
+        const guardLeg = new THREE.Mesh(
+          new THREE.BoxGeometry(0.18, 0.36, 0.016),
+          matSafetyYellowGuard
+        );
+        guardLeg.position.set(-0.05, 0.52, zLeg);
+        safetyGuardMeshGroup.add(guardLeg);
+        cutawayMeshes.push(guardLeg);
+      });
+    }
+
+    // 5.4 SUB-ASSEMBLY 4: `mechanical_seal` — Cartridge Mechanical Shaft Seal & Stuffing Box Cover (`SL`)
+    function buildMechanicalSeal() {
+      const grp = subsystems.mechanical_seal;
+      const sx = 0.48; // Positioned at X = +0.48 m, Y = 0.72 m
+
+      // 1. Rear Casing Stuffing-Box Cover Plate (R = 0.36 m, Cast NAB Bronze)
+      const backplate = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.355, 0.355, 0.042, 40),
+        matNabBronze
+      );
+      backplate.rotation.z = Math.PI / 2;
+      backplate.position.set(sx + 0.04, PUMP_Y, 0.0);
+      backplate.castShadow = true;
+      grp.add(backplate);
+
+      // Stuffing Box Seal Chamber Barrel (R = 0.14 m) with Finned Cooling Jacket
+      const stuffingBarrel = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.135, 0.145, 0.12, 32),
+        matNabBronze
+      );
+      stuffingBarrel.rotation.z = Math.PI / 2;
+      stuffingBarrel.position.set(sx - 0.01, PUMP_Y, 0.0);
+      grp.add(stuffingBarrel);
+
+      // 2. Cartridge Mechanical Shaft Seal Assembly (SiC / Tungsten-Carbide Faces & Wave Spring)
+      // Gold/Brass Gland Follower Plate (#d4af37) with 4 Stainless Tightening Studs
+      const glandFollower = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.128, 0.128, 0.028, 28),
+        matSealGoldBrass
+      );
+      glandFollower.rotation.z = Math.PI / 2;
+      glandFollower.position.set(sx - 0.065, PUMP_Y, 0.0);
+      glandFollower.castShadow = true;
+      grp.add(glandFollower);
+
+      for (let s = 0; s < 4; s++) {
+        const ang = (s / 4) * Math.PI * 2 + Math.PI / 4;
+        const stud = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.009, 0.009, 0.11, 12),
+          matStainlessSteel
+        );
+        stud.rotation.z = Math.PI / 2;
+        stud.position.set(sx - 0.04, PUMP_Y + Math.sin(ang) * 0.105, Math.cos(ang) * 0.105);
+        grp.add(stud);
+
+        const nut = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.016, 0.016, 0.018, 6),
+          matStainlessSteel
+        );
+        nut.rotation.z = Math.PI / 2;
+        nut.position.set(sx - 0.088, PUMP_Y + Math.sin(ang) * 0.105, Math.cos(ang) * 0.105);
+        grp.add(nut);
+      }
+
+      // Stationary & Rotating Silicon-Carbide / Tungsten-Carbide Seal Rings (`0x1e242b`)
+      [-0.02, 0.01].forEach((xRing) => {
+        const sicRing = new THREE.Mesh(
+          new THREE.TorusGeometry(0.074, 0.015, 16, 32),
+          matSiliconCarbideDark
+        );
+        sicRing.rotation.y = Math.PI / 2;
+        sicRing.position.set(sx + xRing, PUMP_Y, 0.0);
+        grp.add(sicRing);
+      });
+
+      // Stainless Wave-Spring Compression Collar
+      const waveCollar = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.086, 0.086, 0.036, 24),
+        matStainlessSteel
+      );
+      waveCollar.rotation.z = Math.PI / 2;
+      waveCollar.position.set(sx + 0.035, PUMP_Y, 0.0);
+      grp.add(waveCollar);
+
+      // 3. Braided Copper API Plan 11 Seal-Flush Cooling Line from Discharge Throat to Seal Gland
+      const flushCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(0.64, 1.08, 0.12),
+        new THREE.Vector3(0.55, 1.06, 0.22),
+        new THREE.Vector3(0.44, 0.94, 0.20),
+        new THREE.Vector3(sx - 0.06, PUMP_Y + 0.115, 0.04)
+      ]);
+      const flushTube = new THREE.Mesh(
+        new THREE.TubeGeometry(flushCurve, 28, 0.009, 12, false),
+        matCopperFlushTube
+      );
+      flushTube.castShadow = true;
+      grp.add(flushTube);
+
+      // Inline Brass Restriction Orifice Union on Seal-Flush Line
+      const orificeUnion = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.018, 0.018, 0.042, 6),
+        matSealGoldBrass
+      );
+      orificeUnion.position.set(0.49, 1.00, 0.21);
+      orificeUnion.rotation.z = 0.65;
+      grp.add(orificeUnion);
+    }
+
+    // 5.5 SUB-ASSEMBLY 5: `impeller` — Enclosed Backward-Curved Bronze Centrifugal Impeller (`IM`)
+    function buildImpeller() {
+      const grp = subsystems.impeller;
+      const ix = 0.68; // Concentrically inside volute at X = +0.68 m, Y = 0.72 m
+
+      // Concentric Rotating Impeller Group at Y = 0.72 m (Spins around X axis with zero wobble!)
+      const impSpinGrp = new THREE.Group();
+      impSpinGrp.position.set(ix, PUMP_Y, 0.0);
+      grp.add(impSpinGrp);
+      coaxialSpinGroups.push(impSpinGrp);
+
+      // 1. Rear Shroud Disc (R = 0.28 m, Cast Nickel-Aluminum-Bronze `0xc88a32`)
+      const rearShroud = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.28, 0.28, 0.018, 44),
+        matImpellerPolishedBronze
+      );
+      rearShroud.rotation.z = Math.PI / 2;
+      rearShroud.position.set(-0.055, 0.0, 0.0);
+      rearShroud.castShadow = true;
+      impSpinGrp.add(rearShroud);
+
+      // 2. Central Keyed Impeller Hub Bore & Streamlined Locked Nose Cap Nut
+      const centerHub = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.075, 0.095, 0.13, 32),
+        matNabBronze
+      );
+      centerHub.rotation.z = Math.PI / 2;
+      centerHub.position.set(0.0, 0.0, 0.0);
+      impSpinGrp.add(centerHub);
+
+      // Hexagonal / Conical Impeller Nose Cap Nut (`+X` suction eye side)
+      const noseNutHex = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.052, 0.062, 0.04, 6),
+        matSealGoldBrass
+      );
+      noseNutHex.rotation.z = Math.PI / 2;
+      noseNutHex.position.set(0.082, 0.0, 0.0);
+      impSpinGrp.add(noseNutHex);
+
+      const noseCone = new THREE.Mesh(
+        new THREE.ConeGeometry(0.052, 0.055, 24),
+        matImpellerPolishedBronze
+      );
+      noseCone.rotation.z = -Math.PI / 2;
+      noseCone.position.set(0.125, 0.0, 0.0);
+      impSpinGrp.add(noseCone);
+
+      // 3. 6 Sculpted 3D Backward-Curved Logarithmic Spiral Hydrodynamic Vanes between Shrouds
+      for (let v = 0; v < 6; v++) {
+        const baseAngle = (v / 6) * Math.PI * 2;
+        const vanePts = [];
+        for (let s = 0; s <= 12; s++) {
+          const u = s / 12;
+          const r = 0.105 + u * 0.170; // Radial span from eye R=0.105m to tip R=0.275m
+          const sweepAng = baseAngle - u * 1.18; // Backward-curved logarithmic spiral sweep
+          vanePts.push(new THREE.Vector3(0.0, Math.sin(sweepAng) * r, Math.cos(sweepAng) * r));
+        }
+        const vaneCurve = new THREE.CatmullRomCurve3(vanePts);
+        // Build thick hydrofoil vane ribbon along curve across axial width X = -0.045 to +0.045 m
+        for (let ax = -2; ax <= 2; ax++) {
+          const vaneTube = new THREE.Mesh(
+            new THREE.TubeGeometry(vaneCurve, 20, 0.011, 8, false),
+            matImpellerPolishedBronze
+          );
+          vaneTube.position.x = ax * 0.018;
+          vaneTube.castShadow = true;
+          impSpinGrp.add(vaneTube);
+        }
+      }
+
+      // 4. Front Shroud Ring with True Hollow Suction Eye Aperture (Outer R = 0.28 m, Eye R = 0.135 m)
+      const frontShroudShape = new THREE.Shape();
+      frontShroudShape.absarc(0, 0, 0.28, 0, Math.PI * 2, false);
+      const eyeHole = new THREE.Path();
+      eyeHole.absarc(0, 0, 0.135, 0, Math.PI * 2, true);
+      frontShroudShape.holes.push(eyeHole);
+
+      const frontShroudGeo = new THREE.ExtrudeGeometry(frontShroudShape, {
+        depth: 0.016,
+        bevelEnabled: true,
+        bevelThickness: 0.004,
+        bevelSize: 0.004,
+        curveSegments: 40
+      });
+      frontShroudGeo.rotateY(Math.PI / 2);
+      const frontShroudMesh = new THREE.Mesh(frontShroudGeo, matImpellerPolishedBronze);
+      frontShroudMesh.position.set(0.046, 0.0, 0.0);
+      frontShroudMesh.castShadow = true;
+      impSpinGrp.add(frontShroudMesh);
+
+      // Replaceable Front & Rear Bronze Casing Wear Rings
+      const frontWearRing = new THREE.Mesh(
+        new THREE.TorusGeometry(0.142, 0.012, 12, 36),
+        matSealGoldBrass
+      );
+      frontWearRing.rotation.y = Math.PI / 2;
+      frontWearRing.position.set(0.072, 0.0, 0.0);
+      impSpinGrp.add(frontWearRing);
+    }
+
+    // 5.6 SUB-ASSEMBLY 6: `volute_casing` — Spiral Cast-Bronze Volute Casing (`VC`)
+    function buildVoluteCasing() {
+      const grp = subsystems.volute_casing;
+      const vx = 0.68; // Centered at X = +0.68 m, Y = 0.72 m
+
+      // 1. Expanding Logarithmic Spiral Volute Scroll Casing (`0xc88a32`)
+      // Built from 32 progressively expanding torus/sphere segments wrapping 360° around X = +0.68 m
+      for (let i = 0; i <= 32; i++) {
+        const u = i / 32;
+        const theta = u * Math.PI * 2; // 0 to 2π around the impeller
+        const rScroll = 0.255 + u * 0.115; // Expanding spiral centerline radius
+        const rCross = 0.088 + u * 0.095;  // Expanding cross-sectional throat radius
+
+        const segY = PUMP_Y - Math.cos(theta) * rScroll;
+        const segZ = Math.sin(theta) * rScroll;
+
+        const scrollSeg = new THREE.Mesh(
+          new THREE.SphereGeometry(rCross, 24, 20),
+          matNabBronze
+        );
+        scrollSeg.scale.set(1.18, 1.0, 1.0);
+        scrollSeg.position.set(vx, segY, segZ);
+        scrollSeg.castShadow = true;
+        scrollSeg.receiveShadow = true;
+        grp.add(scrollSeg);
+        cutawayMeshes.push(scrollSeg);
+      }
+
+      // Vertical Tangential Volute Discharge Throat Chimneys rising to Y = 1.12 m
+      for (let t = 0; t < 6; t++) {
+        const ty = PUMP_Y + 0.12 + t * 0.055;
+        const throatSeg = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.135, 0.155 - t * 0.004, 0.08, 28),
+          matNabBronze
+        );
+        throatSeg.position.set(vx, ty, 0.0);
+        throatSeg.castShadow = true;
+        grp.add(throatSeg);
+        cutawayMeshes.push(throatSeg);
+      }
+
+      // 2. Front Suction Cover Flange & Rear Stuffing-Box Casing Ring with 16 Perimeter Flange Bolts
+      const rearCasingFlange = new THREE.Mesh(
+        new THREE.TorusGeometry(0.355, 0.026, 14, 40),
+        matNabBronze
+      );
+      rearCasingFlange.rotation.y = Math.PI / 2;
+      rearCasingFlange.position.set(vx - 0.14, PUMP_Y, 0.0);
+      grp.add(rearCasingFlange);
+      cutawayMeshes.push(rearCasingFlange);
+
+      const frontCasingFlange = new THREE.Mesh(
+        new THREE.TorusGeometry(0.285, 0.024, 14, 40),
+        matNabBronze
+      );
+      frontCasingFlange.rotation.y = Math.PI / 2;
+      frontCasingFlange.position.set(vx + 0.14, PUMP_Y, 0.0);
+      grp.add(frontCasingFlange);
+      cutawayMeshes.push(frontCasingFlange);
+
+      // 16 Perimeter Stainless Hex Casing Flange Bolts & Nuts around Rear & Front Casing Rings
+      for (let b = 0; b < 16; b++) {
+        const ang = (b / 16) * Math.PI * 2;
+        const by = PUMP_Y + Math.sin(ang) * 0.355;
+        const bz = Math.cos(ang) * 0.355;
+
+        const bolt = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.011, 0.011, 0.075, 6),
+          matStainlessSteel
+        );
+        bolt.rotation.z = Math.PI / 2;
+        bolt.position.set(vx - 0.14, by, bz);
+        grp.add(bolt);
+      }
+
+      // 3. Heavy Cast-Bronze Volute Pedestal Support Foot bolted to Skid at X = +0.65 m (Y = 0.32 to 0.48 m)
+      const casingFootWeb = new THREE.Mesh(
+        new THREE.BoxGeometry(0.24, 0.18, 0.44),
+        matNabBronze
+      );
+      casingFootWeb.position.set(vx - 0.02, 0.40, 0.0);
+      casingFootWeb.castShadow = true;
+      grp.add(casingFootWeb);
+
+      const casingSolePlate = new THREE.Mesh(
+        new THREE.BoxGeometry(0.28, 0.036, 0.54),
+        matNabBronze
+      );
+      casingSolePlate.position.set(vx - 0.02, 0.33, 0.0);
+      grp.add(casingSolePlate);
+
+      // Bottom Casing Drain Plug & Petcock + Top Air-Release Vent Cock
+      const casingDrain = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.018, 0.018, 0.07, 6),
+        matSealGoldBrass
+      );
+      casingDrain.rotation.x = Math.PI / 2;
+      casingDrain.position.set(vx, 0.38, 0.28);
+      grp.add(casingDrain);
+
+      const airVentCock = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.014, 0.014, 0.06, 12),
+        matSealGoldBrass
+      );
+      airVentCock.position.set(vx - 0.08, PUMP_Y + 0.38, -0.18);
+      grp.add(airVentCock);
+    }
+
+    // 5.7 SUB-ASSEMBLY 7: `suction_discharge` — End-Suction & Top-Discharge Marine Flanged Nozzles (`SD`)
+    function buildSuctionDischarge() {
+      const grp = subsystems.suction_discharge;
+      flowStreamBeads.length = 0;
+
+      // 1. Axial End-Suction Reducer Spool & DIN/JIS 8-Bolt Marine Flange (`X = +1.05 m, Y = 0.72 m`)
+      const suctionSpool = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.155, 0.225, 0.26, 36),
+        matNabBronze
+      );
+      suctionSpool.rotation.z = Math.PI / 2;
+      suctionSpool.position.set(0.95, PUMP_Y, 0.0);
+      suctionSpool.castShadow = true;
+      grp.add(suctionSpool);
+
+      // Machined Stainless/Bronze DIN End-Suction Flange Face at X = +1.08 m with Hollow Bore
+      const sucFlangeShape = new THREE.Shape();
+      sucFlangeShape.absarc(0, 0, 0.245, 0, Math.PI * 2, false);
+      const sucBore = new THREE.Path();
+      sucBore.absarc(0, 0, 0.135, 0, Math.PI * 2, true);
+      sucFlangeShape.holes.push(sucBore);
+
+      const sucFlangeGeo = new THREE.ExtrudeGeometry(sucFlangeShape, { depth: 0.034, bevelEnabled: false, curveSegments: 36 });
+      sucFlangeGeo.rotateY(Math.PI / 2);
+      const sucFlangeMesh = new THREE.Mesh(sucFlangeGeo, matStainlessSteel);
+      sucFlangeMesh.position.set(1.06, PUMP_Y, 0.0);
+      sucFlangeMesh.castShadow = true;
+      grp.add(sucFlangeMesh);
+
+      // 8 Suction Flange Bolts & Nuts around R = 0.20 m
+      for (let b = 0; b < 8; b++) {
+        const ang = (b / 8) * Math.PI * 2;
+        const bolt = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.013, 0.013, 0.075, 6),
+          matStainlessSteel
+        );
+        bolt.rotation.z = Math.PI / 2;
+        bolt.position.set(1.06, PUMP_Y + Math.sin(ang) * 0.20, Math.cos(ang) * 0.20);
+        grp.add(bolt);
+      }
+
+      // Compound Vacuum/Pressure Suction Gauge (-1 to +3 bar) mounted on Suction Spool at X = +0.96 m
+      const sucGaugeStem = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.012, 0.012, 0.11, 12),
+        matSealGoldBrass
+      );
+      sucGaugeStem.position.set(0.96, PUMP_Y + 0.21, 0.0);
+      grp.add(sucGaugeStem);
+
+      const sucGaugeCase = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.068, 0.068, 0.032, 28),
+        matSealGoldBrass
+      );
+      sucGaugeCase.rotation.x = Math.PI / 2;
+      sucGaugeCase.position.set(0.96, PUMP_Y + 0.31, 0.0);
+      grp.add(sucGaugeCase);
+
+      const sucDialFace = new THREE.Mesh(
+        new THREE.CircleGeometry(0.060, 28),
+        new THREE.MeshBasicMaterial({ map: suctionDialTex })
+      );
+      sucDialFace.position.set(0.96, PUMP_Y + 0.31, 0.018);
+      grp.add(sucDialFace);
+
+      suctionNeedleGroup = new THREE.Group();
+      suctionNeedleGroup.position.set(0.96, PUMP_Y + 0.31, 0.020);
+      grp.add(suctionNeedleGroup);
+      const sucNeedle = new THREE.Mesh(
+        new THREE.BoxGeometry(0.006, 0.044, 0.002),
+        new THREE.MeshBasicMaterial({ color: 0x0284c7 })
+      );
+      sucNeedle.position.y = 0.016;
+      suctionNeedleGroup.add(sucNeedle);
+
+      // 2. Vertical Top-Discharge Throat & 12-Bolt High-Pressure Flange (`X = +0.68 m, Y = 1.25 m`)
+      const dischargeSpool = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.125, 0.142, 0.22, 36),
+        matNabBronze
+      );
+      dischargeSpool.position.set(0.68, 1.18, 0.0);
+      dischargeSpool.castShadow = true;
+      grp.add(dischargeSpool);
+
+      // Bronze Non-Return Check-Valve Boss & Hinge Pin on Discharge Throat
+      const checkBoss = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.038, 0.038, 0.30, 18),
+        matNabBronze
+      );
+      checkBoss.rotation.x = Math.PI / 2;
+      checkBoss.position.set(0.68, 1.15, 0.0);
+      grp.add(checkBoss);
+
+      // 12-Bolt High-Pressure DIN PN16 Top-Discharge Flange at Y = 1.29 m with Hollow Bore
+      const disFlangeShape = new THREE.Shape();
+      disFlangeShape.absarc(0, 0, 0.23, 0, Math.PI * 2, false);
+      const disBore = new THREE.Path();
+      disBore.absarc(0, 0, 0.115, 0, Math.PI * 2, true);
+      disFlangeShape.holes.push(disBore);
+
+      const disFlangeGeo = new THREE.ExtrudeGeometry(disFlangeShape, { depth: 0.036, bevelEnabled: false, curveSegments: 36 });
+      disFlangeGeo.rotateX(Math.PI / 2);
+      const disFlangeMesh = new THREE.Mesh(disFlangeGeo, matStainlessSteel);
+      disFlangeMesh.position.set(0.68, 1.31, 0.0);
+      disFlangeMesh.castShadow = true;
+      grp.add(disFlangeMesh);
+
+      for (let b = 0; b < 12; b++) {
+        const ang = (b / 12) * Math.PI * 2;
+        const bolt = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.012, 0.012, 0.075, 6),
+          matStainlessSteel
+        );
+        bolt.position.set(0.68 + Math.cos(ang) * 0.19, 1.29, Math.sin(ang) * 0.19);
+        grp.add(bolt);
+      }
+
+      // Glycerin-Filled High-Pressure Discharge Gauge (0–16 bar) on Coiled Brass Pigtail Siphon Tube
+      const pigtailPts = [
+        new THREE.Vector3(0.68, 1.20, 0.13),
+        new THREE.Vector3(0.68, 1.20, 0.22),
+        new THREE.Vector3(0.64, 1.26, 0.24),
+        new THREE.Vector3(0.68, 1.32, 0.22),
+        new THREE.Vector3(0.72, 1.26, 0.20),
+        new THREE.Vector3(0.68, 1.22, 0.22),
+        new THREE.Vector3(0.68, 1.38, 0.22)
+      ];
+      const pigtailCurve = new THREE.CatmullRomCurve3(pigtailPts);
+      const pigtailMesh = new THREE.Mesh(
+        new THREE.TubeGeometry(pigtailCurve, 32, 0.008, 10, false),
+        matSealGoldBrass
+      );
+      grp.add(pigtailMesh);
+
+      const disGaugeCase = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.072, 0.072, 0.034, 28),
+        matSealGoldBrass
+      );
+      disGaugeCase.rotation.x = Math.PI / 2;
+      disGaugeCase.position.set(0.68, 1.44, 0.22);
+      grp.add(disGaugeCase);
+
+      const disDialFace = new THREE.Mesh(
+        new THREE.CircleGeometry(0.064, 28),
+        new THREE.MeshBasicMaterial({ map: dischargeDialTex })
+      );
+      disDialFace.position.set(0.68, 1.44, 0.238);
+      grp.add(disDialFace);
+
+      dischargeNeedleGroup = new THREE.Group();
+      dischargeNeedleGroup.position.set(0.68, 1.44, 0.240);
+      grp.add(dischargeNeedleGroup);
+      const disNeedle = new THREE.Mesh(
+        new THREE.BoxGeometry(0.006, 0.048, 0.002),
+        new THREE.MeshBasicMaterial({ color: 0xdc2626 })
+      );
+      disNeedle.position.y = 0.018;
+      dischargeNeedleGroup.add(disNeedle);
+
+      // 3. Internal Seawater Suction-to-Volute-to-Discharge Streamline Flow Tracer Beads
+      const swFlowCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(1.18, PUMP_Y, 0.0),
+        new THREE.Vector3(0.72, PUMP_Y, 0.0),
+        new THREE.Vector3(0.68, PUMP_Y - 0.22, 0.14),
+        new THREE.Vector3(0.68, PUMP_Y + 0.05, -0.26),
+        new THREE.Vector3(0.68, 1.38, 0.0)
+      ]);
+      for (let f = 0; f < 10; f++) {
+        const bead = new THREE.Mesh(
+          new THREE.SphereGeometry(0.020, 12, 12),
+          new THREE.MeshBasicMaterial({ color: 0x0ea5e9 })
+        );
+        grp.add(bead);
+        flowStreamBeads.push({ mesh: bead, curve: swFlowCurve, t: f / 10 });
+      }
+    }
+
+    buildPumpSkid();
+    buildDriveMotor();
+    buildShaftCoupling();
+    buildMechanicalSeal();
+    buildImpeller();
+    buildVoluteCasing();
+    buildSuctionDischarge();
+
+    /* =====================================================================
+       6. NATIVE-COLOR GHOST-OPACITY ISOLATION & EXPLODE CENTERLINES
+       ===================================================================== */
+    const explodeGuideLines = [];
+
+    function prepareSubsystemMaterials() {
+      for (const key in subsystems) {
+        const grp = subsystems[key];
+        const origCloneMap = new Map();
+        const ghostCloneMap = new Map();
+
+        grp.traverse((obj) => {
+          if (obj.isMesh && obj.material) {
+            if (!origCloneMap.has(obj.material)) {
+              const origClone = obj.material.clone();
+              const ghostClone = origClone.clone();
+              ghostClone.transparent = true;
+              ghostClone.opacity = 0.14;
+              ghostClone.depthWrite = false;
+              origCloneMap.set(obj.material, origClone);
+              ghostCloneMap.set(obj.material, ghostClone);
+            }
+            obj.userData.origMaterial = origCloneMap.get(obj.material);
+            obj.userData.ghostMaterial = ghostCloneMap.get(obj.material);
+            obj.userData.partId = key;
+            obj.userData.subsystemKey = key;
+            obj.material = obj.userData.origMaterial;
+          }
+        });
+      }
+    }
+
+    function buildExplodeGuidelines() {
+      const lineMat = new THREE.LineDashedMaterial({
+        color: 0xd97706,
+        dashSize: 0.07,
+        gapSize: 0.04,
+        transparent: true,
+        opacity: 0.0
+      });
+      const anchors = {
+        drive_motor:       new THREE.Vector3(-0.60, PUMP_Y, 0.00),
+        shaft_coupling:    new THREE.Vector3( 0.12, PUMP_Y, 0.00),
+        mechanical_seal:   new THREE.Vector3( 0.48, PUMP_Y, 0.00),
+        impeller:          new THREE.Vector3( 0.68, PUMP_Y, 0.00),
+        volute_casing:     new THREE.Vector3( 0.68, PUMP_Y, 0.00),
+        suction_discharge: new THREE.Vector3( 0.88, PUMP_Y + 0.18, 0.00)
+      };
+      for (const key in anchors) {
+        const pts = [anchors[key].clone(), anchors[key].clone()];
+        const geo = new THREE.BufferGeometry().setFromPoints(pts);
+        const line = new THREE.Line(geo, lineMat.clone());
+        line.computeLineDistances();
+        scene.add(line);
+        explodeGuideLines.push({ key, line, base: anchors[key], vec: explodeVectors[key] });
+      }
+    }
+
+    prepareSubsystemMaterials();
+    buildExplodeGuidelines();
+
+    function warmShaders() {
+      try {
+        renderer.compile(scene, camera);
+        cutawayMeshes.forEach(m => { m.material = matVoluteXrayGlass; });
+        renderer.compile(scene, camera);
+        cutawayMeshes.forEach(m => { m.material = m.userData.origMaterial; });
+      } catch (e) {
+        console.warn('Warmup notice:', e);
+      }
+    }
+    warmShaders();
+
+    /* =====================================================================
+       7. CENTRIFUGAL PUMP AFFINITY LAWS & 440 V MOTOR TELEMETRY MODEL
+       ===================================================================== */
+    const state = {
+      rpmOrder: 1760.0,         // Default 1,760 RPM rated speed (0 to 1,800 RPM)
+      liveRpm: 1760.0,
+      valveTrimPct: 100.0,      // Discharge valve opening % of BEP (25% to 120%)
+      shaftAngle: 0.0,          // Coaxial rotation angle around X axis (rad)
+      guardFitted: true,
+      fireMainMode: false,      // Sea Water Cooling (8.5 bar) vs Fire Main High-Pressure Mode
+      autoRotateOrbit: false,
+      explodeFactor: 0.0,
+      targetExplodeFactor: 0.0,
+      cutawayGlass: true,       // Start with X-Ray Volute ON so spinning bronze impeller is visible!
+      labelsVisible: true,
+      showGraphs: true,
+      activeSubsystem: null,
+      time: 0,
+      autoTourActive: false,
+      idleTimer: 0,
+      tourStep: 0,
+      tourStepTimer: 0
+    };
+
+    function computePumpHydraulics(rpmVal) {
+      const nRatio = rpmVal / 1760.0;
+      const vRatio = state.valveTrimPct / 100.0;
+
+      // Affinity Law 1: Volumetric Flow Q(n) = 180 m³/h * (n / 1760) * valveTrim
+      const qRated = 180.0;
+      const flowM3h = qRated * nRatio * vRatio;
+
+      // Affinity Law 2: Total Dynamic Head H(Q, n) = H_shutoff * (n/n0)^2 - k * Q^2
+      // At n = 1760 RPM & Q = 180 m³/h (vRatio = 1.0): H = 108 * 1^2 - 23 * 1^2 = 85.0 mLC (8.5 bar)
+      const hShutoff = 108.0 * Math.pow(nRatio, 2);
+      const headDrop = 23.0 * Math.pow(nRatio * vRatio, 2);
+      const headMlc = rpmVal > 5 ? Math.max(2.0, hShutoff - headDrop) : 0.0;
+      const dischargeBar = headMlc * 0.1005; // Seawater 1025 kg/m³: 85.0 mLC ≈ 8.54 bar
+
+      // Suction Pressure (+0.35 bar flooded sea-chest static head minus velocity drawdown)
+      const suctionBar = 0.48 - 0.13 * Math.pow(flowM3h / 180.0, 2);
+
+      // Pump Efficiency η_p (peaks at 81.4% at vRatio = 1.0 BEP)
+      const effPump = rpmVal > 50
+        ? Math.max(0.25, 0.814 * (1.0 - 0.42 * Math.pow(vRatio - 1.0, 2)))
+        : 0.0;
+
+      // Hydraulic Power & Shaft Brake Power (kW)
+      const pHydKw = (1025.0 * 9.81 * flowM3h * headMlc) / 3600000.0;
+      const pNoLoadKw = 4.2 * Math.pow(nRatio, 2.2);
+      const pBrakeKw = rpmVal > 10 ? pNoLoadKw + (effPump > 0.05 ? pHydKw / (effPump * 0.665) : 0.0) : 0.0;
+
+      // 440 V 3-Phase 60 Hz Motor Line Current (118.0 A RMS at 1,760 RPM & 100% BEP)
+      const iNoLoadAmps = rpmVal > 10 ? 26.0 * nRatio : 0.0;
+      const iLoadAmps = 115.1 * Math.pow(nRatio, 2.6) * (0.35 + 0.65 * vRatio);
+      const currentAmps = rpmVal > 10 ? Math.sqrt(Math.pow(iNoLoadAmps, 2) + Math.pow(iLoadAmps, 2)) : 0.0;
+
+      // Available Net Positive Suction Head (NPSHa) & Mechanical Seal Face Temp (°C)
+      const npshAvailM = Math.max(2.4, 9.2 - 1.4 * Math.pow(flowM3h / 180.0, 2));
+      const sealTempC = 32.0 + 9.2 * Math.pow(nRatio, 1.5);
+
+      return {
+        nRatio,
+        vRatio,
+        flowM3h,
+        headMlc,
+        dischargeBar,
+        suctionBar,
+        effPump,
+        pHydKw,
+        pBrakeKw,
+        currentAmps,
+        npshAvailM,
+        sealTempC
+      };
+    }
+
+    function showInterlockToast(msg) {
+      const toast = document.getElementById('interlock-toast');
+      const txt = document.getElementById('interlock-msg');
+      txt.textContent = msg;
+      toast.classList.remove('opacity-0', 'translate-y-[-10px]');
+      toast.classList.add('opacity-100', 'translate-y-0');
+      clearTimeout(toast._timeout);
+      toast._timeout = setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-[-10px]');
+      }, 2800);
+    }
+
+    function applyIsolationAndCutaway() {
+      document.getElementById('btn-cutaway-toggle').classList.toggle('active', state.cutawayGlass);
+      document.getElementById('btn-top-xray').classList.toggle('text-orange-700', state.cutawayGlass);
+      document.getElementById('btn-top-xray').classList.toggle('text-slate-600', !state.cutawayGlass);
+
+      for (const key in subsystems) {
+        const grp = subsystems[key];
+        grp.visible = true;
+        const isIsolatedTarget = (state.activeSubsystem === null || state.activeSubsystem === key);
+
+        grp.traverse((obj) => {
+          if (!obj.isMesh || !obj.userData.origMaterial) return;
+          if (obj.material === matOilerGlass) return;
+
+          if (isIsolatedTarget) {
+            if (state.cutawayGlass && cutawayMeshes.includes(obj)) {
+              obj.material = matVoluteXrayGlass;
+            } else {
+              obj.material = obj.userData.origMaterial;
+            }
+          } else {
+            obj.material = obj.userData.ghostMaterial;
+          }
+        });
+      }
+    }
+
+    applyIsolationAndCutaway();
+
+    function selectSubsystem(subKey) {
+      if (state.activeSubsystem === subKey) {
+        state.activeSubsystem = null;
+      } else {
+        state.activeSubsystem = subKey;
+      }
+
+      document.querySelectorAll('.subsystem-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.sub === state.activeSubsystem);
+      });
+
+      calloutItems.forEach((item) => {
+        item.el.classList.toggle('isolated', item.sub === state.activeSubsystem);
+      });
+
+      if (state.activeSubsystem && subsystemMeta[state.activeSubsystem]) {
+        const m = subsystemMeta[state.activeSubsystem];
+        document.getElementById('info-code').textContent = m.code;
+        document.getElementById('info-subsystem').textContent = m.sub;
+        document.getElementById('info-title').textContent = m.title;
+        document.getElementById('info-desc').textContent = m.desc;
+      } else {
+        document.getElementById('info-code').textContent = 'ASSY-00';
+        document.getElementById('info-subsystem').textContent = 'Sea Water & Fire Main Pump Overview';
+        document.getElementById('info-title').textContent = '180 m³/h @ 85 mLC (8.5 bar) Centrifugal Skid';
+        document.getElementById('info-desc').textContent = '440 V, 3-Phase, 60 Hz, 75 kW TEFC squirrel-cage induction motor driving an enclosed 6-vane Nickel-Aluminum-Bronze impeller inside a spiral bronze volute casing with Plan 11 cartridge mechanical seal flush.';
+      }
+
+      applyIsolationAndCutaway();
+    }
+
+    /* =====================================================================
+       8. LEFT & RIGHT DIVIDED CALLOUT COLUMNS WITH LONG SVG LEADER LINES
+       ===================================================================== */
+    // Exact Left (MO, SH, SK) & Right (SD, VC, IM, SL) Column Assignment as Specified
+    const calloutDefs = [
+      // Left Column (MO, SH, SK)
+      { code: 'MO', label: '440 V 75 kW TEFC Drive Motor',     side: 'left',  pos: new THREE.Vector3(-0.60, 0.92,  0.18), sub: 'drive_motor' },
+      { code: 'SH', label: '316L Shaft, Coupling & Guard',     side: 'left',  pos: new THREE.Vector3( 0.15, 0.82,  0.12), sub: 'shaft_coupling' },
+      { code: 'SK', label: 'Fabricated Steel Baseplate Skid',  side: 'left',  pos: new THREE.Vector3(-0.45, 0.14,  0.46), sub: 'pump_skid' },
+      // Right Column (SD, VC, IM, SL)
+      { code: 'SD', label: 'Suction & Discharge Nozzles',      side: 'right', pos: new THREE.Vector3( 0.82, 1.25,  0.10), sub: 'suction_discharge' },
+      { code: 'VC', label: 'Spiral Cast-Bronze Volute Casing', side: 'right', pos: new THREE.Vector3( 0.68, 0.96, -0.18), sub: 'volute_casing' },
+      { code: 'IM', label: 'Enclosed 6-Vane Bronze Impeller',  side: 'right', pos: new THREE.Vector3( 0.72, 0.72,  0.16), sub: 'impeller' },
+      { code: 'SL', label: 'Cartridge Mechanical Shaft Seal',  side: 'right', pos: new THREE.Vector3( 0.48, 0.72,  0.16), sub: 'mechanical_seal' }
+    ];
+
+    const calloutItems = [];
+    calloutDefs.forEach((def) => {
+      const el = document.createElement('div');
+      el.className = 'callout-pill absolute px-2.5 py-1 rounded-lg text-[11px] font-medium whitespace-nowrap flex items-center justify-between gap-1.5 cursor-pointer';
+      el.innerHTML = `<div class="flex items-center gap-1.5 overflow-hidden"><span class="px-1 py-0.5 rounded bg-slate-100 text-slate-500 mono text-[9px] font-semibold shrink-0">${def.code}</span><span class="truncate">${def.label}</span></div><span class="text-slate-400 text-[10px] shrink-0">↗</span>`;
+      el.addEventListener('click', () => {
+        selectSubsystem(def.sub);
+        resetIdleTimer();
+      });
+      calloutsContainer.appendChild(el);
+
+      const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      polyline.setAttribute('fill', 'none');
+      polyline.setAttribute('stroke', '#94a3b8');
+      polyline.setAttribute('stroke-width', '1.2');
+      calloutsSvg.appendChild(polyline);
+
+      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('r', '3.0');
+      dot.setAttribute('fill', '#c88a32');
+      calloutsSvg.appendChild(dot);
+
+      calloutItems.push({ ...def, el, polyline, dot, anchorX: 0, anchorY: 0, y: 0, visible: true });
+    });
+
+    function resolveVerticalSpacing(items, minY, maxY, minGap) {
+      if (items.length === 0) return;
+      items.sort((a, b) => a.y - b.y);
+      items[0].y = Math.max(minY, items[0].y);
+      for (let i = 1; i < items.length; i++) {
+        if (items[i].y - items[i - 1].y < minGap) {
+          items[i].y = items[i - 1].y + minGap;
+        }
+      }
+      const last = items[items.length - 1];
+      if (last.y > maxY) {
+        last.y = maxY;
+        for (let i = items.length - 2; i >= 0; i--) {
+          if (items[i + 1].y - items[i].y < minGap) {
+            items[i].y = Math.max(minY, items[i + 1].y - minGap);
+          }
+        }
+      }
+    }
+
+    function updateCallouts() {
+      if (!state.labelsVisible) {
+        calloutItems.forEach((c) => {
+          c.el.style.display = 'none';
+          c.polyline.style.display = 'none';
+          c.dot.style.display = 'none';
+        });
+        return;
+      }
+
+      const vp = getViewportSize();
+      const leftColX = vp.left + 24;
+      const rightColX = window.innerWidth - 330 - 24 - 204;
+
+      const leftGroup = [];
+      const rightGroup = [];
+      const tempV = new THREE.Vector3();
+
+      calloutItems.forEach((c) => {
+        tempV.copy(c.pos);
+        if (c.sub && explodeVectors[c.sub]) {
+          tempV.addScaledVector(explodeVectors[c.sub], state.explodeFactor);
+        }
+        tempV.project(camera);
+        if (tempV.z > 1.0) {
+          c.visible = false;
+          c.el.style.display = 'none';
+          c.polyline.style.display = 'none';
+          c.dot.style.display = 'none';
+        } else {
+          c.visible = true;
+          c.anchorX = vp.left + (tempV.x * 0.5 + 0.5) * vp.width;
+          c.anchorY = vp.top + (-(tempV.y * 0.5) + 0.5) * vp.height;
+          c.y = c.anchorY;
+          if (c.side === 'left') leftGroup.push(c);
+          else rightGroup.push(c);
+        }
+      });
+
+      resolveVerticalSpacing(leftGroup, 96, window.innerHeight - 76, 42);
+      resolveVerticalSpacing(rightGroup, 96, window.innerHeight - 76, 42);
+
+      calloutItems.forEach((c) => {
+        if (!c.visible) return;
+        const badgeX = c.side === 'left' ? leftColX : rightColX;
+        const badgeEdgeX = c.side === 'left' ? badgeX + 204 : badgeX;
+        const elbowX = c.side === 'left' ? badgeEdgeX + 22 : badgeEdgeX - 22;
+
+        c.el.style.display = 'flex';
+        c.el.style.left = `${badgeX}px`;
+        c.el.style.top = `${c.y - 14}px`;
+
+        const isIsolated = (state.activeSubsystem === c.sub);
+        c.polyline.style.display = 'block';
+        c.polyline.setAttribute('points', `${c.anchorX},${c.anchorY} ${elbowX},${c.y} ${badgeEdgeX},${c.y}`);
+        c.polyline.setAttribute('stroke', isIsolated ? '#ea580c' : '#94a3b8');
+        c.polyline.setAttribute('stroke-width', isIsolated ? '1.8' : '1.2');
+
+        c.dot.style.display = 'block';
+        c.dot.setAttribute('cx', `${c.anchorX}`);
+        c.dot.setAttribute('cy', `${c.anchorY}`);
+      });
+    }
+
+    /* =====================================================================
+       9. KINEMATIC UPDATE LOOP (COAXIAL IMPELLER/SHAFT SPIN & GAUGES)
+       ===================================================================== */
+    function updateKinematics(deltaSec) {
+      state.time += deltaSec;
+      state.explodeFactor += (state.targetExplodeFactor - state.explodeFactor) * 0.12;
+      state.liveRpm += (state.rpmOrder - state.liveRpm) * Math.min(1.0, deltaSec * 6.0);
+
+      const hyd = computePumpHydraulics(state.liveRpm);
+
+      // 1. Coaxial Rotation of Bronze Impeller, 316L Shaft, Pin Coupling & Motor Fan around X-Axis (Zero Wobble!)
+      const visualOmega = (state.liveRpm / 60.0) * Math.PI * 2 * 0.16;
+      state.shaftAngle += visualOmega * deltaSec;
+      coaxialSpinGroups.forEach((spinGrp) => {
+        spinGrp.rotation.x = state.shaftAngle;
+      });
+
+      // 2. Animate Seawater Suction-to-Discharge Streamline Beads
+      const flowSpeed = Math.max(0.0, (hyd.flowM3h / 180.0) * 0.65);
+      flowStreamBeads.forEach((fb) => {
+        fb.t = (fb.t + deltaSec * flowSpeed) % 1.0;
+        fb.curve.getPointAt(fb.t, fb.mesh.position);
+        fb.mesh.visible = state.liveRpm > 20;
+      });
+
+      // 3. Update Suction & Discharge Pressure Gauge Needles
+      if (suctionNeedleGroup) {
+        const sucNorm = THREE.MathUtils.clamp((hyd.suctionBar - (-1.0)) / 4.0, 0, 1);
+        suctionNeedleGroup.rotation.z = THREE.MathUtils.lerp(Math.PI * 0.65, -Math.PI * 0.65, sucNorm);
+      }
+      if (dischargeNeedleGroup) {
+        const disNorm = THREE.MathUtils.clamp(hyd.dischargeBar / 16.0, 0, 1);
+        dischargeNeedleGroup.rotation.z = THREE.MathUtils.lerp(Math.PI * 0.65, -Math.PI * 0.65, disNorm);
+      }
+
+      // 4. Optional Auto-Rotate Camera Orbit
+      if (state.autoRotateOrbit && !isCameraTweening) {
+        const offset = camera.position.clone().sub(controls.target);
+        offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), deltaSec * 0.28);
+        camera.position.copy(controls.target).add(offset);
+      }
+
+      // 5. Apply Non-Touching Subsystem Explosion Offsets & Dashed Centerlines
+      for (const key in subsystems) {
+        const vec = explodeVectors[key];
+        subsystems[key].position.set(
+          vec.x * state.explodeFactor,
+          vec.y * state.explodeFactor,
+          vec.z * state.explodeFactor
+        );
+      }
+
+      explodeGuideLines.forEach((g) => {
+        if (state.explodeFactor > 0.02) {
+          const posArr = g.line.geometry.attributes.position.array;
+          posArr[0] = g.base.x;
+          posArr[1] = g.base.y;
+          posArr[2] = g.base.z;
+          posArr[3] = g.base.x + g.vec.x * state.explodeFactor;
+          posArr[4] = g.base.y + g.vec.y * state.explodeFactor;
+          posArr[5] = g.base.z + g.vec.z * state.explodeFactor;
+          g.line.geometry.attributes.position.needsUpdate = true;
+          g.line.computeLineDistances();
+          g.line.material.opacity = Math.min(0.70, state.explodeFactor * 0.90);
+        } else {
+          g.line.material.opacity = 0.0;
+        }
+      });
+
+      updateHUD(hyd);
+      updateProofValues(hyd);
+      renderGraphs(hyd);
+    }
+
+    /* =====================================================================
+       10. HUD & LIVE 2D TELEMETRY CANVASES
+       ===================================================================== */
+    function updateHUD(h) {
+      document.getElementById('tel-flow').textContent = `${Math.round(h.flowM3h)} m³/h`;
+      document.getElementById('tel-head').textContent = `${h.headMlc.toFixed(1)} mLC · ${h.dischargeBar.toFixed(1)}bar`;
+      document.getElementById('tel-current').textContent = `${Math.round(h.currentAmps)} A @ 440V`;
+      document.getElementById('tel-npsh').textContent = `${h.npshAvailM.toFixed(1)} m · ${Math.round(h.sealTempC)}°C`;
+
+      document.getElementById('val-eff').textContent = `${(h.effPump * 100).toFixed(1)}%`;
+      document.getElementById('val-pbrake').textContent = `${h.pBrakeKw.toFixed(1)} kW`;
+      document.getElementById('val-psuc').textContent = `${h.suctionBar >= 0 ? '+' : ''}${h.suctionBar.toFixed(2)} bar`;
+
+      document.getElementById('hq-live-badge').textContent = `${Math.round(h.flowM3h)} m³/h · ${h.headMlc.toFixed(1)} mLC`;
+      document.getElementById('wave-live-badge').textContent = `${Math.round(h.currentAmps)} A · ${h.dischargeBar.toFixed(2)} bar`;
+
+      const statusTxt = document.getElementById('tel-status-txt');
+      const statusDot = document.getElementById('tel-status-dot');
+      const statusPill = document.getElementById('tel-status-pill');
+
+      if (state.liveRpm < 10) {
+        statusTxt.textContent = 'PUMP STOPPED';
+        statusDot.className = 'w-1.5 h-1.5 rounded-full bg-slate-400';
+        statusPill.className = 'flex items-center gap-1 text-slate-500 font-semibold';
+      } else if (state.fireMainMode) {
+        statusTxt.textContent = `${Math.round(state.liveRpm)} RPM FIRE MAIN`;
+        statusDot.className = 'w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse';
+        statusPill.className = 'flex items-center gap-1 text-rose-600 font-semibold';
+      } else {
+        statusTxt.textContent = `${Math.round(state.liveRpm)} RPM DUTY`;
+        statusDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse';
+        statusPill.className = 'flex items-center gap-1 text-emerald-600 font-semibold';
+      }
+    }
+
+    function updateProofValues(h) {
+      const elRpm = document.getElementById('proof-rpm');
+      if (!elRpm) return;
+      const slipPct = state.liveRpm > 10 ? (((1800 - state.liveRpm) / 1800) * 100).toFixed(1) : '0.0';
+      elRpm.textContent = `${Math.round(state.liveRpm)} RPM · s = ${slipPct}%`;
+      document.getElementById('proof-qh').textContent = `${h.flowM3h.toFixed(1)} m³/h · ${h.headMlc.toFixed(1)} mLC (${h.dischargeBar.toFixed(2)} bar)`;
+      document.getElementById('proof-power').textContent = `P_brake = ${h.pBrakeKw.toFixed(1)} kW · η_p = ${(h.effPump * 100).toFixed(1)}%`;
+      document.getElementById('proof-current').textContent = `${h.currentAmps.toFixed(1)} A RMS @ 440 V AC`;
+      document.getElementById('proof-seal').textContent = `NPSHa = ${h.npshAvailM.toFixed(1)} m · T_seal = ${h.sealTempC.toFixed(1)} °C`;
+    }
+
+    const hqCanvas = document.getElementById('hq-canvas');
+    const hqCtx = hqCanvas.getContext('2d');
+    const waveCanvas = document.getElementById('wave-canvas');
+    const waveCtx = waveCanvas.getContext('2d');
+
+    function renderGraphs(h) {
+      if (!state.showGraphs) return;
+
+      // Canvas 1: Centrifugal Pump H-Q Curve (Head mLC vs Flow m³/h) & System Resistance Curve
+      const cw = hqCanvas.width;
+      const ch = hqCanvas.height;
+      hqCtx.clearRect(0, 0, cw, ch);
+
+      hqCtx.strokeStyle = 'rgba(203, 213, 225, 0.65)';
+      hqCtx.lineWidth = 1;
+      [0.25, 0.5, 0.75].forEach((r) => {
+        hqCtx.beginPath();
+        hqCtx.moveTo(0, ch * r);
+        hqCtx.lineTo(cw, ch * r);
+        hqCtx.stroke();
+      });
+
+      const padL = 10, padR = 10, padB = 10, padT = 10;
+      const plotW = cw - padL - padR;
+      const plotH = ch - padT - padB;
+
+      // Draw Pump H-Q Characteristic Curve at current speed nRatio in Bronze (#c88a32)
+      hqCtx.strokeStyle = '#c88a32';
+      hqCtx.lineWidth = 2.0;
+      hqCtx.beginPath();
+      for (let i = 0; i <= 60; i++) {
+        const qNorm = (i / 60) * 1.25; // 0 to 225 m³/h
+        const x = padL + (qNorm / 1.25) * plotW;
+        const headVal = Math.max(0, 108.0 * Math.pow(h.nRatio, 2) - 23.0 * Math.pow(qNorm, 2));
+        const y = (ch - padB) - (headVal / 120.0) * plotH;
+        if (i === 0) hqCtx.moveTo(x, y);
+        else hqCtx.lineTo(x, y);
+      }
+      hqCtx.stroke();
+
+      // Draw System Resistance Parabolic Curve in Sky Blue (#0284c7)
+      hqCtx.strokeStyle = '#0284c7';
+      hqCtx.lineWidth = 1.6;
+      hqCtx.beginPath();
+      for (let i = 0; i <= 60; i++) {
+        const qNorm = (i / 60) * 1.25;
+        const x = padL + (qNorm / 1.25) * plotW;
+        const sysH = 12.0 + (73.0 / Math.max(0.15, Math.pow(h.vRatio, 2))) * Math.pow(qNorm, 2);
+        const y = (ch - padB) - (Math.min(120.0, sysH) / 120.0) * plotH;
+        if (i === 0) hqCtx.moveTo(x, y);
+        else hqCtx.lineTo(x, y);
+      }
+      hqCtx.stroke();
+
+      // Live Operating Point Dot (Q, H)
+      const opX = padL + Math.min(1.0, (h.flowM3h / 225.0)) * plotW;
+      const opY = (ch - padB) - Math.min(1.0, (h.headMlc / 120.0)) * plotH;
+      hqCtx.fillStyle = '#ea580c';
+      hqCtx.beginPath();
+      hqCtx.arc(opX, opY, 4.0, 0, Math.PI * 2);
+      hqCtx.fill();
+
+      // Canvas 2: 440 V 3-Phase 60 Hz Motor Current Waveforms & Discharge Pressure Line
+      const ww = waveCanvas.width;
+      const wh = waveCanvas.height;
+      waveCtx.clearRect(0, 0, ww, wh);
+
+      const midY = wh * 0.5;
+      waveCtx.strokeStyle = 'rgba(203, 213, 225, 0.65)';
+      waveCtx.lineWidth = 1;
+      waveCtx.beginPath();
+      waveCtx.moveTo(0, midY);
+      waveCtx.lineTo(ww, midY);
+      waveCtx.stroke();
+
+      if (state.liveRpm > 10) {
+        const amp = Math.max(4.0, (wh * 0.38) * Math.min(1.0, h.currentAmps / 140.0));
+        const phaseCols = ['#dc2626', '#eab308', '#2563eb'];
+        phaseCols.forEach((col, pIdx) => {
+          const shift = (pIdx * 2 * Math.PI) / 3;
+          waveCtx.strokeStyle = col;
+          waveCtx.lineWidth = 1.5;
+          waveCtx.beginPath();
+          for (let x = 0; x < ww; x++) {
+            const theta = (x / ww) * Math.PI * 4.0 + state.time * 10.0 * h.nRatio - shift;
+            const y = midY - Math.sin(theta) * amp;
+            if (x === 0) waveCtx.moveTo(x, y);
+            else waveCtx.lineTo(x, y);
+          }
+          waveCtx.stroke();
+        });
+      }
+    }
+
+    /* =====================================================================
+       11. CAMERA PRESETS & UI EVENT BINDINGS
+       ===================================================================== */
+    function moveCameraTo(presetKey) {
+      const presets = {
+        hero:      { pos: new THREE.Vector3(-2.80, 2.00, 3.60), target: new THREE.Vector3( 0.00, 0.75, 0.00) },
+        impeller:  { pos: new THREE.Vector3( 1.25, 1.12, 1.85), target: new THREE.Vector3( 0.68, 0.72, 0.00) },
+        seal:      { pos: new THREE.Vector3( 0.35, 1.15, 1.75), target: new THREE.Vector3( 0.48, 0.75, 0.00) },
+        coupling:  { pos: new THREE.Vector3( 0.05, 1.18, 1.85), target: new THREE.Vector3( 0.12, 0.72, 0.00) },
+        nozzles:   { pos: new THREE.Vector3( 1.85, 1.45, 2.05), target: new THREE.Vector3( 0.85, 1.02, 0.00) },
+        motor:     { pos: new THREE.Vector3(-1.45, 1.35, 2.15), target: new THREE.Vector3(-0.60, 0.76, 0.00) },
+        skid:      { pos: new THREE.Vector3( 0.00, 1.35, 2.95), target: new THREE.Vector3( 0.00, 0.32, 0.00) }
+      };
+
+      const p = presets[presetKey] || presets.hero;
+      camTargetPos.copy(p.pos);
+      camTargetLook.copy(p.target);
+      isCameraTweening = true;
+
+      const sel = document.getElementById('select-camera-preset');
+      if (sel && sel.value !== presetKey) sel.value = presetKey;
+    }
+
+    function updateCameraTween() {
+      if (isCameraTweening) {
+        camera.position.lerp(camTargetPos, 0.10);
+        controls.target.lerp(camTargetLook, 0.10);
+        if (camera.position.distanceTo(camTargetPos) < 0.03 && controls.target.distanceTo(camTargetLook) < 0.03) {
+          isCameraTweening = false;
+        }
+      }
+      controls.update();
+    }
+
+    function toggleCutaway() {
+      state.cutawayGlass = !state.cutawayGlass;
+      applyIsolationAndCutaway();
+    }
+
+    function toggleLabels() {
+      state.labelsVisible = !state.labelsVisible;
+      document.getElementById('btn-labels-toggle').classList.toggle('active', state.labelsVisible);
+      document.getElementById('btn-top-labels').classList.toggle('text-orange-700', state.labelsVisible);
+      document.getElementById('btn-top-labels').classList.toggle('text-slate-600', !state.labelsVisible);
+    }
+
+    // Bind Subsystem Isolation Buttons
+    document.querySelectorAll('.subsystem-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        selectSubsystem(btn.dataset.sub);
+        resetIdleTimer();
+      });
+    });
+
+    document.getElementById('btn-show-all').addEventListener('click', () => {
+      state.activeSubsystem = null;
+      selectSubsystem(null);
+      resetIdleTimer();
+    });
+
+    document.getElementById('select-camera-preset').addEventListener('change', (e) => {
+      moveCameraTo(e.target.value);
+      resetIdleTimer();
+    });
+
+    document.getElementById('btn-cutaway-toggle').addEventListener('click', () => {
+      toggleCutaway();
+      resetIdleTimer();
+    });
+    document.getElementById('btn-top-xray').addEventListener('click', () => {
+      toggleCutaway();
+      resetIdleTimer();
+    });
+
+    document.getElementById('btn-labels-toggle').addEventListener('click', () => {
+      toggleLabels();
+      resetIdleTimer();
+    });
+    document.getElementById('btn-top-labels').addEventListener('click', () => {
+      toggleLabels();
+      resetIdleTimer();
+    });
+
+    document.getElementById('btn-top-autorotate').addEventListener('click', () => {
+      state.autoRotateOrbit = !state.autoRotateOrbit;
+      document.getElementById('btn-top-autorotate').classList.toggle('text-orange-700', state.autoRotateOrbit);
+      document.getElementById('btn-top-autorotate').classList.toggle('font-semibold', state.autoRotateOrbit);
+      resetIdleTimer();
+    });
+
+    function toggleTelemetryDrawer() {
+      state.showGraphs = !state.showGraphs;
+      document.getElementById('btn-graphs-toggle').classList.toggle('active', state.showGraphs);
+      document.getElementById('telemetry-drawer').classList.toggle('hidden', !state.showGraphs);
+    }
+    document.getElementById('btn-graphs-toggle').addEventListener('click', toggleTelemetryDrawer);
+    document.getElementById('btn-collapse-telemetry').addEventListener('click', toggleTelemetryDrawer);
+
+    // Master Input 1: Impeller Speed Slider (0 to 1800 RPM, default 1760 RPM)
+    const sliderRpm = document.getElementById('slider-rpm');
+    function setImpellerSpeed(rpm) {
+      state.rpmOrder = rpm;
+      sliderRpm.value = rpm;
+      const freqHz = Math.round((rpm / 1760.0) * 60);
+      document.getElementById('val-rpm-slider').textContent = `${Math.round(rpm).toLocaleString()} RPM (${freqHz} Hz)`;
+      resetIdleTimer();
+    }
+    sliderRpm.addEventListener('input', (e) => setImpellerSpeed(parseFloat(e.target.value)));
+    document.getElementById('btn-rpm-stop').addEventListener('click', () => setImpellerSpeed(0));
+    document.getElementById('btn-rpm-slow').addEventListener('click', () => setImpellerSpeed(900));
+    document.getElementById('btn-rpm-rated').addEventListener('click', () => setImpellerSpeed(1760));
+    document.getElementById('btn-rpm-sync').addEventListener('click', () => setImpellerSpeed(1800));
+
+    // Master Input 2: Discharge Valve Trim Slider (25% to 120% BEP)
+    const sliderValve = document.getElementById('slider-valve');
+    sliderValve.addEventListener('input', (e) => {
+      state.valveTrimPct = parseFloat(e.target.value);
+      const hyd = computePumpHydraulics(state.rpmOrder);
+      document.getElementById('val-valve-slider').textContent = `${Math.round(state.valveTrimPct)}% BEP (${Math.round(hyd.flowM3h)} m³/h)`;
+      resetIdleTimer();
+    });
+
+    // Safety Coupling Guard Toggle Button (with Machinery Safety Interlock when running)
+    document.getElementById('btn-toggle-guard').addEventListener('click', () => {
+      if (state.guardFitted && state.liveRpm > 100) {
+        showInterlockToast('Machinery Safety Interlock: Reduce pump speed to 0 RPM STOP before removing the perforated yellow coupling guard!');
+        return;
+      }
+      state.guardFitted = !state.guardFitted;
+      if (safetyGuardMeshGroup) {
+        safetyGuardMeshGroup.visible = state.guardFitted;
+      }
+      document.getElementById('lbl-guard-btn').textContent = state.guardFitted
+        ? '🛡️ GUARD: FITTED'
+        : '🛡️ GUARD: REMOVED';
+      resetIdleTimer();
+    });
+
+    // Sea Water Cooling vs SOLAS Fire Main Service Mode Toggle
+    document.getElementById('btn-service-mode').addEventListener('click', () => {
+      state.fireMainMode = !state.fireMainMode;
+      const btn = document.getElementById('btn-service-mode');
+      const lbl = document.getElementById('lbl-service-btn');
+      if (state.fireMainMode) {
+        btn.className = 'px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-semibold shadow-sm transition flex items-center justify-center gap-1';
+        lbl.textContent = '🚒 FIRE MAIN (9.2bar)';
+        state.valveTrimPct = 82;
+        sliderValve.value = 82;
+        setImpellerSpeed(1800);
+        showInterlockToast('SOLAS II-2 Fire Main Mode Active: Discharge lined up to Fire Hydrant Header (151 m³/h @ 9.2 bar).');
+      } else {
+        btn.className = 'px-2.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-[11px] font-semibold shadow-sm transition flex items-center justify-center gap-1';
+        lbl.textContent = '🌊 SW COOLING';
+        state.valveTrimPct = 100;
+        sliderValve.value = 100;
+        setImpellerSpeed(1760);
+      }
+      const hyd = computePumpHydraulics(state.rpmOrder);
+      document.getElementById('val-valve-slider').textContent = `${Math.round(state.valveTrimPct)}% BEP (${Math.round(hyd.flowM3h)} m³/h)`;
+      resetIdleTimer();
+    });
+
+    // Explode Assembly Slider (with Smooth Wide-Framing Camera Pullback so all 7 separated assemblies fit cleanly)
+    const sliderExplode = document.getElementById('slider-explode');
+    function setExplodeTarget(factor) {
+      state.targetExplodeFactor = factor;
+      sliderExplode.value = Math.round(factor * 100);
+      document.getElementById('val-explode').textContent = `${Math.round(factor * 100)}%`;
+
+      camTargetPos.set(
+        -2.80 - factor * 1.45,
+         2.00 + factor * 1.35,
+         3.60 + factor * 2.85
+      );
+      camTargetLook.set(factor * 0.25, 0.75 + factor * 0.35, 0.0);
+      isCameraTweening = true;
+      resetIdleTimer();
+    }
+
+    sliderExplode.addEventListener('input', (e) => {
+      setExplodeTarget(parseFloat(e.target.value) / 100);
+    });
+    document.getElementById('btn-assemble-all').addEventListener('click', () => {
+      setExplodeTarget(0.0);
+    });
+    document.getElementById('btn-explode-all').addEventListener('click', () => {
+      setExplodeTarget(1.0);
+    });
+
+    // Reset View & Zoom Buttons
+    function resetViewAll() {
+      state.autoRotateOrbit = false;
+      document.getElementById('btn-top-autorotate').classList.remove('text-orange-700', 'font-semibold');
+      moveCameraTo('hero');
+      state.targetExplodeFactor = 0.0;
+      sliderExplode.value = 0;
+      document.getElementById('val-explode').textContent = '0%';
+      state.activeSubsystem = null;
+      selectSubsystem(null);
+      resetIdleTimer();
+    }
+    document.getElementById('btn-reset-cam').addEventListener('click', resetViewAll);
+    document.getElementById('btn-top-reset').addEventListener('click', resetViewAll);
+
+    document.getElementById('btn-zoom-in').addEventListener('click', () => {
+      isCameraTweening = false;
+      const offset = camera.position.clone().sub(controls.target);
+      offset.setLength(Math.max(controls.minDistance, offset.length() * 0.88));
+      camera.position.copy(controls.target).add(offset);
+      controls.update();
+    });
+
+    document.getElementById('btn-zoom-out').addEventListener('click', () => {
+      isCameraTweening = false;
+      const offset = camera.position.clone().sub(controls.target);
+      offset.setLength(Math.min(controls.maxDistance, offset.length() * 1.14));
+      camera.position.copy(controls.target).add(offset);
+      controls.update();
+    });
+
+    // Proof Modal
+    const modalProof = document.getElementById('modal-proof');
+    document.getElementById('btn-math-proof').addEventListener('click', () => {
+      modalProof.classList.remove('hidden');
+      resetIdleTimer();
+    });
+    document.getElementById('btn-close-proof').addEventListener('click', () => {
+      modalProof.classList.add('hidden');
+    });
+
+    // 3D Raycaster Click Inspection
+    const downPos = { x: 0, y: 0 };
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      downPos.x = e.clientX;
+      downPos.y = e.clientY;
+    });
+    renderer.domElement.addEventListener('pointerup', (e) => {
+      if (Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y) > 5) return;
+      const vp = getViewportSize();
+      mouseVec.x = ((e.clientX - vp.left) / vp.width) * 2 - 1;
+      mouseVec.y = -((e.clientY - vp.top) / vp.height) * 2 + 1;
+      raycaster.setFromCamera(mouseVec, camera);
+      const meshes = [];
+      for (const k in subsystems) {
+        subsystems[k].traverse((o) => { if (o.isMesh && o.userData.subsystemKey) meshes.push(o); });
+      }
+      const hits = raycaster.intersectObjects(meshes, false);
+      if (hits.length > 0) {
+        const subKey = hits[0].object.userData.subsystemKey;
+        if (subKey && subsystemMeta[subKey]) {
+          selectSubsystem(subKey);
+        }
+      }
+    });
+
+    /* =====================================================================
+       12. AUTO-TOUR SYSTEM
+       ===================================================================== */
+    function resetIdleTimer() {
+      state.idleTimer = 0;
+    }
+
+    function startAutoTour() {
+      state.autoTourActive = true;
+      state.tourStep = 0;
+      state.tourStepTimer = 0;
+      document.getElementById('tour-pointer').classList.remove('hidden');
+    }
+
+    function stopAutoTour() {
+      state.autoTourActive = false;
+      document.getElementById('tour-pointer').classList.add('hidden');
+      state.activeSubsystem = null;
+      selectSubsystem(null);
+    }
+
+    document.getElementById('btn-start-tour').addEventListener('click', () => {
+      if (state.autoTourActive) stopAutoTour(); else startAutoTour();
+    });
+
+    ['pointerdown', 'wheel', 'keydown', 'touchstart'].forEach((evt) => {
+      window.addEventListener(evt, () => {
+        if (state.autoTourActive) stopAutoTour();
+        resetIdleTimer();
+      }, { passive: true });
+    });
+
+    function updateAutoTour(deltaSec) {
+      if (!state.autoTourActive) {
+        state.idleTimer += deltaSec;
+        if (state.idleTimer >= 28.0) {
+          startAutoTour();
+        }
+        return;
+      }
+
+      state.tourStepTimer += deltaSec;
+      const tourKeys = ['pump_skid', 'drive_motor', 'shaft_coupling', 'mechanical_seal', 'impeller', 'volute_casing', 'suction_discharge'];
+      const tourCams = ['skid', 'motor', 'coupling', 'seal', 'impeller', 'impeller', 'nozzles'];
+
+      if (state.tourStepTimer >= 4.2) {
+        state.tourStepTimer = 0;
+        state.tourStep = (state.tourStep + 1) % (tourKeys.length + 1);
+
+        if (state.tourStep < tourKeys.length) {
+          const key = tourKeys[state.tourStep];
+          state.activeSubsystem = null;
+          selectSubsystem(key);
+          moveCameraTo(tourCams[state.tourStep]);
+
+          const btn = document.querySelector(`.subsystem-btn[data-sub="${key}"]`);
+          const ptr = document.getElementById('tour-pointer');
+          if (btn && ptr) {
+            const rect = btn.getBoundingClientRect();
+            ptr.style.left = `${rect.right + 16}px`;
+            ptr.style.top = `${rect.top + rect.height / 2}px`;
+            document.getElementById('tour-tag').textContent = subsystemMeta[key].title;
+          }
+        } else {
+          state.activeSubsystem = null;
+          selectSubsystem(null);
+          setExplodeTarget(0.90);
+          setTimeout(() => {
+            setExplodeTarget(0.0);
+          }, 2600);
+        }
+      }
+    }
+
+    /* =====================================================================
+       13. MAIN ANIMATION LOOP & RESPONSIVE RESIZE
+       ===================================================================== */
+    let lastTimestamp = performance.now();
+
+    function animate(timestamp) {
+      requestAnimationFrame(animate);
+      const deltaSec = Math.min((timestamp - lastTimestamp) / 1000, 0.1);
+      lastTimestamp = timestamp;
+
+      updateKinematics(deltaSec);
+      updateCameraTween();
+      updateCallouts();
+      updateAutoTour(deltaSec);
+
+      renderer.render(scene, camera);
+    }
+
+    function onWindowResize() {
+      const vp = getViewportSize();
+      camera.aspect = vp.width / vp.height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(vp.width, vp.height);
+    }
+    window.addEventListener('resize', onWindowResize);
+
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

@@ -1,0 +1,2786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOLAS Ch. II-1 440 V / 220 V Emergency Switchboard (ESB) &amp; Interlocked ACBs — 3D Digital Twin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #f2f4f7;
+      color: #0f172a;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    #canvas-container {
+      position: absolute;
+      inset: 0;
+      left: 280px;
+      width: calc(100% - 280px);
+      height: 100%;
+      z-index: 1;
+      background: radial-gradient(circle at 50% 45%, #f8fafc 0%, #eaedf1 100%);
+    }
+    @media (max-width: 768px) {
+      #canvas-container {
+        left: 0;
+        width: 100%;
+      }
+    }
+    .inspector-card {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 5px;
+      background: #e2e8f0;
+      border-radius: 9999px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: #ea580c;
+      cursor: pointer;
+      border: 2px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+      transition: transform 0.15s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+    .subsystem-btn {
+      transition: all 0.16s ease;
+    }
+    .subsystem-btn:hover {
+      background: #f8fafc;
+    }
+    .subsystem-btn.active {
+      background: #fff7ed !important;
+      border-color: #fdba74 !important;
+    }
+    .subsystem-btn.active .sub-badge {
+      background: #ea580c !important;
+      color: #ffffff !important;
+    }
+    .view-pill {
+      transition: all 0.15s ease;
+      background: #f8fafc;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+    }
+    .view-pill.active {
+      background: #faeee7;
+      color: #9a3412;
+      border-color: #f3c6b1;
+      font-weight: 500;
+    }
+    /* Auto Tour Pointer */
+    #tour-pointer {
+      pointer-events: none;
+      position: absolute;
+      z-index: 99;
+      transform: translate(-50%, -50%);
+      transition: top 1.0s cubic-bezier(0.2, 0.8, 0.2, 1), left 1.0s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    /* Divided Left/Right Callout Pills */
+    .callout-pill {
+      pointer-events: auto;
+      transition: opacity 0.18s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid rgba(203, 213, 225, 0.92);
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+      color: #334155;
+      width: 204px;
+    }
+    .callout-pill:hover {
+      border-color: #94a3b8;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+      color: #0f172a;
+    }
+    .callout-pill.isolated {
+      border-color: #ea580c;
+      background: #fff7ed;
+      color: #9a3412;
+    }
+    #interlock-toast {
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  </style>
+</head>
+<body class="w-screen h-screen relative select-none overflow-hidden">
+
+  <!-- 3D WebGL Canvas Host -->
+  <div id="canvas-container"></div>
+
+  <!-- Divided Left/Right Callouts & Long SVG Leader Lines Container -->
+  <div id="callouts-container" class="pointer-events-none fixed inset-0 z-10 overflow-hidden">
+    <svg id="callouts-svg" class="w-full h-full block"></svg>
+  </div>
+
+  <!-- Auto Tour Cursor Indicator -->
+  <div id="tour-pointer" class="hidden">
+    <div class="relative flex items-center gap-2">
+      <div class="w-5 h-5 rounded-full bg-orange-500/60 border-2 border-white shadow animate-ping absolute"></div>
+      <div class="w-5 h-5 rounded-full bg-orange-600 border-2 border-white shadow-md flex items-center justify-center text-[8px] text-white font-bold">●</div>
+      <div id="tour-tag" class="px-2.5 py-1 rounded-md bg-white/95 border border-slate-300 text-slate-800 text-[11px] font-medium whitespace-nowrap shadow-md">Tour Active</div>
+    </div>
+  </div>
+
+  <!-- Floating Status / SOLAS Ch. II-1 Reg. 42/43 Interlock Toast -->
+  <div id="interlock-toast" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 translate-y-[-10px] transition duration-200">
+    <div class="px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-300 shadow-xl flex items-center gap-2.5 text-amber-900 text-xs font-semibold">
+      <svg class="w-4 h-4 text-amber-600 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+      <span id="interlock-msg">SOLAS Ch. II-1 Reg. 43 Emergency Switchboard Bus-Tie / EDG Interlock</span>
+    </div>
+  </div>
+
+  <!-- Left Minimal Equipment Sidebar (280px wide) -->
+  <aside class="fixed top-0 left-0 bottom-0 w-[280px] bg-white border-r border-slate-200/90 z-20 flex flex-col justify-between p-4 overflow-y-auto">
+    <div>
+      <!-- Top Domain Pill -->
+      <div class="flex items-center justify-between px-2.5 py-2 rounded-lg border border-slate-200/90 bg-slate-50/60 text-xs font-medium text-slate-700 mb-4">
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded bg-red-100 text-red-700 flex items-center justify-center text-[10px] font-bold mono">ES</span>
+          <span>Emergency Power</span>
+        </div>
+        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+
+      <!-- Title & Spec Subtitle -->
+      <div class="px-1 mb-4">
+        <h1 class="text-base font-semibold text-slate-900 tracking-tight leading-snug">SOLAS 440 V / 220 V Emergency Switchboard (ESB)</h1>
+        <p class="text-[11px] text-slate-400 mt-0.5">2-Bay Form 3b · Interlocked Bus-Tie &amp; EDG ACBs · 50kVA 440/220V Tx</p>
+      </div>
+
+      <!-- Equipment Header -->
+      <div class="flex items-center justify-between px-1 mb-2">
+        <span class="text-[11px] font-semibold text-slate-500">Equipment</span>
+        <button id="btn-show-all" class="text-[11px] text-orange-700 hover:text-orange-800 font-medium">Show all</button>
+      </div>
+
+      <!-- 7 Subsystem Isolation Buttons (Native-Color Ghost-Opacity Isolation) -->
+      <div class="flex flex-col gap-1" id="subsystem-buttons">
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="esb_frame">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">EF</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">2-Bay ESB Frame &amp; Canopy</div>
+              <div class="text-[11px] text-slate-400">SOLAS red header · Form 3b cells</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">›</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="esb_doors">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">ED</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">Cutout Doors &amp; Mimic Bus</div>
+              <div class="text-[11px] text-slate-400">Extruded windows · Feeder handles</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">›</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="esb_busbar_440v">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">BA</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">440 V Emergency Copper Bus</div>
+              <div class="text-[11px] text-slate-400">1,200 A L1/L2/L3 · DMC standoffs</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">›</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="esb_busbar_220v">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">BB</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">220 V Bus &amp; 50 kVA Transformer</div>
+              <div class="text-[11px] text-slate-400">440/220V dry Tx · Dual IMDs</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">›</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="interlock_tie_acb">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">TA</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">Interlocked Bus-Tie &amp; EDG ACBs</div>
+              <div class="text-[11px] text-slate-400">Walking-beam link · Drawout ACBs</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">›</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="metering_synchro_panel">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">MP</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">Synchroscope &amp; PMS Controller</div>
+              <div class="text-[11px] text-slate-400">LED synchro · 440V/Hz/kW meters</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">›</span>
+        </button>
+
+        <button class="subsystem-btn group text-left px-2.5 py-2 rounded-xl border border-transparent flex items-center justify-between" data-sub="essential_feeder_mccbs">
+          <div class="flex items-center gap-2.5">
+            <span class="sub-badge w-6 h-6 rounded-md bg-slate-100 text-slate-500 mono text-[10px] font-semibold flex items-center justify-center transition">CW</span>
+            <div>
+              <div class="text-xs font-medium text-slate-800 leading-tight">SOLAS Essential Feeder MCCBs</div>
+              <div class="text-[11px] text-slate-400">6 molded breakers · DIN wiring loom</div>
+            </div>
+          </div>
+          <span class="text-slate-300 group-hover:text-slate-500 text-xs">›</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Bottom 2x2 Nameplate & Live Telemetry Strip -->
+    <div class="pt-3 border-t border-slate-100">
+      <div class="flex items-center justify-between text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-2 px-1">
+        <span>Live Telemetry</span>
+        <span id="tel-status-pill" class="flex items-center gap-1 text-emerald-600 font-semibold">
+          <span id="tel-status-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="tel-status-txt">NORMAL · MSB TIE</span>
+        </span>
+      </div>
+      <div class="grid grid-cols-2 gap-1.5 text-left">
+        <div class="bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1.5">
+          <span class="text-[10px] text-slate-400 block">ESB 440V / 220V</span>
+          <span id="tel-volts" class="text-xs font-semibold mono text-slate-800">440 V · 220 V AC</span>
+        </div>
+        <div class="bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1.5">
+          <span class="text-[10px] text-slate-400 block">Interlock ACBs</span>
+          <span id="tel-acbs" class="text-xs font-semibold mono text-emerald-700">TIE: ON · EDG: OFF</span>
+        </div>
+        <div class="bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1.5">
+          <span class="text-[10px] text-slate-400 block">Essential Load</span>
+          <span id="tel-load" class="text-xs font-semibold mono text-sky-700">184 kW · 288 A</span>
+        </div>
+        <div class="bg-slate-50 border border-slate-200/70 rounded-lg px-2.5 py-1.5">
+          <span class="text-[10px] text-slate-400 block">Earth Insulation</span>
+          <span id="tel-imd" class="text-xs font-semibold mono text-emerald-700">&gt; 5.0 MΩ (OK)</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Top-Left Floating Header & Pill Toolbar -->
+  <div class="fixed top-4 left-[296px] z-20 flex flex-wrap items-center gap-2">
+    <button id="btn-math-proof" class="px-3 py-1.5 rounded-lg inspector-card hover:bg-white text-slate-600 hover:text-slate-900 text-xs font-medium transition flex items-center gap-1.5">
+      <span>SOLAS II-1/43 &amp; ACB Interlock proof</span>
+    </button>
+    <button id="btn-top-reset" class="px-3 py-1.5 rounded-lg inspector-card hover:bg-white text-slate-600 hover:text-slate-900 text-xs font-medium transition">
+      Reset View
+    </button>
+    <button id="btn-top-autorotate" class="px-3 py-1.5 rounded-lg inspector-card hover:bg-white text-slate-600 hover:text-slate-900 text-xs font-medium transition">
+      Auto-Rotate
+    </button>
+    <button id="btn-top-labels" class="px-3 py-1.5 rounded-lg inspector-card hover:bg-white text-orange-700 font-semibold text-xs transition">
+      Toggle Labels
+    </button>
+    <button id="btn-top-xray" class="px-3 py-1.5 rounded-lg inspector-card hover:bg-white text-orange-700 font-semibold text-xs transition">
+      X-Ray Enclosure
+    </button>
+  </div>
+
+  <!-- Right Floating Inspector Card (330px wide) -->
+  <aside class="fixed top-4 right-4 z-20 w-[330px] inspector-card rounded-2xl p-4 flex flex-col gap-3 max-h-[calc(100vh-32px)] overflow-y-auto">
+    <!-- Inspector Top Bar -->
+    <div class="flex items-center justify-between text-slate-500 border-b border-slate-100 pb-2">
+      <div class="flex items-center gap-2 text-xs font-medium text-slate-700">
+        <svg class="w-3.5 h-3.5 text-slate-400" fill="currentColor" viewBox="0 0 16 16">
+          <circle cx="3" cy="3" r="1.4"/><circle cx="8" cy="3" r="1.4"/><circle cx="13" cy="3" r="1.4"/>
+          <circle cx="3" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="13" cy="8" r="1.4"/>
+        </svg>
+        <span>Inspector</span>
+        <span id="info-code" class="text-[10px] mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">ASSY-00</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <button id="btn-start-tour" class="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition" title="Auto-Tour">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        </button>
+        <button id="btn-collapse-telemetry" class="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition" title="Toggle Telemetry Drawer">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Component Title & Description -->
+    <div>
+      <span id="info-subsystem" class="text-[10px] font-semibold uppercase tracking-wider text-orange-700 block mb-0.5">SOLAS Ch. II-1 Reg. 42 &amp; 43 · Emergency Distribution</span>
+      <h2 id="info-title" class="text-sm font-semibold text-slate-900 leading-snug">440 V / 220 V Emergency Switchboard &amp; Interlocked ACBs</h2>
+      <p id="info-desc" class="text-xs text-slate-500 mt-1 leading-relaxed">2-bay Form 3b marine Emergency Switchboard housing mechanically and electrically interlocked Main Bus-Tie and EDG Incomer drawout ACBs, 1,200 A 440 V copper busbars, a 50 kVA 440/220 V step-down transformer, and 6 SOLAS essential feeder MCCBs.</p>
+    </div>
+
+    <!-- View Section (Labels, Cutaway, Telemetry Pills) -->
+    <div>
+      <span class="text-[11px] text-slate-400 font-medium block mb-1.5">View</span>
+      <div class="flex flex-wrap items-center gap-1.5">
+        <button id="btn-labels-toggle" class="view-pill active px-2.5 py-1 rounded-lg text-xs">
+          Labels
+        </button>
+        <button id="btn-cutaway-toggle" class="view-pill active px-2.5 py-1 rounded-lg text-xs">
+          X-Ray Enclosure
+        </button>
+        <button id="btn-graphs-toggle" class="view-pill active px-2.5 py-1 rounded-lg text-xs">
+          Telemetry
+        </button>
+      </div>
+    </div>
+
+    <!-- Explore Equipment / Camera Presets Dropdown -->
+    <div>
+      <label for="select-camera-preset" class="text-[11px] text-slate-400 font-medium block mb-1.5">Explore equipment</label>
+      <div class="relative">
+        <select id="select-camera-preset" class="w-full appearance-none bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium rounded-lg border border-slate-200/90 px-3 py-2 pr-8 outline-none cursor-pointer transition">
+          <option value="hero">Hero 2-Bay Emergency Switchboard 3/4</option>
+          <option value="acbs">Bay 1 · Interlocked Bus-Tie &amp; EDG Drawout ACBs</option>
+          <option value="metering">Upper · Synchroscope, Gauges &amp; PMS Controller</option>
+          <option value="feeders">Bay 2 · 6 SOLAS Essential Feeder MCCBs &amp; Loom</option>
+          <option value="bus440">Rear Upper · 440 V 1,200 A Copper Busbars</option>
+          <option value="tx220">Rear Lower · 50 kVA 440/220 V Transformer &amp; IMDs</option>
+        </select>
+        <svg class="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+    </div>
+
+    <!-- Operational Controls: Transfer Mode Toggle, Essential Load Slider & Explode Assembly -->
+    <div class="space-y-2.5 pt-2 border-t border-slate-100">
+      <!-- Essential Emergency Load Demand Slider (50 kW to 320 kW) -->
+      <div>
+        <div class="flex justify-between items-center text-[11px] mb-1">
+          <span class="text-slate-500 font-medium">Essential Feeder Demand (P_ESB)</span>
+          <span id="val-load-slider" class="mono text-emerald-700 font-semibold">184 kW (288 A @ 440V)</span>
+        </div>
+        <input id="slider-load" type="range" min="45" max="320" value="184" step="5">
+        <div class="flex justify-between text-[9px] text-slate-400 mt-0.5 mono">
+          <button id="btn-load-harbor" class="hover:text-slate-700">65 kW HARBOR</button>
+          <button id="btn-load-sea" class="hover:text-slate-700">184 kW SEA + STEER</button>
+          <button id="btn-load-fire" class="hover:text-slate-700">295 kW + FIRE PUMP</button>
+        </div>
+      </div>
+
+      <!-- 3D Explode Assembly Slider (0% to 100%) -->
+      <div>
+        <div class="flex justify-between items-center text-[11px] mb-1">
+          <span class="text-slate-500 font-medium">Explode Assembly</span>
+          <span id="val-explode" class="mono text-slate-700 font-semibold">0%</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btn-assemble-all" class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 transition">0%</button>
+          <input id="slider-explode" type="range" min="0" max="100" value="0" step="1">
+          <button id="btn-explode-all" class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 transition">100%</button>
+        </div>
+      </div>
+
+      <!-- Primary Normal ↔ Blackout Interlock Transfer Button + Secondary Controls -->
+      <div class="space-y-1.5 pt-0.5">
+        <button id="btn-transfer-mode" class="w-full px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold shadow-sm transition flex items-center justify-center gap-1.5">
+          <span id="lbl-transfer-btn">⚡ MODE: NORMAL (MAIN BUS TIE CLOSED)</span>
+        </button>
+        <div class="grid grid-cols-2 gap-1.5">
+          <button id="btn-sync-check" class="px-2.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-[11px] font-semibold shadow-sm transition flex items-center justify-center gap-1">
+            <span id="lbl-sync-btn">🔄 SYNC CHECK: OFF</span>
+          </button>
+          <button id="btn-toggle-doors" class="px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-800 text-white text-[11px] font-medium shadow-sm transition flex items-center justify-center">
+            <span id="lbl-doors-btn">Open ESB Doors</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Collapsible Live 2D Telemetry Drawer -->
+    <div id="telemetry-drawer" class="space-y-2 pt-2 border-t border-slate-100">
+      <!-- Canvas 1: 3-Phase 440 V / 220 V ESB Bus Waveforms & Return-Transfer Synchroscope Phase Angle -->
+      <div class="bg-slate-50/90 rounded-xl p-2 border border-slate-200/80">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">ESB 3-Phase 440V &amp; 220V Waveforms</span>
+          <span id="wave-live-badge" class="text-[10px] mono font-semibold text-orange-700">60.0 Hz · Δφ = 0.0°</span>
+        </div>
+        <canvas id="wave-canvas" width="280" height="86" class="w-full block rounded bg-white border border-slate-200/60"></canvas>
+        <div class="grid grid-cols-3 gap-1 mt-1 text-center">
+          <div class="bg-white px-1 py-0.5 rounded border border-slate-200/60">
+            <span class="text-[8px] text-slate-400 block">Bus-Tie ACB</span>
+            <span id="val-tie-state" class="text-[10px] font-semibold mono text-emerald-700">CLOSED (I)</span>
+          </div>
+          <div class="bg-white px-1 py-0.5 rounded border border-slate-200/60">
+            <span class="text-[8px] text-slate-400 block">EDG Incomer</span>
+            <span id="val-edg-state" class="text-[10px] font-semibold mono text-slate-500">OPEN (O)</span>
+          </div>
+          <div class="bg-white px-1 py-0.5 rounded border border-slate-200/60">
+            <span class="text-[8px] text-slate-400 block">220V Tx Load</span>
+            <span id="val-tx-load" class="text-[10px] font-semibold mono text-sky-700">34.2 kVA</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Canvas 2: Essential Feeder Load Allocation & Walking-Beam Mechanical Interlock Status -->
+      <div class="bg-slate-50/90 rounded-xl p-2 border border-slate-200/80">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">SOLAS Essential Feeders (kW)</span>
+          <span id="feeder-live-badge" class="text-[10px] mono text-emerald-700 font-semibold">6/6 FEEDERS ONLINE</span>
+        </div>
+        <canvas id="feeder-canvas" width="280" height="54" class="w-full block rounded bg-white border border-slate-200/60"></canvas>
+      </div>
+    </div>
+
+    <!-- Footer Row: Reset View & Zoom Buttons -->
+    <div class="flex items-center gap-1.5 pt-1 border-t border-slate-100">
+      <button id="btn-reset-cam" class="flex-1 py-1.5 px-3 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium border border-slate-200/90 shadow-sm transition text-center">
+        Reset view
+      </button>
+      <button id="btn-zoom-in" class="w-8 h-8 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium border border-slate-200/90 shadow-sm transition flex items-center justify-center" title="Zoom in">+</button>
+      <button id="btn-zoom-out" class="w-8 h-8 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium border border-slate-200/90 shadow-sm transition flex items-center justify-center" title="Zoom out">−</button>
+    </div>
+  </aside>
+
+  <!-- Mathematical Kinematic & SOLAS Ch. II-1 Reg. 42/43 Proof Modal -->
+  <div id="modal-proof" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-2xl rounded-2xl p-6 border border-slate-200 shadow-2xl max-h-[85vh] overflow-y-auto text-slate-700">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-red-600"></span>
+          <h2 class="text-base font-semibold text-slate-900">SOLAS Ch. II-1 Reg. 42/43 Emergency Switchboard &amp; Interlock Proof</h2>
+        </div>
+        <button id="btn-close-proof" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="mt-4 space-y-4 text-xs leading-relaxed">
+        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+          <h4 class="font-semibold text-slate-900 text-sm mb-1">1. SOLAS Ch. II-1 Reg. 43 Automatic Bus-Tie &amp; EDG Interlock Logic</h4>
+          <p class="text-slate-600">Under normal sea/harbor conditions, the Emergency Switchboard (`ESB`) is supplied from the Main Switchboard (`MSB`) via the `440 V Bus-Tie ACB (52-BT)`. Upon loss of Main Bus voltage ($V_{MSB} &lt; 0.85\,V_n$ for $&gt; 3\text{ s}$), `52-BT` automatically trips open, the Emergency Diesel Generator (`EDG`) auto-starts, and `EDG Incomer ACB (52-EDG)` closes onto the dead ESB bus within $\le 45\text{ seconds}$:</p>
+          <div class="mono bg-white p-2.5 rounded-lg my-2 text-slate-800 border border-slate-200">
+            Boolean Mechanical &amp; Electrical Interlock:  (52-BT CLOSED) ∧ (52-EDG CLOSED) = 0  (Unless Sync Check ANSI 25 Active)<br>
+            Walking-Beam Pivot Angle:  θ_beam = +14° (Normal: 52-BT ON)  ↔  θ_beam = -14° (Blackout: 52-EDG ON)
+          </div>
+        </div>
+
+        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+          <h4 class="font-semibold text-slate-900 text-sm mb-1">2. 440 V / 220 V Dual-Bus Power Balance &amp; Essential Feeder Sizing</h4>
+          <p class="text-slate-600">The `440 V` emergency bus supplies heavy 3-phase motor loads (`Emergency Steering Gear`, `Emergency Fire Pump`, `Submersible Bilge Pump`) and feeds a `50 kVA, 440 V / 220 V Δ-Y` dry-type isolation transformer for `220 V` navigation (`Bridge ABT`), `GMDSS 24V Charger`, and `Emergency Lighting`:</p>
+          <div class="mono bg-white p-2.5 rounded-lg my-2 text-slate-800 border border-slate-200">
+            I_ESB,440V = P_ESB / (√3 · 440 V · cosφ) = 184,000 W / (1.732 × 440 × 0.84) = 287.5 A  (Busbar Rating: 1,200 A)<br>
+            440V / 220V IT Earth-Free System: Dual Insulation Monitoring Devices (IMD) alarm at R_iso &lt; 50 kΩ
+          </div>
+        </div>
+
+        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+          <h4 class="font-semibold text-slate-900 text-sm mb-1">3. Live Emergency Switchboard Verification Table</h4>
+          <table class="w-full text-left mono text-[11px] mt-2">
+            <thead>
+              <tr class="text-slate-400 border-b border-slate-200">
+                <th class="py-1">Parameter</th>
+                <th>Formula / Standard</th>
+                <th>Current Live Value</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200/70">
+              <tr><td class="py-1.5 text-slate-600">Operating Supply Mode</td><td>SOLAS Ch. II-1 Reg. 42/43</td><td id="proof-mode" class="text-orange-600 font-semibold">NORMAL · MSB BUS-TIE CLOSED</td></tr>
+              <tr><td class="py-1.5 text-slate-600">Interlocked ACBs (52-BT / 52-EDG)</td><td>Walking-Beam + Bowden Cable</td><td id="proof-acbs" class="text-emerald-600 font-semibold">52-BT: CLOSED (I) · 52-EDG: OPEN (O)</td></tr>
+              <tr><td class="py-1.5 text-slate-600">440 V Bus Current &amp; Active Load</td><td>I = P / (√3 · 440 · 0.84)</td><td id="proof-load" class="text-sky-600 font-semibold">184 kW · 288 A @ 440 V 60.0 Hz</td></tr>
+              <tr><td class="py-1.5 text-slate-600">220 V Step-Down Tx &amp; IMDs</td><td>50 kVA Δ-Y · IEC 61557-8</td><td id="proof-tx" class="text-indigo-600 font-semibold">220 V AC (34.2 kVA) · R_iso &gt; 5.0 MΩ</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Three.js Module Script (three@0.160.0) -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+    const container = document.getElementById('canvas-container');
+    const calloutsContainer = document.getElementById('callouts-container');
+    const calloutsSvg = document.getElementById('callouts-svg');
+
+    function getViewportSize() {
+      const rect = container.getBoundingClientRect();
+      return {
+        width: rect.width || (window.innerWidth - 280),
+        height: rect.height || window.innerHeight,
+        left: rect.left || 280,
+        top: rect.top || 0
+      };
+    }
+
+    /* =====================================================================
+       1. SCENE, CAMERA, RENDERER, PMREM ENVIRONMENT & SMOOTH CLAMPED ZOOM
+       ===================================================================== */
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf2f4f7);
+
+    const vp0 = getViewportSize();
+    const camera = new THREE.PerspectiveCamera(35, vp0.width / vp0.height, 0.1, 100);
+
+    let isCameraTweening = false;
+    const camTargetPos = new THREE.Vector3(-2.8, 2.0, 3.8);
+    const camTargetLook = new THREE.Vector3(0.0, 1.05, 0.0);
+    camera.position.copy(camTargetPos);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(vp0.width, vp0.height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    container.appendChild(renderer.domElement);
+
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.copy(camTargetLook);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.enablePan = true;
+    controls.enableZoom = false; // Mandatory custom non-jumping wheel zoom below
+    controls.minDistance = 1.7;
+    controls.maxDistance = 11.0;
+    controls.minAzimuthAngle = -Infinity;
+    controls.maxAzimuthAngle = Infinity;
+    controls.minPolarAngle = 0.05;
+    controls.maxPolarAngle = Math.PI * 0.495;
+    controls.update();
+
+    controls.addEventListener('start', () => {
+      isCameraTweening = false;
+    });
+
+    // Smooth Non-Jumping Wheel Zoom (4.2% per notch, clamped 1.7 m to 11.0 m)
+    renderer.domElement.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const clampedDelta = THREE.MathUtils.clamp(e.deltaY, -100, 100);
+      if (clampedDelta === 0) return;
+      isCameraTweening = false;
+      const zoomFactor = 1 + (clampedDelta > 0 ? 0.042 : -0.042) * (Math.abs(clampedDelta) / 100);
+      const offset = camera.position.clone().sub(controls.target);
+      const newDist = THREE.MathUtils.clamp(offset.length() * zoomFactor, controls.minDistance, controls.maxDistance);
+      offset.setLength(newDist);
+      camera.position.copy(controls.target).add(offset);
+      controls.update();
+    }, { passive: false });
+
+    const raycaster = new THREE.Raycaster();
+    const mouseVec = new THREE.Vector2();
+
+    /* =====================================================================
+       2. UNIFIED LIGHT-STUDIO LIGHTING & TWO-TIER CONCRETE STUDIO PLINTH
+       ===================================================================== */
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xdde2e8, 1.15);
+    scene.add(hemiLight);
+
+    const mainLight = new THREE.DirectionalLight(0xfffefa, 1.35);
+    mainLight.position.set(5.0, 10.5, 6.2);
+    mainLight.castShadow = true;
+    mainLight.shadow.mapSize.width = 2048;
+    mainLight.shadow.mapSize.height = 2048;
+    mainLight.shadow.bias = -0.0003;
+    mainLight.shadow.camera.near = 0.5;
+    mainLight.shadow.camera.far = 28;
+    mainLight.shadow.camera.left = -4.8;
+    mainLight.shadow.camera.right = 4.8;
+    mainLight.shadow.camera.top = 4.8;
+    mainLight.shadow.camera.bottom = -4.8;
+    scene.add(mainLight);
+
+    const fillLight = new THREE.DirectionalLight(0xe8ecf0, 0.85);
+    fillLight.position.set(-5.2, 5.0, -4.5);
+    scene.add(fillLight);
+
+    // Wide Two-Tier Architectural Concrete Studio Plinth (8.4 m × 6.4 m at y = 0.0)
+    const plinthGrp = new THREE.Group();
+    const padGeo = new THREE.BoxGeometry(8.0, 0.06, 6.0);
+    const padMesh = new THREE.Mesh(
+      padGeo,
+      new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.82, metalness: 0.04 })
+    );
+    padMesh.position.set(0, -0.03, 0);
+    padMesh.receiveShadow = true;
+    plinthGrp.add(padMesh);
+
+    const padEdges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(padGeo),
+      new THREE.LineBasicMaterial({ color: 0xdde2e8, transparent: true, opacity: 0.85 })
+    );
+    padEdges.position.copy(padMesh.position);
+    plinthGrp.add(padEdges);
+
+    const curbGeo = new THREE.BoxGeometry(8.4, 0.08, 6.4);
+    const curbMesh = new THREE.Mesh(
+      curbGeo,
+      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.78, metalness: 0.06 })
+    );
+    curbMesh.position.set(0, -0.08, 0);
+    curbMesh.receiveShadow = true;
+    plinthGrp.add(curbMesh);
+
+    const curbEdges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(curbGeo),
+      new THREE.LineBasicMaterial({ color: 0xcbd5e1, transparent: true, opacity: 0.75 })
+    );
+    curbEdges.position.copy(curbMesh.position);
+    plinthGrp.add(curbEdges);
+    scene.add(plinthGrp);
+
+    const groundShadow = new THREE.Mesh(
+      new THREE.PlaneGeometry(32, 32),
+      new THREE.ShadowMaterial({ opacity: 0.14 })
+    );
+    groundShadow.rotation.x = -Math.PI / 2;
+    groundShadow.position.y = 0.001;
+    groundShadow.receiveShadow = true;
+    scene.add(groundShadow);
+
+    /* =====================================================================
+       3. PROCEDURAL TEXTURES (HEADER STRIPE, SYNCHROSCOPE, PMS LCD, GAUGES)
+       ===================================================================== */
+    function createPowderBumpTexture() {
+      const c = document.createElement('canvas');
+      c.width = 128; c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#808080';
+      ctx.fillRect(0, 0, 128, 128);
+      for (let i = 0; i < 1600; i++) {
+        const v = 115 + Math.floor(Math.random() * 30);
+        ctx.fillStyle = `rgb(${v},${v},${v})`;
+        ctx.fillRect(Math.random() * 128, Math.random() * 128, 2, 2);
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(5, 5);
+      return tex;
+    }
+
+    function createSolasRedHeaderTexture() {
+      const c = document.createElement('canvas');
+      c.width = 1024; c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#dc2626';
+      ctx.fillRect(0, 0, 1024, 128);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 5;
+      ctx.strokeRect(8, 8, 1008, 112);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 34px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('440 V / 220 V EMERGENCY SWITCHBOARD — SOLAS CH. II-1', 512, 58);
+
+      ctx.fillStyle = '#fef08a';
+      ctx.font = 'bold 21px JetBrains Mono, monospace';
+      ctx.fillText('BAY 01: MSB BUS-TIE & EDG INCOMER ACBs   ·   BAY 02: 440V / 220V ESSENTIAL FEEDERS', 512, 98);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function createSynchroscopeDialTexture() {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 256;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, 256, 256);
+
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.arc(128, 128, 114, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // 24 Circular Phase LEDs around Synchroscope Ring (12 o'clock = Green SYNC 0°)
+      for (let i = 0; i < 24; i++) {
+        const ang = (i / 24) * Math.PI * 2 - Math.PI / 2;
+        const rx = 128 + Math.cos(ang) * 94;
+        const ry = 128 + Math.sin(ang) * 94;
+        ctx.fillStyle = i === 0 ? '#10b981' : (i === 1 || i === 23 ? '#facc15' : '#ef4444');
+        ctx.beginPath();
+        ctx.arc(rx, ry, i === 0 ? 7 : 4.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 16px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('SYNCHROSCOPE', 128, 82);
+      ctx.fillStyle = '#10b981';
+      ctx.font = 'bold 14px JetBrains Mono, monospace';
+      ctx.fillText('▲ 12:00 SYNC', 128, 56);
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 13px JetBrains Mono, monospace';
+      ctx.fillText('◄ SLOW   FAST ►', 128, 182);
+      ctx.fillText('ANSI 25 · ESB/MSB', 128, 204);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function createSquareMeterTexture(title, valueTxt, unitTxt, maxScale) {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 256;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, 256, 256);
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 12;
+      ctx.strokeRect(6, 6, 244, 244);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 24px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(title, 128, 52);
+
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(128, 165, 86, Math.PI * 1.15, Math.PI * 1.85);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(128, 165);
+      ctx.lineTo(164, 94);
+      ctx.stroke();
+
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(128, 165, 9, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#0284c7';
+      ctx.font = 'bold 24px JetBrains Mono, monospace';
+      ctx.fillText(valueTxt, 128, 214);
+      ctx.fillStyle = '#64748b';
+      ctx.font = 'bold 15px JetBrains Mono, monospace';
+      ctx.fillText(`SCALE: 0 – ${maxScale} ${unitTxt}`, 128, 238);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    const pmsCanvas = document.createElement('canvas');
+    pmsCanvas.width = 512; pmsCanvas.height = 256;
+    const pmsCtx = pmsCanvas.getContext('2d');
+    const pmsScreenTex = new THREE.CanvasTexture(pmsCanvas);
+    pmsScreenTex.colorSpace = THREE.SRGBColorSpace;
+
+    function updatePmsScreenTexture(isBlackout, isSyncActive, loadKw, amps) {
+      pmsCtx.fillStyle = '#0b192c';
+      pmsCtx.fillRect(0, 0, 512, 256);
+      pmsCtx.strokeStyle = '#22d3ee';
+      pmsCtx.lineWidth = 5;
+      pmsCtx.strokeRect(6, 6, 500, 244);
+
+      pmsCtx.fillStyle = isBlackout ? '#dc2626' : '#0284c7';
+      pmsCtx.fillRect(14, 14, 484, 42);
+      pmsCtx.fillStyle = '#ffffff';
+      pmsCtx.font = 'bold 21px JetBrains Mono, monospace';
+      pmsCtx.fillText(
+        isBlackout
+          ? 'SOLAS BLACKOUT · EDG SUPPLY ONLINE (<45s)'
+          : 'ESB AUTO TRANSFER CONTROLLER · NORMAL MSB',
+        26, 42
+      );
+
+      pmsCtx.fillStyle = '#22d3ee';
+      pmsCtx.font = 'bold 20px JetBrains Mono, monospace';
+      pmsCtx.fillText(`ESB 440V BUS: 440.0 V   60.0 Hz   ${loadKw} kW`, 24, 92);
+      pmsCtx.fillText(`ESB 220V BUS: 220.0 V   I_LINE:   ${amps} A`, 24, 126);
+
+      pmsCtx.fillStyle = isBlackout ? '#facc15' : '#10b981';
+      pmsCtx.font = 'bold 19px JetBrains Mono, monospace';
+      pmsCtx.fillText(
+        isBlackout
+          ? '52-BT (MAIN TIE): OPEN   |  52-EDG: CLOSED (I)'
+          : '52-BT (MAIN TIE): CLOSED |  52-EDG: STAND-BY (O)',
+        24, 168
+      );
+
+      pmsCtx.fillStyle = '#94a3b8';
+      pmsCtx.font = 'bold 16px JetBrains Mono, monospace';
+      pmsCtx.fillText(
+        isSyncActive
+          ? 'ANSI 25 RETURN-TO-NORMAL SYNCHROSCOPE: ACTIVE'
+          : 'WALKING-BEAM INTERLOCK: ENGAGED · IMD > 5.0 MOhm',
+        24, 210
+      );
+
+      pmsScreenTex.needsUpdate = true;
+    }
+
+    function createFeederLabelTexture(codeStr, titleStr, ratingStr, busStr) {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 64;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(0, 0, 256, 64);
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(2, 2, 252, 60);
+
+      ctx.fillStyle = busStr === '440V' ? '#dc2626' : '#0284c7';
+      ctx.fillRect(8, 8, 56, 48);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 16px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(codeStr, 36, 30);
+      ctx.font = 'bold 12px JetBrains Mono, monospace';
+      ctx.fillText(busStr, 36, 48);
+
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 15px Inter, sans-serif';
+      ctx.fillText(titleStr, 72, 28);
+      ctx.fillStyle = '#facc15';
+      ctx.font = 'bold 13px JetBrains Mono, monospace';
+      ctx.fillText(ratingStr, 72, 50);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    const powderBump = createPowderBumpTexture();
+    const solasHeaderTex = createSolasRedHeaderTexture();
+    const synchroDialTex = createSynchroscopeDialTexture();
+    const meterVoltTex = createSquareMeterTexture('ESB VOLTS', '440 V', 'V', '500');
+    const meterFreqTex = createSquareMeterTexture('FREQUENCY', '60.0 Hz', 'Hz', '65');
+    const meterKwTex   = createSquareMeterTexture('ESB POWER', '184 kW', 'kW', '400');
+    updatePmsScreenTexture(false, false, 184, 288);
+
+    /* =====================================================================
+       4. PHYSICALLY BASED MATERIAL PALETTE (`MeshStandardMaterial`)
+       ===================================================================== */
+    // 1. Pebble Grey Switchboard Sheet Metal (`0x9aa3ad`): roughness 0.40, metalness 0.36, side: DoubleSide
+    const matPebbleGrey = new THREE.MeshStandardMaterial({
+      color: 0x9aa3ad,
+      roughness: 0.40,
+      metalness: 0.36,
+      bumpMap: powderBump,
+      bumpScale: 0.0014,
+      side: THREE.DoubleSide
+    });
+    // 2. SOLAS Red Header Stripe & Emergency Accents (`0xdc2626`)
+    const matSolasRed = new THREE.MeshStandardMaterial({
+      color: 0xdc2626,
+      roughness: 0.34,
+      metalness: 0.22
+    });
+    // 3. Dark Slate Base Plinth & Internal Partitions (`0x3e4c59`): roughness 0.48, metalness 0.45
+    const matDarkSlate = new THREE.MeshStandardMaterial({
+      color: 0x3e4c59,
+      roughness: 0.48,
+      metalness: 0.45,
+      bumpMap: powderBump,
+      bumpScale: 0.0016,
+      side: THREE.DoubleSide
+    });
+    // 4. Electrolytic Copper 440 V / 220 V Busbars (`0xd97742`): roughness 0.20, metalness 0.88
+    const matCopper = new THREE.MeshStandardMaterial({
+      color: 0xd97742,
+      roughness: 0.20,
+      metalness: 0.88
+    });
+    // 5. Black Thermoset Molded ACB & MCCB Casings (`0x1e242b`): roughness 0.42, metalness 0.25
+    const matThermosetBlack = new THREE.MeshStandardMaterial({
+      color: 0x1e242b,
+      roughness: 0.42,
+      metalness: 0.25
+    });
+    // 6. Clear Polycarbonate Inspection Windows (`0xd8ecff`): transparent, opacity 0.25, depthWrite false
+    const matPolyWindow = new THREE.MeshStandardMaterial({
+      color: 0xd8ecff,
+      roughness: 0.12,
+      metalness: 0.10,
+      transparent: true,
+      opacity: 0.25,
+      depthWrite: false
+    });
+    // Supporting Engineering Materials
+    const matChrome = new THREE.MeshStandardMaterial({
+      color: 0xd8dee4,
+      roughness: 0.18,
+      metalness: 0.86
+    });
+    const matBrass = new THREE.MeshStandardMaterial({
+      color: 0xd4af37,
+      roughness: 0.24,
+      metalness: 0.84
+    });
+    const matDmcInsulator = new THREE.MeshStandardMaterial({
+      color: 0x8c2d26,
+      roughness: 0.28,
+      metalness: 0.08
+    });
+    const matWiringBlue = new THREE.MeshStandardMaterial({
+      color: 0x0284c7,
+      roughness: 0.35,
+      metalness: 0.15
+    });
+    const matPhaseL1 = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.32, metalness: 0.15 });
+    const matPhaseL2 = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.32, metalness: 0.15 });
+    const matPhaseL3 = new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.32, metalness: 0.15 });
+    const matCutawayGlass = new THREE.MeshPhysicalMaterial({
+      color: 0x93c5fd,
+      transparent: true,
+      opacity: 0.22,
+      roughness: 0.08,
+      transmission: 0.84,
+      thickness: 0.15,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+
+    /* =====================================================================
+       5. SEVEN COHESIVE FUNCTIONAL SUB-ASSEMBLIES (`parts` REGISTRY)
+       ===================================================================== */
+    const subsystems = {
+      esb_frame:              new THREE.Group(),
+      esb_doors:              new THREE.Group(),
+      esb_busbar_440v:        new THREE.Group(),
+      esb_busbar_220v:        new THREE.Group(),
+      interlock_tie_acb:      new THREE.Group(),
+      metering_synchro_panel: new THREE.Group(),
+      essential_feeder_mccbs: new THREE.Group()
+    };
+
+    const parts = subsystems;
+
+    for (const key in subsystems) {
+      subsystems[key].userData.partId = key;
+      subsystems[key].userData.subsystemKey = key;
+      scene.add(subsystems[key]);
+    }
+
+    // Non-Overlapping Explode Vectors (Preserving exact directional octants from prompt while guaranteeing 100% spatial separation)
+    const explodeVectors = {
+      esb_frame:              new THREE.Vector3( 0.00,  0.00,  0.00),
+      esb_doors:              new THREE.Vector3( 0.00,  0.00,  1.28),
+      esb_busbar_440v:        new THREE.Vector3(-0.45,  0.65, -0.78),
+      esb_busbar_220v:        new THREE.Vector3( 0.65, -0.12, -0.82),
+      interlock_tie_acb:      new THREE.Vector3(-0.78, -0.05,  0.72),
+      metering_synchro_panel: new THREE.Vector3( 0.00,  0.68,  0.78),
+      essential_feeder_mccbs: new THREE.Vector3( 0.78,  0.12,  0.68)
+    };
+
+    const subsystemMeta = {
+      esb_frame: {
+        code: 'ASSY-EF',
+        sub: '2-Bay Form 3b Marine Enclosure (1,700 × 2,150 × 1,100 mm) & Drip Canopy',
+        title: '2-Bay SOLAS Emergency Switchboard Frame & Drip Canopy',
+        desc: '2-bay marine switchboard enclosure (Bay 1 at X = -0.42 m, Bay 2 at X = +0.42 m) with dark-slate base plinth, top drip-proof overhang canopy, prominent SOLAS red top header nameplate, insulated front handrail bar, and internal Form 3b compartment partitions.'
+      },
+      esb_doors: {
+        code: 'ASSY-ED',
+        sub: 'Hinged Front Cubicle Doors with Extruded Cutout Windows & Mimic Bus',
+        title: 'Hinged Front Doors with Extruded Cutout Windows & Mimic Bus',
+        desc: 'Bay 1 (-0.42 m) hinged door features a hollow THREE.ExtrudeGeometry viewing window over the drawout ACBs and an engraved Normal MSB ↔ Bus-Tie ACB ↔ ESB ↔ EDG ACB mimic diagram with live LEDs. Bay 2 (+0.42 m) door exposes the 6 SOLAS essential feeder handles.'
+      },
+      esb_busbar_440v: {
+        code: 'ASSY-BA',
+        sub: 'Upper-Rear 1,200 A, 440 V 3-Phase Electrolytic Copper Busbars & Risers',
+        title: '440 V Emergency Copper Busbar Section & Standoff Insulators',
+        desc: 'Heavy 3-phase electrolytic copper busbars (L1 Red, L2 Yellow, L3 Blue, 1,200 A rated) in the upper-rear chamber (Y = 1.55 m, Z = -0.25 m) mounted on ribbed DMC standoff insulators with vertical copper risers dropping to the ACBs and feeder MCCB bank.'
+      },
+      esb_busbar_220v: {
+        code: 'ASSY-BB',
+        sub: '50 kVA 440 V / 220 V Dry-Type Step-Down Transformer, 220 V Bus & IMDs',
+        title: '220 V Transformed Emergency Busbar & Step-Down Transformer',
+        desc: 'Housed in the lower-rear section of Bay 2 (X = +0.42 m, Y = 0.55 m, Z = -0.18 m): internal 440 V / 220 V, 50 kVA dry-type isolation transformer feeding the 220 V copper busbar section and dual 440 V / 220 V Insulation Monitoring Devices (IMD).'
+      },
+      interlock_tie_acb: {
+        code: 'ASSY-TA',
+        sub: 'Bay 1 · Mechanical Walking-Beam & Bowden-Cable Interlocked Drawout ACBs',
+        title: 'Mechanical & Electrical Interlocked Normal/EDG Drawout ACBs',
+        desc: 'Twin drawout 440 V Air Circuit Breakers (52-BT Bus-Tie from Main Switchboard & 52-EDG Incomer from Emergency Generator) linked by a walking-beam and Bowden-cable mechanical interlock preventing simultaneous closure unless synchronized.'
+      },
+      metering_synchro_panel: {
+        code: 'ASSY-MP',
+        sub: 'Upper Instrument Compartment · ANSI 25 Synchroscope & PMS Controller',
+        title: 'Digital Multifunction Metering, Synchroscope & PMS Controller',
+        desc: 'Upper instrument compartment (Y = 1.72 m, Z = +0.38 m) featuring a circular LED/needle Synchroscope (for blackless return-to-normal transfer), 3 square analog gauges (440 V, 60.0 Hz, kW), and a glowing cyan ESB Automatic Transfer Controller.'
+      },
+      essential_feeder_mccbs: {
+        code: 'ASSY-CW',
+        sub: 'Bay 2 · 6 Molded-Case Circuit Breakers (MCCBs) & Slotted DIN Wiring Loom',
+        title: 'SOLAS Essential Feeder MCCB Bank & Control Wiring Loom',
+        desc: 'Vertical stack of 6 molded-case circuit breakers (Emergency Steering Gear, Emergency Fire Pump, Navigation Bridge ABT, 24 V GMDSS Charger, Emergency Lighting, Submersible Bilge Pump) flanked by slotted grey DIN-rail trunking and blue halogen-free control harnesses.'
+      }
+    };
+
+    // Kinematic & Cutaway Registries
+    const cutawayMeshes = [];
+    let bay1DoorPivot = null;
+    let bay2DoorPivot = null;
+    let walkingBeamPivot = null;
+    let tieAcbFlagMesh = null;
+    let edgAcbFlagMesh = null;
+    let mimicTieLedMesh = null;
+    let mimicEdgLedMesh = null;
+    let mimicEdgGenLedMesh = null;
+    let synchroNeedlePivot = null;
+
+    const BAY1_X = -0.42;
+    const BAY2_X =  0.42;
+
+    /* =====================================================================
+       6. BUILD 7 PROCEDURAL MARINE ESB SUB-ASSEMBLIES
+       ===================================================================== */
+
+    // 6.1 SUB-ASSEMBLY 1: `esb_frame` — 2-Bay SOLAS Emergency Switchboard Frame & Drip Canopy (`EF`)
+    function buildEsbFrame() {
+      const grp = subsystems.esb_frame;
+
+      // 1. Dark Slate Base Plinth (`1.74 m wide × 0.12 m high × 1.14 m deep` at Y = 0.06 m)
+      const basePlinth = new THREE.Mesh(
+        new THREE.BoxGeometry(1.74, 0.12, 1.14),
+        matDarkSlate
+      );
+      basePlinth.position.set(0.0, 0.06, 0.0);
+      basePlinth.castShadow = true;
+      basePlinth.receiveShadow = true;
+      grp.add(basePlinth);
+
+      // 6 Structural Corner & Inter-Bay Vertical Columns (`X = -0.84, 0.00, +0.84 m`, `Z = -0.54, +0.54 m`, Height 1.96 m)
+      const colGeo = new THREE.BoxGeometry(0.04, 1.96, 0.04);
+      [-0.83, 0.00, 0.83].forEach((xc) => {
+        [-0.53, 0.53].forEach((zc) => {
+          const col = new THREE.Mesh(colGeo, matDarkSlate);
+          col.position.set(xc, 1.10, zc);
+          col.castShadow = true;
+          grp.add(col);
+        });
+      });
+
+      // Internal Form 3b Vertical Inter-Bay Partition Wall (`X = 0.00 m`) & Horizontal Compartment Shelves
+      const centerPartition = new THREE.Mesh(
+        new THREE.BoxGeometry(0.016, 1.94, 1.04),
+        matDarkSlate
+      );
+      centerPartition.position.set(0.0, 1.10, 0.0);
+      grp.add(centerPartition);
+
+      [0.48, 1.44].forEach((yh) => {
+        const hShelf = new THREE.Mesh(
+          new THREE.BoxGeometry(1.66, 0.018, 0.72),
+          matDarkSlate
+        );
+        hShelf.position.set(0.0, yh, 0.14);
+        grp.add(hShelf);
+      });
+
+      // Vertical Rear Busbar Segregation Baffle Plate (`Z = -0.10 m`)
+      const busBaffle = new THREE.Mesh(
+        new THREE.BoxGeometry(1.66, 1.92, 0.014),
+        matDarkSlate
+      );
+      busBaffle.position.set(0.0, 1.10, -0.10);
+      grp.add(busBaffle);
+
+      // Left, Right & Rear Pebble Grey Sheet-Metal Enclosure Panels (Included in `cutawayMeshes`)
+      [-0.845, 0.845].forEach((xs) => {
+        const sidePanel = new THREE.Mesh(
+          new THREE.BoxGeometry(0.016, 1.96, 1.08),
+          matPebbleGrey
+        );
+        sidePanel.position.set(xs, 1.10, 0.0);
+        sidePanel.castShadow = true;
+        grp.add(sidePanel);
+        cutawayMeshes.push(sidePanel);
+      });
+
+      const rearPanel = new THREE.Mesh(
+        new THREE.BoxGeometry(1.68, 1.96, 0.016),
+        matPebbleGrey
+      );
+      rearPanel.position.set(0.0, 1.10, -0.545);
+      rearPanel.castShadow = true;
+      grp.add(rearPanel);
+      cutawayMeshes.push(rearPanel);
+
+      // Top Drip-Proof Overhang Canopy (`1.78 m wide × 0.07 m high × 1.24 m deep` at Y = 2.115 m)
+      const dripCanopy = new THREE.Mesh(
+        new THREE.BoxGeometry(1.78, 0.065, 1.24),
+        matPebbleGrey
+      );
+      dripCanopy.position.set(0.0, 2.115, 0.04);
+      dripCanopy.castShadow = true;
+      grp.add(dripCanopy);
+      cutawayMeshes.push(dripCanopy);
+
+      // Prominent SOLAS Red Top Header Nameplate Stripe (`0xdc2626`, `440 V / 220 V EMERGENCY SWITCHBOARD — SOLAS CH. II-1`)
+      const redHeaderBoard = new THREE.Mesh(
+        new THREE.BoxGeometry(1.72, 0.14, 0.024),
+        new THREE.MeshStandardMaterial({ map: solasHeaderTex, roughness: 0.32, metalness: 0.15 })
+      );
+      redHeaderBoard.position.set(0.0, 2.01, 0.562);
+      grp.add(redHeaderBoard);
+
+      // 4 Top Crane Lifting Eye Bolts
+      [-0.76, 0.76].forEach((xl) => {
+        [-0.44, 0.44].forEach((zl) => {
+          const eye = new THREE.Mesh(
+            new THREE.TorusGeometry(0.030, 0.008, 10, 20),
+            matChrome
+          );
+          eye.position.set(xl, 2.175, zl);
+          grp.add(eye);
+        });
+      });
+
+      // Full-Width Insulated Marine Storm Handrail Bar across the Front (`Y = 1.44 m, Z = +0.64 m`)
+      const handrailTube = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.016, 0.016, 1.68, 20),
+        matChrome
+      );
+      handrailTube.rotation.z = Math.PI / 2;
+      handrailTube.position.set(0.0, 1.44, 0.645);
+      handrailTube.castShadow = true;
+      grp.add(handrailTube);
+
+      [-0.80, 0.00, 0.80].forEach((xh) => {
+        const standoffBracket = new THREE.Mesh(
+          new THREE.BoxGeometry(0.028, 0.032, 0.095),
+          matThermosetBlack
+        );
+        standoffBracket.position.set(xh, 1.44, 0.595);
+        grp.add(standoffBracket);
+      });
+    }
+
+    // 6.2 SUB-ASSEMBLY 2: `esb_doors` — Hinged Front Doors with Extruded Cutout Windows & Mimic Bus (`ED`)
+    function buildEsbDoors() {
+      const grp = subsystems.esb_doors;
+
+      // Helper to build a Pebble-Grey Hinged Front Door (`0.78 m wide × 1.26 m high`) with a True Hollow `THREE.ExtrudeGeometry` Cutout Window
+      function createHollowWindowDoor(winW, winH, winCy) {
+        const doorW = 0.78, doorH = 1.26, doorD = 0.022;
+        const shape = new THREE.Shape();
+        shape.moveTo(-doorW / 2, -doorH / 2);
+        shape.lineTo( doorW / 2, -doorH / 2);
+        shape.lineTo( doorW / 2,  doorH / 2);
+        shape.lineTo(-doorW / 2,  doorH / 2);
+        shape.closePath();
+
+        const hole = new THREE.Path();
+        hole.moveTo(-winW / 2, winCy - winH / 2);
+        hole.lineTo( winW / 2, winCy - winH / 2);
+        hole.lineTo( winW / 2, winCy + winH / 2);
+        hole.lineTo(-winW / 2, winCy + winH / 2);
+        hole.closePath();
+        shape.holes.push(hole);
+
+        const geo = new THREE.ExtrudeGeometry(shape, { depth: doorD, bevelEnabled: false });
+        geo.translate(0, 0, -doorD / 2);
+        const doorMesh = new THREE.Mesh(geo, matPebbleGrey);
+        doorMesh.position.set(doorW / 2, 0, 0);
+        doorMesh.castShadow = true;
+        cutawayMeshes.push(doorMesh);
+
+        // Dark Slate Hollow Window Bezel Frame
+        const bezelShape = new THREE.Shape();
+        const bw = winW / 2 + 0.022, bh = winH / 2 + 0.022;
+        bezelShape.moveTo(-bw, winCy - bh);
+        bezelShape.lineTo( bw, winCy - bh);
+        bezelShape.lineTo( bw, winCy + bh);
+        bezelShape.moveTo(-bw, winCy + bh);
+        bezelShape.closePath();
+        bezelShape.holes.push(hole);
+
+        const bezelGeo = new THREE.ExtrudeGeometry(bezelShape, { depth: 0.030, bevelEnabled: false });
+        bezelGeo.translate(0, 0, -0.015);
+        const bezelMesh = new THREE.Mesh(bezelGeo, matDarkSlate);
+        bezelMesh.position.set(doorW / 2, 0, 0);
+
+        // Clear Polycarbonate Inspection Window Pane (`0xd8ecff`, opacity: 0.25, depthWrite: false)
+        const glassMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(winW, winH, 0.006),
+          matPolyWindow
+        );
+        glassMesh.position.set(doorW / 2, winCy, 0);
+
+        return { doorMesh, bezelMesh, glassMesh, doorW };
+      }
+
+      // 1. BAY 1 DOOR (`X = -0.42 m` — 440 V EDG Incomer & Bus-Tie Section, Left-Hinged at X = -0.81 m, Y = 0.78 m, Z = +0.555 m)
+      bay1DoorPivot = new THREE.Group();
+      bay1DoorPivot.position.set(-0.81, 0.78, 0.555);
+      grp.add(bay1DoorPivot);
+
+      const b1 = createHollowWindowDoor(0.46, 0.68, -0.02);
+      bay1DoorPivot.add(b1.doorMesh, b1.bezelMesh, b1.glassMesh);
+
+      // Engraved Single-Line Mimic Bus Diagram on Upper Portion of Bay 1 Door (`Normal 440V MSB ↔ 52-BT ↔ ESB ↔ 52-EDG ↔ EDG`)
+      const mimicPlate = new THREE.Mesh(
+        new THREE.BoxGeometry(0.68, 0.20, 0.008),
+        matDarkSlate
+      );
+      mimicPlate.position.set(0.39, 0.46, 0.014);
+      bay1DoorPivot.add(mimicPlate);
+
+      // Horizontal ESB Mimic Busbar Line (Red) running across Bay 1 Mimic Plate
+      const mimicBusLine = new THREE.Mesh(
+        new THREE.BoxGeometry(0.60, 0.014, 0.010),
+        matSolasRed
+      );
+      mimicBusLine.position.set(0.39, 0.52, 0.018);
+      bay1DoorPivot.add(mimicBusLine);
+
+      // Left Drop Line (`Main 440V Bus-Tie 52-BT`) & Status LED Block (`mimicTieLedMesh`)
+      const tieDropLine = new THREE.Mesh(
+        new THREE.BoxGeometry(0.012, 0.12, 0.010),
+        matChrome
+      );
+      tieDropLine.position.set(0.24, 0.45, 0.018);
+      bay1DoorPivot.add(tieDropLine);
+
+      mimicTieLedMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.036, 0.036, 0.014),
+        new THREE.MeshBasicMaterial({ color: 0x10b981 }) // Green/Closed in Normal mode
+      );
+      mimicTieLedMesh.position.set(0.24, 0.44, 0.020);
+      bay1DoorPivot.add(mimicTieLedMesh);
+
+      // Right Drop Line (`EDG Incomer 52-EDG`) & Status LED Block (`mimicEdgLedMesh`) + EDG Generator Symbol (`mimicEdgGenLedMesh`)
+      const edgDropLine = new THREE.Mesh(
+        new THREE.BoxGeometry(0.012, 0.12, 0.010),
+        matSolasRed
+      );
+      edgDropLine.position.set(0.54, 0.45, 0.018);
+      bay1DoorPivot.add(edgDropLine);
+
+      mimicEdgLedMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.036, 0.036, 0.014),
+        new THREE.MeshBasicMaterial({ color: 0x475569 }) // Standby/Open in Normal mode
+      );
+      mimicEdgLedMesh.position.set(0.54, 0.46, 0.020);
+      bay1DoorPivot.add(mimicEdgLedMesh);
+
+      mimicEdgGenLedMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.024, 0.024, 0.014, 20),
+        new THREE.MeshBasicMaterial({ color: 0x475569 })
+      );
+      mimicEdgGenLedMesh.rotation.x = Math.PI / 2;
+      mimicEdgGenLedMesh.position.set(0.54, 0.39, 0.020);
+      bay1DoorPivot.add(mimicEdgGenLedMesh);
+
+      // Chrome Vertical Latch Handle & Bottom Ventilation Louvers on Bay 1 Door
+      const handle1 = new THREE.Mesh(
+        new THREE.BoxGeometry(0.022, 0.16, 0.032),
+        matChrome
+      );
+      handle1.position.set(0.72, -0.02, 0.022);
+      bay1DoorPivot.add(handle1);
+
+      for (let l = 0; l < 4; l++) {
+        const louver = new THREE.Mesh(
+          new THREE.BoxGeometry(0.46, 0.016, 0.016),
+          matDarkSlate
+        );
+        louver.position.set(0.39, -0.44 - l * 0.035, 0.012);
+        bay1DoorPivot.add(louver);
+      }
+
+      // 2. BAY 2 DOOR (`X = +0.42 m` — Essential 440 V & 220 V Emergency Feeders, Right-Hinged at X = +0.81 m, Y = 0.78 m, Z = +0.555 m)
+      bay2DoorPivot = new THREE.Group();
+      bay2DoorPivot.position.set(0.81, 0.78, 0.555);
+      grp.add(bay2DoorPivot);
+
+      const b2 = createHollowWindowDoor(0.48, 0.76, 0.04);
+      // Mirror X offset so door extends from hinge at +0.81 m leftwards to +0.03 m
+      b2.doorMesh.position.x = -b2.doorW / 2;
+      b2.bezelMesh.position.x = -b2.doorW / 2;
+      b2.glassMesh.position.x = -b2.doorW / 2;
+      bay2DoorPivot.add(b2.doorMesh, b2.bezelMesh, b2.glassMesh);
+
+      // Continuation of Red ESB Mimic Busbar Line across top of Bay 2 Door (`440V & 220V Essential Feeders`)
+      const mimicPlate2 = new THREE.Mesh(
+        new THREE.BoxGeometry(0.68, 0.14, 0.008),
+        matDarkSlate
+      );
+      mimicPlate2.position.set(-0.39, 0.50, 0.014);
+      bay2DoorPivot.add(mimicPlate2);
+
+      const mimicBusLine2 = new THREE.Mesh(
+        new THREE.BoxGeometry(0.60, 0.014, 0.010),
+        matSolasRed
+      );
+      mimicBusLine2.position.set(-0.39, 0.52, 0.018);
+      bay2DoorPivot.add(mimicBusLine2);
+
+      const handle2 = new THREE.Mesh(
+        new THREE.BoxGeometry(0.022, 0.16, 0.032),
+        matChrome
+      );
+      handle2.position.set(-0.72, -0.02, 0.022);
+      bay2DoorPivot.add(handle2);
+
+      for (let l = 0; l < 4; l++) {
+        const louver2 = new THREE.Mesh(
+          new THREE.BoxGeometry(0.46, 0.016, 0.016),
+          matDarkSlate
+        );
+        louver2.position.set(-0.39, -0.44 - l * 0.035, 0.012);
+        bay2DoorPivot.add(louver2);
+      }
+    }
+
+    // 6.3 SUB-ASSEMBLY 3: `esb_busbar_440v` — 440 V Emergency Copper Busbar Section (`BA`)
+    function buildEsbBusbar440v() {
+      const grp = subsystems.esb_busbar_440v;
+      const phaseMats = [matPhaseL1, matPhaseL2, matPhaseL3];
+
+      // 3 Horizontal 1,200 A Electrolytic Copper Main Busbars (`L1` Red, `L2` Yellow, `L3` Blue) spanning Bay 1 & Bay 2 (`Y = 1.68, 1.56, 1.44 m, Z = -0.25 m`)
+      [1.68, 1.56, 1.44].forEach((yb, pIdx) => {
+        // Double-Laminated Copper Bars (`1.52 m wide × 0.055 m high × 0.014 m thick`)
+        [-0.010, 0.010].forEach((dz) => {
+          const mainBar = new THREE.Mesh(
+            new THREE.BoxGeometry(1.52, 0.052, 0.012),
+            matCopper
+          );
+          mainBar.position.set(0.0, yb, -0.25 + dz);
+          mainBar.castShadow = true;
+          grp.add(mainBar);
+        });
+
+        // Color-Coded Phase Identification Sleeves (`L1` Red, `L2` Yellow, `L3` Blue) in both Bays
+        [-0.55, 0.55].forEach((xs) => {
+          const sleeve = new THREE.Mesh(
+            new THREE.BoxGeometry(0.18, 0.058, 0.038),
+            phaseMats[pIdx]
+          );
+          sleeve.position.set(xs, yb, -0.25);
+          grp.add(sleeve);
+        });
+
+        // 4 Ribbed Maroon DMC Standoff Insulators per Phase Bar anchoring to Rear Frame
+        [-0.68, -0.22, 0.22, 0.68].forEach((xi) => {
+          const insulator = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.026, 0.032, 0.14, 20),
+            matDmcInsulator
+          );
+          insulator.rotation.x = Math.PI / 2;
+          insulator.position.set(xi, yb, -0.34);
+          grp.add(insulator);
+        });
+      });
+
+      // 6 Vertical Copper Drop-Down Risers in Bay 1 (`X = -0.58 to -0.26 m`, dropping to `Bus-Tie ACB` & `EDG Incomer ACB`)
+      [-0.56, -0.42, -0.28].forEach((xr, pIdx) => {
+        const yTop = 1.68 - pIdx * 0.12;
+        const riser1 = new THREE.Mesh(
+          new THREE.BoxGeometry(0.038, yTop - 0.62, 0.014),
+          matCopper
+        );
+        riser1.position.set(xr, (yTop + 0.62) / 2, -0.18);
+        riser1.castShadow = true;
+        grp.add(riser1);
+
+        // Bolted Copper Clamp Block
+        const clamp = new THREE.Mesh(
+          new THREE.BoxGeometry(0.052, 0.058, 0.044),
+          matBrass
+        );
+        clamp.position.set(xr, yTop, -0.22);
+        grp.add(clamp);
+      });
+
+      // 3 Vertical Copper Distribution Risers in Bay 2 (`X = +0.28, +0.42, +0.56 m`, feeding the 6 Essential Feeder MCCBs & 440/220V Transformer)
+      [0.28, 0.42, 0.56].forEach((xr, pIdx) => {
+        const yTop = 1.68 - pIdx * 0.12;
+        const riser2 = new THREE.Mesh(
+          new THREE.BoxGeometry(0.038, yTop - 0.52, 0.014),
+          matCopper
+        );
+        riser2.position.set(xr, (yTop + 0.52) / 2, -0.16);
+        riser2.castShadow = true;
+        grp.add(riser2);
+      });
+    }
+
+    // 6.4 SUB-ASSEMBLY 4: `esb_busbar_220v` — 220 V Transformed Emergency Busbar & Step-Down Transformer (`BB`)
+    function buildEsbBusbar220v() {
+      const grp = subsystems.esb_busbar_220v;
+      const txX = BAY2_X; // +0.42 m
+      const txY = 0.34;
+      const txZ = -0.24;
+
+      // 1. Internal `440 V / 220 V, 50 kVA` Dry-Type Emergency Lighting & Navigation Step-Down Transformer
+      const coreFrame = new THREE.Mesh(
+        new THREE.BoxGeometry(0.54, 0.32, 0.26),
+        matDarkSlate
+      );
+      coreFrame.position.set(txX, txY, txZ);
+      coreFrame.castShadow = true;
+      grp.add(coreFrame);
+
+      // 3 Cast-Resin / Copper-Foil Transformer Winding Coils (`U, V, W`) inside Core Yoke
+      [-0.16, 0.00, 0.16].forEach((dx) => {
+        const coilOuter = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.072, 0.072, 0.28, 24),
+          matCopper
+        );
+        coilOuter.position.set(txX + dx, txY, txZ);
+        coilOuter.castShadow = true;
+        grp.add(coilOuter);
+
+        const insulatorTop = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.018, 0.022, 0.05, 16),
+          matDmcInsulator
+        );
+        insulatorTop.position.set(txX + dx, txY + 0.18, txZ + 0.06);
+        grp.add(insulatorTop);
+      });
+
+      // 2. 220 V Insulated Copper Secondary Busbars (`L1, L2, L3` at `Y = 0.64, 0.58, 0.52 m, Z = -0.22 m`)
+      [0.64, 0.58, 0.52].forEach((yb220, idx) => {
+        const bar220 = new THREE.Mesh(
+          new THREE.BoxGeometry(0.62, 0.028, 0.010),
+          matCopper
+        );
+        bar220.position.set(txX, yb220, -0.20);
+        grp.add(bar220);
+
+        const tag = new THREE.Mesh(
+          new THREE.BoxGeometry(0.09, 0.032, 0.016),
+          idx === 0 ? matPhaseL1 : (idx === 1 ? matPhaseL2 : matPhaseL3)
+        );
+        tag.position.set(txX - 0.22, yb220, -0.20);
+        grp.add(tag);
+      });
+
+      // 3. Dual 440 V & 220 V Insulation Monitoring Devices (`IMD` — IEC 61557-8 Earth-Fault Monitors `> 5.0 MΩ OK`)
+      [-0.18, 0.18].forEach((dxImd, iIdx) => {
+        const imdBox = new THREE.Mesh(
+          new THREE.BoxGeometry(0.16, 0.12, 0.11),
+          matThermosetBlack
+        );
+        imdBox.position.set(txX + dxImd, 0.28, 0.06);
+        grp.add(imdBox);
+
+        const imdLed = new THREE.Mesh(
+          new THREE.SphereGeometry(0.011, 12, 12),
+          new THREE.MeshBasicMaterial({ color: 0x10b981 })
+        );
+        imdLed.position.set(txX + dxImd - 0.04, 0.31, 0.118);
+        grp.add(imdLed);
+
+        const imdBar = new THREE.Mesh(
+          new THREE.BoxGeometry(0.08, 0.022, 0.006),
+          new THREE.MeshBasicMaterial({ color: iIdx === 0 ? 0x22d3ee : 0x38bdf8 })
+        );
+        imdBar.position.set(txX + dxImd + 0.02, 0.28, 0.118);
+        grp.add(imdBar);
+      });
+    }
+
+    // 6.5 SUB-ASSEMBLY 5: `interlock_tie_acb` — Mechanical & Electrical Interlocked Normal/EDG Drawout ACBs (`TA`)
+    function buildInterlockTieAcb() {
+      const grp = subsystems.interlock_tie_acb;
+      const acbX = BAY1_X; // -0.42 m
+
+      // Helper to build a Drawout 440 V Air Circuit Breaker (`52-BT` Upper at Y = 1.12 m, `52-EDG` Lower at Y = 0.64 m)
+      function createDrawoutAcbUnit(yCenter, isUpperTieBreaker) {
+        const unitGrp = new THREE.Group();
+        unitGrp.position.set(acbX, yCenter, 0.10);
+
+        // Drawout Steel Cassette Cradle & Telescopic Side Guide Rails
+        const cradleShell = new THREE.Mesh(
+          new THREE.BoxGeometry(0.48, 0.34, 0.32),
+          matDarkSlate
+        );
+        cradleShell.position.set(0, 0, -0.04);
+        cradleShell.castShadow = true;
+        unitGrp.add(cradleShell);
+
+        // Black Thermoset Molded ACB Body & Front Operating Escutcheon (`0x1e242b`)
+        const acbBody = new THREE.Mesh(
+          new THREE.BoxGeometry(0.42, 0.30, 0.26),
+          matThermosetBlack
+        );
+        acbBody.position.set(0, 0, 0.04);
+        acbBody.castShadow = true;
+        unitGrp.add(acbBody);
+
+        // 3 Top Molded Arc-Chute Quenching Chambers (`L1, L2, L3`)
+        [-0.12, 0.00, 0.12].forEach((xa) => {
+          const arcChute = new THREE.Mesh(
+            new THREE.BoxGeometry(0.09, 0.045, 0.18),
+            matDmcInsulator
+          );
+          arcChute.position.set(xa, 0.165, 0.02);
+          unitGrp.add(arcChute);
+        });
+
+        // Left-Side Microprocessor Electronic Trip Unit (`ETU` — ANSI 51/50/51G) with Cyan LCD & Dial Knobs
+        const etuPanel = new THREE.Mesh(
+          new THREE.BoxGeometry(0.13, 0.22, 0.018),
+          matDarkSlate
+        );
+        etuPanel.position.set(-0.12, -0.01, 0.172);
+        unitGrp.add(etuPanel);
+
+        const etuLcd = new THREE.Mesh(
+          new THREE.BoxGeometry(0.095, 0.055, 0.006),
+          new THREE.MeshBasicMaterial({ color: 0x22d3ee })
+        );
+        etuLcd.position.set(-0.12, 0.05, 0.182);
+        unitGrp.add(etuLcd);
+
+        // Right-Side Spring Charging Handle (`Yellow`) + Recessed Green `PUSH ON (I)` & Red `PUSH OFF (O)` Buttons
+        const chargeHandle = new THREE.Mesh(
+          new THREE.BoxGeometry(0.036, 0.12, 0.035),
+          matPhaseL2
+        );
+        chargeHandle.position.set(0.13, -0.02, 0.185);
+        unitGrp.add(chargeHandle);
+
+        const btnOn = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.015, 0.015, 0.018, 16),
+          new THREE.MeshBasicMaterial({ color: 0x16a34a })
+        );
+        btnOn.rotation.x = Math.PI / 2;
+        btnOn.position.set(0.03, 0.05, 0.175);
+        unitGrp.add(btnOn);
+
+        const btnOff = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.015, 0.015, 0.018, 16),
+          new THREE.MeshBasicMaterial({ color: 0xdc2626 })
+        );
+        btnOff.rotation.x = Math.PI / 2;
+        btnOff.position.set(0.03, -0.01, 0.175);
+        unitGrp.add(btnOff);
+
+        // Mechanical `CLOSED (I)` / `OPEN (O)` Flag Indicator Window
+        const flagMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(0.065, 0.032, 0.012),
+          new THREE.MeshBasicMaterial({ color: isUpperTieBreaker ? 0xdc2626 : 0x16a34a })
+        );
+        flagMesh.position.set(0.03, -0.075, 0.176);
+        unitGrp.add(flagMesh);
+
+        // Brass Racking Lead-Screw Hex Port at Bottom Center
+        const rackPort = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.016, 0.016, 0.024, 6),
+          matBrass
+        );
+        rackPort.rotation.x = Math.PI / 2;
+        rackPort.position.set(0.03, -0.12, 0.176);
+        unitGrp.add(rackPort);
+
+        return { unitGrp, flagMesh };
+      }
+
+      // Upper Drawout ACB: `52-BT` (Normal Main 440 V Switchboard Bus-Tie ACB at Y = 1.12 m)
+      const tieAcb = createDrawoutAcbUnit(1.12, true);
+      grp.add(tieAcb.unitGrp);
+      tieAcbFlagMesh = tieAcb.flagMesh;
+
+      // Lower Drawout ACB: `52-EDG` (Emergency Generator 440 V Incomer ACB at Y = 0.64 m)
+      const edgAcb = createDrawoutAcbUnit(0.64, false);
+      grp.add(edgAcb.unitGrp);
+      edgAcbFlagMesh = edgAcb.flagMesh;
+
+      // Visible Walking-Beam & Bowden-Cable Mechanical Interlock Linkage mounted on Right Flank of the Twin ACBs (`X = -0.15 m, Y = 0.88 m, Z = +0.22 m`)
+      const fulcrumHub = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.028, 0.028, 0.04, 20),
+        matBrass
+      );
+      fulcrumHub.rotation.z = Math.PI / 2;
+      fulcrumHub.position.set(acbX + 0.27, 0.88, 0.22);
+      grp.add(fulcrumHub);
+
+      walkingBeamPivot = new THREE.Group();
+      walkingBeamPivot.position.set(acbX + 0.285, 0.88, 0.22);
+      grp.add(walkingBeamPivot);
+
+      // Pivoting Chrome Walking-Beam Lever (`0.48 m long`) with Upper & Lower Interlock Plunger Pins
+      const beamBar = new THREE.Mesh(
+        new THREE.BoxGeometry(0.018, 0.48, 0.036),
+        matChrome
+      );
+      beamBar.castShadow = true;
+      walkingBeamPivot.add(beamBar);
+
+      [-0.21, 0.21].forEach((yp) => {
+        const clevisPin = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.012, 0.012, 0.065, 14),
+          matSolasRed
+        );
+        clevisPin.rotation.z = Math.PI / 2;
+        clevisPin.position.set(-0.02, yp, 0.0);
+        walkingBeamPivot.add(clevisPin);
+      });
+
+      // Curved Bowden-Cable Mechanical Interlock Sheath connecting the two ACB trip shafts
+      const bowdenCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(acbX + 0.26, 1.12, 0.24),
+        new THREE.Vector3(acbX + 0.33, 0.88, 0.28),
+        new THREE.Vector3(acbX + 0.26, 0.64, 0.24)
+      ]);
+      const bowdenCable = new THREE.Mesh(
+        new THREE.TubeGeometry(bowdenCurve, 20, 0.008, 10, false),
+        matBrass
+      );
+      grp.add(bowdenCable);
+    }
+
+    // 6.6 SUB-ASSEMBLY 6: `metering_synchro_panel` — Digital Multifunction Metering, Synchroscope & PMS Controller (`MP`)
+    function buildMeteringSynchroPanel() {
+      const grp = subsystems.metering_synchro_panel;
+      const mpY = 1.72;
+      const mpZ = 0.48;
+
+      // Full-Width Upper Instrument Fascia Plate spanning Bay 1 & Bay 2 (`1.64 m wide × 0.42 m high` at Y = 1.72 m)
+      const fasciaBacking = new THREE.Mesh(
+        new THREE.BoxGeometry(1.64, 0.42, 0.08),
+        matDarkSlate
+      );
+      fasciaBacking.position.set(0.0, mpY, mpZ);
+      fasciaBacking.castShadow = true;
+      grp.add(fasciaBacking);
+
+      // 1. Bay 1 Left: Circular LED / Needle Synchroscope (`ANSI 25` at `X = -0.64 m, Y = 1.73 m`)
+      const synchroBezel = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.135, 0.135, 0.032, 32),
+        matThermosetBlack
+      );
+      synchroBezel.rotation.x = Math.PI / 2;
+      synchroBezel.position.set(-0.63, mpY + 0.01, mpZ + 0.045);
+      grp.add(synchroBezel);
+
+      const synchroFace = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.118, 0.118, 0.008, 32),
+        new THREE.MeshBasicMaterial({ map: synchroDialTex })
+      );
+      synchroFace.rotation.x = Math.PI / 2;
+      synchroFace.position.set(-0.63, mpY + 0.01, mpZ + 0.060);
+      grp.add(synchroFace);
+
+      // Rotating Synchroscope Pointer Needle (`synchroNeedlePivot`)
+      synchroNeedlePivot = new THREE.Group();
+      synchroNeedlePivot.position.set(-0.63, mpY + 0.01, mpZ + 0.066);
+      grp.add(synchroNeedlePivot);
+
+      const synchroNeedle = new THREE.Mesh(
+        new THREE.BoxGeometry(0.010, 0.16, 0.006),
+        new THREE.MeshBasicMaterial({ color: 0x22d3ee })
+      );
+      synchroNeedle.position.y = 0.03;
+      synchroNeedlePivot.add(synchroNeedle);
+
+      const synchroHub = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.016, 0.016, 0.010, 16),
+        matBrass
+      );
+      synchroHub.rotation.x = Math.PI / 2;
+      synchroNeedlePivot.add(synchroHub);
+
+      // 2. Center: 3 Square Analog Panel Meters (`440 V`, `60.0 Hz`, `184 kW` at `X = -0.34, -0.14, +0.06 m`)
+      const gaugeDefs = [
+        { x: -0.34, tex: meterVoltTex },
+        { x: -0.14, tex: meterFreqTex },
+        { x:  0.06, tex: meterKwTex }
+      ];
+      gaugeDefs.forEach((gd) => {
+        const gBezel = new THREE.Mesh(
+          new THREE.BoxGeometry(0.165, 0.165, 0.028),
+          matThermosetBlack
+        );
+        gBezel.position.set(gd.x, mpY + 0.04, mpZ + 0.045);
+        grp.add(gBezel);
+
+        const gDial = new THREE.Mesh(
+          new THREE.BoxGeometry(0.145, 0.145, 0.006),
+          new THREE.MeshBasicMaterial({ map: gd.tex })
+        );
+        gDial.position.set(gd.x, mpY + 0.04, mpZ + 0.059);
+        grp.add(gDial);
+      });
+
+      // Lower Row Selector Switches & Pilot Lamps under Analog Meters
+      [-0.34, -0.14, 0.06].forEach((xs, sIdx) => {
+        const camSwitch = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.022, 0.022, 0.032, 16),
+          matThermosetBlack
+        );
+        camSwitch.rotation.x = Math.PI / 2;
+        camSwitch.position.set(xs, mpY - 0.12, mpZ + 0.05);
+        grp.add(camSwitch);
+
+        const knob = new THREE.Mesh(
+          new THREE.BoxGeometry(0.012, 0.038, 0.024),
+          sIdx === 1 ? matSolasRed : matChrome
+        );
+        knob.position.set(xs, mpY - 0.12, mpZ + 0.068);
+        grp.add(knob);
+      });
+
+      // 3. Bay 2 Right: Glowing Cyan Microprocessor ESB Automatic Transfer Controller (`X = +0.48 m, Y = 1.72 m`)
+      const pmsBezel = new THREE.Mesh(
+        new THREE.BoxGeometry(0.56, 0.30, 0.032),
+        matThermosetBlack
+      );
+      pmsBezel.position.set(0.48, mpY + 0.01, mpZ + 0.045);
+      grp.add(pmsBezel);
+
+      const pmsScreen = new THREE.Mesh(
+        new THREE.BoxGeometry(0.51, 0.25, 0.008),
+        new THREE.MeshBasicMaterial({ map: pmsScreenTex })
+      );
+      pmsScreen.position.set(0.48, mpY + 0.01, mpZ + 0.060);
+      grp.add(pmsScreen);
+    }
+
+    // 6.7 SUB-ASSEMBLY 7: `essential_feeder_mccbs` — SOLAS Essential Feeder MCCB Bank & Control Wiring Loom (`CW`)
+    function buildEssentialFeederMccbs() {
+      const grp = subsystems.essential_feeder_mccbs;
+      const fx = BAY2_X; // +0.42 m
+
+      // Vertical Stack of 6 Molded-Case Circuit Breakers (MCCBs) in Bay 2 (`Y = 1.28 m down to 0.68 m, Z = +0.12 m`)
+      const feederSpecs = [
+        { code: 'F-01', title: 'EMERG STEERING GEAR',  rating: '440V · 160A MCCB', bus: '440V', y: 1.28 },
+        { code: 'F-02', title: 'EMERG FIRE PUMP',      rating: '440V · 200A MCCB', bus: '440V', y: 1.16 },
+        { code: 'F-03', title: 'SUBMERSIBLE BILGE P.', rating: '440V · 100A MCCB', bus: '440V', y: 1.04 },
+        { code: 'F-04', title: 'NAV BRIDGE ABT FEED',  rating: '220V · 63A MCCB',  bus: '220V', y: 0.92 },
+        { code: 'F-05', title: '24V GMDSS CHARGER',    rating: '220V · 50A MCCB',  bus: '220V', y: 0.80 },
+        { code: 'F-06', title: 'SOLAS EMERG LIGHTING', rating: '220V · 63A MCCB',  bus: '220V', y: 0.68 }
+      ];
+
+      // Heavy Backplane Mounting Plate for MCCB Stack
+      const mccbBackplane = new THREE.Mesh(
+        new THREE.BoxGeometry(0.56, 0.76, 0.022),
+        matDarkSlate
+      );
+      mccbBackplane.position.set(fx, 0.98, 0.02);
+      grp.add(mccbBackplane);
+
+      feederSpecs.forEach((fd) => {
+        // Black Thermoset Molded MCCB Body (`0x1e242b`)
+        const mccbBody = new THREE.Mesh(
+          new THREE.BoxGeometry(0.38, 0.095, 0.16),
+          matThermosetBlack
+        );
+        mccbBody.position.set(fx - 0.04, fd.y, 0.11);
+        mccbBody.castShadow = true;
+        grp.add(mccbBody);
+
+        // Engraved Feeder Identification Placard on Left Side of MCCB
+        const lblTex = createFeederLabelTexture(fd.code, fd.title, fd.rating, fd.bus);
+        const lblPlate = new THREE.Mesh(
+          new THREE.BoxGeometry(0.22, 0.056, 0.006),
+          new THREE.MeshBasicMaterial({ map: lblTex })
+        );
+        lblPlate.position.set(fx - 0.10, fd.y, 0.194);
+        grp.add(lblPlate);
+
+        // Rotary Operating Handle Bezel & Red/Yellow Toggle Lever on Right Side of MCCB
+        const rotaryBase = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.026, 0.026, 0.018, 18),
+          matPhaseL2
+        );
+        rotaryBase.rotation.x = Math.PI / 2;
+        rotaryBase.position.set(fx + 0.07, fd.y, 0.195);
+        grp.add(rotaryBase);
+
+        const rotaryLever = new THREE.Mesh(
+          new THREE.BoxGeometry(0.014, 0.045, 0.022),
+          matSolasRed
+        );
+        rotaryLever.position.set(fx + 0.07, fd.y, 0.21);
+        rotaryLever.rotation.z = -0.35; // ON position
+        grp.add(rotaryLever);
+
+        // Green/Red Feeder ON Pilot Lamp
+        const fLed = new THREE.Mesh(
+          new THREE.SphereGeometry(0.0085, 12, 12),
+          new THREE.MeshBasicMaterial({ color: 0x10b981 })
+        );
+        fLed.position.set(fx + 0.125, fd.y, 0.195);
+        grp.add(fLed);
+      });
+
+      // Slotted Grey DIN-Rail Wiring Trunking Ducts & CT Test Terminal Blocks flanking the MCCB Stack (`X = fx - 0.28` and `fx + 0.22`)
+      [-0.27, 0.21].forEach((dxTrunk) => {
+        const trunkingDuct = new THREE.Mesh(
+          new THREE.BoxGeometry(0.045, 0.78, 0.085),
+          matPebbleGrey
+        );
+        trunkingDuct.position.set(fx + dxTrunk, 0.98, 0.12);
+        grp.add(trunkingDuct);
+      });
+
+      // Halogen-Free Blue Control Wiring Harnesses (`0x0284c7`) routed neatly from MCCB Aux Contacts up to the PMS Controller
+      [-0.24, 0.18].forEach((dxLoom, lIdx) => {
+        const loomCurve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(fx + dxLoom, 0.65, 0.17),
+          new THREE.Vector3(fx + dxLoom, 1.05, 0.18),
+          new THREE.Vector3(fx + dxLoom * 0.6, 1.42, 0.22)
+        ]);
+        const loomTube = new THREE.Mesh(
+          new THREE.TubeGeometry(loomCurve, 24, 0.012, 10, false),
+          lIdx === 0 ? matWiringBlue : matSolasRed
+        );
+        grp.add(loomTube);
+      });
+    }
+
+    buildEsbFrame();
+    buildEsbDoors();
+    buildEsbBusbar440v();
+    buildEsbBusbar220v();
+    buildInterlockTieAcb();
+    buildMeteringSynchroPanel();
+    buildEssentialFeederMccbs();
+
+    /* =====================================================================
+       7. NATIVE-COLOR GHOST-OPACITY ISOLATION & EXPLODE CENTERLINES
+       ===================================================================== */
+    const explodeGuideLines = [];
+
+    function prepareSubsystemMaterials() {
+      for (const key in subsystems) {
+        const grp = subsystems[key];
+        const origCloneMap = new Map();
+        const ghostCloneMap = new Map();
+
+        grp.traverse((obj) => {
+          if (obj.isMesh && obj.material) {
+            if (!origCloneMap.has(obj.material)) {
+              const origClone = obj.material.clone();
+              const ghostClone = origClone.clone();
+              ghostClone.transparent = true;
+              ghostClone.opacity = 0.14;
+              ghostClone.depthWrite = false;
+              origCloneMap.set(obj.material, origClone);
+              ghostCloneMap.set(obj.material, ghostClone);
+            }
+            obj.userData.origMaterial = origCloneMap.get(obj.material);
+            obj.userData.ghostMaterial = ghostCloneMap.get(obj.material);
+            obj.userData.partId = key;
+            obj.userData.subsystemKey = key;
+            obj.material = obj.userData.origMaterial;
+          }
+        });
+      }
+    }
+
+    function buildExplodeGuidelines() {
+      const lineMat = new THREE.LineDashedMaterial({
+        color: 0xea580c,
+        dashSize: 0.07,
+        gapSize: 0.04,
+        transparent: true,
+        opacity: 0.0
+      });
+      const anchors = {
+        esb_doors:              new THREE.Vector3( 0.00, 0.78,  0.55),
+        esb_busbar_440v:        new THREE.Vector3( 0.00, 1.56, -0.25),
+        esb_busbar_220v:        new THREE.Vector3( 0.42, 0.38, -0.22),
+        interlock_tie_acb:      new THREE.Vector3(-0.42, 0.88,  0.10),
+        metering_synchro_panel: new THREE.Vector3( 0.00, 1.72,  0.48),
+        essential_feeder_mccbs: new THREE.Vector3( 0.42, 0.98,  0.12)
+      };
+      for (const key in anchors) {
+        const pts = [anchors[key].clone(), anchors[key].clone()];
+        const geo = new THREE.BufferGeometry().setFromPoints(pts);
+        const line = new THREE.Line(geo, lineMat.clone());
+        line.computeLineDistances();
+        scene.add(line);
+        explodeGuideLines.push({ key, line, base: anchors[key], vec: explodeVectors[key] });
+      }
+    }
+
+    prepareSubsystemMaterials();
+    buildExplodeGuidelines();
+
+    function warmShaders() {
+      try {
+        renderer.compile(scene, camera);
+        cutawayMeshes.forEach(m => { m.material = matCutawayGlass; });
+        renderer.compile(scene, camera);
+        cutawayMeshes.forEach(m => { m.material = m.userData.origMaterial; });
+      } catch (e) {
+        console.warn('Warmup notice:', e);
+      }
+    }
+    warmShaders();
+
+    /* =====================================================================
+       8. SOLAS CH. II-1 EMERGENCY TRANSFER & ACB INTERLOCK MODEL
+       ===================================================================== */
+    const state = {
+      isBlackoutMode: false,    // False = NORMAL (52-BT CLOSED, 52-EDG OPEN); True = BLACKOUT (52-BT OPEN, 52-EDG CLOSED)
+      isSyncCheckActive: false, // True = Return-to-Normal Synchroscope Rotating & Phase-Locking
+      isDoorsOpen: false,       // Hinged front cubicle doors swing open 95°
+      doorAngleRad: 0.0,
+      beamAngleRad: 0.24,       // Walking-beam mechanical interlock angle (+0.24 rad Normal vs -0.24 rad Blackout)
+      syncPhaseRad: 0.0,
+      loadKw: 184.0,            // Essential feeder demand (45 kW to 320 kW)
+      autoRotateOrbit: false,
+      explodeFactor: 0.0,
+      targetExplodeFactor: 0.0,
+      cutawayGlass: true,       // Start with X-Ray Enclosure ON so ACBs, busbars, transformer, and MCCBs are immediately visible
+      labelsVisible: true,
+      showGraphs: true,
+      activeSubsystem: null,
+      time: 0,
+      autoTourActive: false,
+      idleTimer: 0,
+      tourStep: 0,
+      tourStepTimer: 0
+    };
+
+    function computeEsbModel() {
+      const pf = 0.84;
+      const lineAmps440 = (state.loadKw * 1000.0) / (Math.sqrt(3) * 440.0 * pf);
+      const txKva220 = Math.min(48.5, 18.0 + (state.loadKw / 320.0) * 28.0);
+      const freqHz = state.isBlackoutMode ? 60.0 : 60.0;
+      const syncDeg = ((state.syncPhaseRad * 180) / Math.PI) % 360;
+
+      return {
+        lineAmps440,
+        txKva220,
+        freqHz,
+        syncDeg
+      };
+    }
+
+    function showInterlockToast(msg) {
+      const toast = document.getElementById('interlock-toast');
+      const txt = document.getElementById('interlock-msg');
+      txt.textContent = msg;
+      toast.classList.remove('opacity-0', 'translate-y-[-10px]');
+      toast.classList.add('opacity-100', 'translate-y-0');
+      clearTimeout(toast._timeout);
+      toast._timeout = setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-[-10px]');
+      }, 3100);
+    }
+
+    function applyIsolationAndCutaway() {
+      document.getElementById('btn-cutaway-toggle').classList.toggle('active', state.cutawayGlass);
+      document.getElementById('btn-top-xray').classList.toggle('text-orange-700', state.cutawayGlass);
+      document.getElementById('btn-top-xray').classList.toggle('text-slate-600', !state.cutawayGlass);
+
+      for (const key in subsystems) {
+        const grp = subsystems[key];
+        grp.visible = true;
+        const isIsolatedTarget = (state.activeSubsystem === null || state.activeSubsystem === key);
+
+        grp.traverse((obj) => {
+          if (!obj.isMesh || !obj.userData.origMaterial) return;
+          if (obj.material === matCutawayGlass && !cutawayMeshes.includes(obj)) return;
+          if (obj.material === matPolyWindow) return;
+
+          if (isIsolatedTarget) {
+            if (state.cutawayGlass && cutawayMeshes.includes(obj)) {
+              obj.material = matCutawayGlass;
+            } else {
+              obj.material = obj.userData.origMaterial;
+            }
+          } else {
+            obj.material = obj.userData.ghostMaterial;
+          }
+        });
+      }
+    }
+
+    applyIsolationAndCutaway();
+
+    function selectSubsystem(subKey) {
+      if (state.activeSubsystem === subKey) {
+        state.activeSubsystem = null;
+      } else {
+        state.activeSubsystem = subKey;
+      }
+
+      document.querySelectorAll('.subsystem-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.sub === state.activeSubsystem);
+      });
+
+      calloutItems.forEach((item) => {
+        item.el.classList.toggle('isolated', item.sub === state.activeSubsystem);
+      });
+
+      if (state.activeSubsystem && subsystemMeta[state.activeSubsystem]) {
+        const m = subsystemMeta[state.activeSubsystem];
+        document.getElementById('info-code').textContent = m.code;
+        document.getElementById('info-subsystem').textContent = m.sub;
+        document.getElementById('info-title').textContent = m.title;
+        document.getElementById('info-desc').textContent = m.desc;
+      } else {
+        document.getElementById('info-code').textContent = 'ASSY-00';
+        document.getElementById('info-subsystem').textContent = 'SOLAS Ch. II-1 Reg. 42 & 43 · Emergency Distribution';
+        document.getElementById('info-title').textContent = '440 V / 220 V Emergency Switchboard & Interlocked ACBs';
+        document.getElementById('info-desc').textContent = '2-bay Form 3b marine Emergency Switchboard housing mechanically and electrically interlocked Main Bus-Tie and EDG Incomer drawout ACBs, 1,200 A 440 V copper busbars, a 50 kVA 440/220 V step-down transformer, and 6 SOLAS essential feeder MCCBs.';
+      }
+
+      applyIsolationAndCutaway();
+    }
+
+    /* =====================================================================
+       9. LEFT & RIGHT DIVIDED CALLOUT COLUMNS WITH LONG SVG LEADER LINES
+       ===================================================================== */
+    // Exact Left (MP, TA, ED, EF) & Right (BA, CW, BB) Column Assignment as Specified
+    const calloutDefs = [
+      // Left Column (MP, TA, ED, EF)
+      { code: 'MP', label: 'Synchroscope & PMS Controller',   side: 'left',  pos: new THREE.Vector3(-0.63, 1.73,  0.54), sub: 'metering_synchro_panel' },
+      { code: 'TA', label: 'Interlocked Bus-Tie & EDG ACBs',  side: 'left',  pos: new THREE.Vector3(-0.42, 0.88,  0.24), sub: 'interlock_tie_acb' },
+      { code: 'ED', label: 'Cutout Doors & Mimic Bus',        side: 'left',  pos: new THREE.Vector3(-0.42, 1.24,  0.56), sub: 'esb_doors' },
+      { code: 'EF', label: '2-Bay ESB Frame & Canopy',        side: 'left',  pos: new THREE.Vector3(-0.82, 0.35,  0.48), sub: 'esb_frame' },
+      // Right Column (BA, CW, BB)
+      { code: 'BA', label: '440 V Emergency Copper Bus',      side: 'right', pos: new THREE.Vector3( 0.42, 1.56, -0.25), sub: 'esb_busbar_440v' },
+      { code: 'CW', label: 'SOLAS Essential Feeder MCCBs',    side: 'right', pos: new THREE.Vector3( 0.42, 1.04,  0.22), sub: 'essential_feeder_mccbs' },
+      { code: 'BB', label: '220 V Bus & 50 kVA Transformer',  side: 'right', pos: new THREE.Vector3( 0.42, 0.38, -0.22), sub: 'esb_busbar_220v' }
+    ];
+
+    const calloutItems = [];
+    calloutDefs.forEach((def) => {
+      const el = document.createElement('div');
+      el.className = 'callout-pill absolute px-2.5 py-1 rounded-lg text-[11px] font-medium whitespace-nowrap flex items-center justify-between gap-1.5 cursor-pointer';
+      el.innerHTML = `<div class="flex items-center gap-1.5 overflow-hidden"><span class="px-1 py-0.5 rounded bg-slate-100 text-slate-500 mono text-[9px] font-semibold shrink-0">${def.code}</span><span class="truncate">${def.label}</span></div><span class="text-slate-400 text-[10px] shrink-0">↗</span>`;
+      el.addEventListener('click', () => {
+        selectSubsystem(def.sub);
+        resetIdleTimer();
+      });
+      calloutsContainer.appendChild(el);
+
+      const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      polyline.setAttribute('fill', 'none');
+      polyline.setAttribute('stroke', '#94a3b8');
+      polyline.setAttribute('stroke-width', '1.2');
+      calloutsSvg.appendChild(polyline);
+
+      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('r', '3.0');
+      dot.setAttribute('fill', '#ea580c');
+      calloutsSvg.appendChild(dot);
+
+      calloutItems.push({ ...def, el, polyline, dot, anchorX: 0, anchorY: 0, y: 0, visible: true });
+    });
+
+    function resolveVerticalSpacing(items, minY, maxY, minGap) {
+      if (items.length === 0) return;
+      items.sort((a, b) => a.y - b.y);
+      items[0].y = Math.max(minY, items[0].y);
+      for (let i = 1; i < items.length; i++) {
+        if (items[i].y - items[i - 1].y < minGap) {
+          items[i].y = items[i - 1].y + minGap;
+        }
+      }
+      const last = items[items.length - 1];
+      if (last.y > maxY) {
+        last.y = maxY;
+        for (let i = items.length - 2; i >= 0; i--) {
+          if (items[i + 1].y - items[i].y < minGap) {
+            items[i].y = Math.max(minY, items[i + 1].y - minGap);
+          }
+        }
+      }
+    }
+
+    function updateCallouts() {
+      if (!state.labelsVisible) {
+        calloutItems.forEach((c) => {
+          c.el.style.display = 'none';
+          c.polyline.style.display = 'none';
+          c.dot.style.display = 'none';
+        });
+        return;
+      }
+
+      const vp = getViewportSize();
+      const leftColX = vp.left + 24;
+      const rightColX = window.innerWidth - 330 - 24 - 204;
+
+      const leftGroup = [];
+      const rightGroup = [];
+      const tempV = new THREE.Vector3();
+
+      calloutItems.forEach((c) => {
+        tempV.copy(c.pos);
+        if (c.sub && explodeVectors[c.sub]) {
+          tempV.addScaledVector(explodeVectors[c.sub], state.explodeFactor);
+        }
+        tempV.project(camera);
+        if (tempV.z > 1.0) {
+          c.visible = false;
+          c.el.style.display = 'none';
+          c.polyline.style.display = 'none';
+          c.dot.style.display = 'none';
+        } else {
+          c.visible = true;
+          c.anchorX = vp.left + (tempV.x * 0.5 + 0.5) * vp.width;
+          c.anchorY = vp.top + (-(tempV.y * 0.5) + 0.5) * vp.height;
+          c.y = c.anchorY;
+          if (c.side === 'left') leftGroup.push(c);
+          else rightGroup.push(c);
+        }
+      });
+
+      resolveVerticalSpacing(leftGroup, 100, window.innerHeight - 76, 42);
+      resolveVerticalSpacing(rightGroup, 100, window.innerHeight - 76, 42);
+
+      calloutItems.forEach((c) => {
+        if (!c.visible) return;
+        const badgeX = c.side === 'left' ? leftColX : rightColX;
+        const badgeEdgeX = c.side === 'left' ? badgeX + 204 : badgeX;
+        const elbowX = c.side === 'left' ? badgeEdgeX + 22 : badgeEdgeX - 22;
+
+        c.el.style.display = 'flex';
+        c.el.style.left = `${badgeX}px`;
+        c.el.style.top = `${c.y - 14}px`;
+
+        const isIsolated = (state.activeSubsystem === c.sub);
+        c.polyline.style.display = 'block';
+        c.polyline.setAttribute('points', `${c.anchorX},${c.anchorY} ${elbowX},${c.y} ${badgeEdgeX},${c.y}`);
+        c.polyline.setAttribute('stroke', isIsolated ? '#ea580c' : '#94a3b8');
+        c.polyline.setAttribute('stroke-width', isIsolated ? '1.8' : '1.2');
+
+        c.dot.style.display = 'block';
+        c.dot.setAttribute('cx', `${c.anchorX}`);
+        c.dot.setAttribute('cy', `${c.anchorY}`);
+      });
+    }
+
+    /* =====================================================================
+       10. KINEMATIC UPDATE LOOP (WALKING-BEAM INTERLOCK, SYNCHRO & DOORS)
+       ===================================================================== */
+    function updateKinematics(deltaSec) {
+      state.time += deltaSec;
+      state.explodeFactor += (state.targetExplodeFactor - state.explodeFactor) * 0.12;
+
+      // 1. Animate Walking-Beam Mechanical Interlock Linkage between 52-BT (Upper) and 52-EDG (Lower)
+      const targetBeamRad = state.isBlackoutMode ? -0.26 : 0.26;
+      state.beamAngleRad += (targetBeamRad - state.beamAngleRad) * Math.min(1.0, deltaSec * 9.0);
+      if (walkingBeamPivot) {
+        walkingBeamPivot.rotation.x = state.beamAngleRad;
+      }
+
+      // 2. Rotate Synchroscope Pointer Needle when ANSI 25 Sync Check is active
+      if (state.isSyncCheckActive) {
+        state.syncPhaseRad = (state.syncPhaseRad + deltaSec * 1.45) % (Math.PI * 2);
+      } else {
+        // Settle smoothly to 12 o'clock (0 rad)
+        state.syncPhaseRad += (0.0 - state.syncPhaseRad) * Math.min(1.0, deltaSec * 6.0);
+      }
+      if (synchroNeedlePivot) {
+        synchroNeedlePivot.rotation.z = -state.syncPhaseRad;
+      }
+
+      // 3. Swing Hinged Front Cubicle Doors (`bay1DoorPivot` Left-Hinged, `bay2DoorPivot` Right-Hinged)
+      const targetDoorRad = state.isDoorsOpen ? (95 * Math.PI) / 180 : 0.0;
+      state.doorAngleRad += (targetDoorRad - state.doorAngleRad) * Math.min(1.0, deltaSec * 8.0);
+      if (bay1DoorPivot) bay1DoorPivot.rotation.y = -state.doorAngleRad;
+      if (bay2DoorPivot) bay2DoorPivot.rotation.y =  state.doorAngleRad;
+
+      // 4. Optional Auto-Rotate Camera Orbit
+      if (state.autoRotateOrbit && !isCameraTweening) {
+        const offset = camera.position.clone().sub(controls.target);
+        offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), deltaSec * 0.25);
+        camera.position.copy(controls.target).add(offset);
+      }
+
+      // 5. Apply Subsystem Explosion Offsets & Dashed Centerlines
+      for (const key in subsystems) {
+        const vec = explodeVectors[key];
+        subsystems[key].position.set(
+          vec.x * state.explodeFactor,
+          vec.y * state.explodeFactor,
+          vec.z * state.explodeFactor
+        );
+      }
+
+      explodeGuideLines.forEach((g) => {
+        if (state.explodeFactor > 0.02) {
+          const posArr = g.line.geometry.attributes.position.array;
+          posArr[0] = g.base.x;
+          posArr[1] = g.base.y;
+          posArr[2] = g.base.z;
+          posArr[3] = g.base.x + g.vec.x * state.explodeFactor;
+          posArr[4] = g.base.y + g.vec.y * state.explodeFactor;
+          posArr[5] = g.base.z + g.vec.z * state.explodeFactor;
+          g.line.geometry.attributes.position.needsUpdate = true;
+          g.line.computeLineDistances();
+          g.line.material.opacity = Math.min(0.75, state.explodeFactor * 0.90);
+        } else {
+          g.line.material.opacity = 0.0;
+        }
+      });
+
+      const model = computeEsbModel();
+      updateHUD(model);
+      updateProofValues(model);
+      renderGraphs(model);
+    }
+
+    /* =====================================================================
+       11. HUD & LIVE 2D TELEMETRY CANVASES (WAVEFORMS & ESSENTIAL FEEDERS)
+       ===================================================================== */
+    function updateHUD(m) {
+      document.getElementById('tel-volts').textContent = '440 V · 220 V AC';
+      document.getElementById('tel-load').textContent = `${Math.round(state.loadKw)} kW · ${Math.round(m.lineAmps440)} A`;
+
+      const acbEl = document.getElementById('tel-acbs');
+      const statusTxt = document.getElementById('tel-status-txt');
+      const statusDot = document.getElementById('tel-status-dot');
+      const statusPill = document.getElementById('tel-status-pill');
+
+      if (state.isBlackoutMode) {
+        acbEl.textContent = 'TIE: OFF · EDG: ON';
+        acbEl.className = 'text-xs font-semibold mono text-red-600';
+        statusTxt.textContent = 'BLACKOUT · EDG ON';
+        statusDot.className = 'w-1.5 h-1.5 rounded-full bg-red-600 animate-ping';
+        statusPill.className = 'flex items-center gap-1 text-red-600 font-semibold';
+      } else {
+        acbEl.textContent = 'TIE: ON · EDG: OFF';
+        acbEl.className = 'text-xs font-semibold mono text-emerald-700';
+        statusTxt.textContent = 'NORMAL · MSB TIE';
+        statusDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse';
+        statusPill.className = 'flex items-center gap-1 text-emerald-600 font-semibold';
+      }
+
+      document.getElementById('val-tie-state').textContent = state.isBlackoutMode ? 'OPEN (O)' : 'CLOSED (I)';
+      document.getElementById('val-tie-state').className = state.isBlackoutMode
+        ? 'text-[10px] font-semibold mono text-slate-500'
+        : 'text-[10px] font-semibold mono text-emerald-700';
+
+      document.getElementById('val-edg-state').textContent = state.isBlackoutMode ? 'CLOSED (I)' : 'OPEN (O)';
+      document.getElementById('val-edg-state').className = state.isBlackoutMode
+        ? 'text-[10px] font-semibold mono text-red-600'
+        : 'text-[10px] font-semibold mono text-slate-500';
+
+      document.getElementById('val-tx-load').textContent = `${m.txKva220.toFixed(1)} kVA`;
+      document.getElementById('wave-live-badge').textContent = `60.0 Hz · Δφ = ${Math.round(m.syncDeg)}°`;
+      document.getElementById('lbl-doors-btn').textContent = state.isDoorsOpen ? 'Close ESB Doors' : 'Open ESB Doors';
+    }
+
+    function updateProofValues(m) {
+      const elMode = document.getElementById('proof-mode');
+      if (!elMode) return;
+      elMode.textContent = state.isBlackoutMode
+        ? 'BLACKOUT · EDG INCOMER ONLINE (<45s)'
+        : 'NORMAL · MSB BUS-TIE CLOSED';
+      document.getElementById('proof-acbs').textContent = state.isBlackoutMode
+        ? '52-BT: OPEN (O) · 52-EDG: CLOSED (I)'
+        : '52-BT: CLOSED (I) · 52-EDG: OPEN (O)';
+      document.getElementById('proof-load').textContent = `${Math.round(state.loadKw)} kW · ${Math.round(m.lineAmps440)} A @ 440 V 60.0 Hz`;
+      document.getElementById('proof-tx').textContent = `220 V AC (${m.txKva220.toFixed(1)} kVA) · R_iso > 5.0 MΩ`;
+    }
+
+    const waveCanvas = document.getElementById('wave-canvas');
+    const waveCtx = waveCanvas.getContext('2d');
+    const feederCanvas = document.getElementById('feeder-canvas');
+    const feederCtx = feederCanvas.getContext('2d');
+
+    function renderGraphs(m) {
+      if (!state.showGraphs) return;
+
+      // Canvas 1: 3-Phase 440 V ESB Bus Waveforms (L1 Red, L2 Amber, L3 Blue) + Sync Phase Reference
+      const ww = waveCanvas.width;
+      const wh = waveCanvas.height;
+      waveCtx.clearRect(0, 0, ww, wh);
+
+      const midY = wh * 0.5;
+      waveCtx.strokeStyle = 'rgba(203, 213, 225, 0.65)';
+      waveCtx.lineWidth = 1;
+      [0.2, 0.5, 0.8].forEach((r) => {
+        waveCtx.beginPath();
+        waveCtx.moveTo(0, wh * r);
+        waveCtx.lineTo(ww, wh * r);
+        waveCtx.stroke();
+      });
+
+      const phaseColors = ['#dc2626', '#eab308', '#2563eb'];
+      const amp = wh * 0.36;
+      phaseColors.forEach((col, pIdx) => {
+        waveCtx.strokeStyle = col;
+        waveCtx.lineWidth = 1.6;
+        waveCtx.beginPath();
+        const shift = (pIdx * 2 * Math.PI) / 3;
+        for (let x = 0; x < ww; x++) {
+          const theta = (x / ww) * Math.PI * 4 + state.time * 10.0 - shift;
+          const y = midY - Math.sin(theta) * amp;
+          if (x === 0) waveCtx.moveTo(x, y);
+          else waveCtx.lineTo(x, y);
+        }
+        waveCtx.stroke();
+      });
+
+      // If Sync Check Active, overlay dashed incoming MSB reference wave
+      if (state.isSyncCheckActive) {
+        waveCtx.strokeStyle = '#10b981';
+        waveCtx.lineWidth = 1.5;
+        waveCtx.setLineDash([4, 3]);
+        waveCtx.beginPath();
+        for (let x = 0; x < ww; x++) {
+          const theta = (x / ww) * Math.PI * 4 + state.time * 10.0 + state.syncPhaseRad;
+          const y = midY - Math.sin(theta) * (amp * 0.88);
+          if (x === 0) waveCtx.moveTo(x, y);
+          else waveCtx.lineTo(x, y);
+        }
+        waveCtx.stroke();
+        waveCtx.setLineDash([]);
+      }
+
+      // Canvas 2: 6 SOLAS Essential Feeders Load Bar Chart
+      const fw = feederCanvas.width;
+      const fh = feederCanvas.height;
+      feederCtx.clearRect(0, 0, fw, fh);
+
+      const labels = ['STEER', 'FIRE', 'BILGE', 'NAV', 'GMDSS', 'LIGHT'];
+      const shares = [0.28, 0.34, 0.16, 0.08, 0.06, 0.08];
+      const barW = 32;
+      const gap = 12;
+
+      labels.forEach((lbl, idx) => {
+        const bx = 12 + idx * (barW + gap);
+        const hFrac = Math.min(1.0, (state.loadKw / 320.0) * (0.65 + shares[idx] * 1.4));
+        const bh = Math.max(6, hFrac * (fh - 20));
+        const by = fh - 14 - bh;
+
+        feederCtx.fillStyle = idx < 3 ? '#dc2626' : '#0284c7';
+        feederCtx.fillRect(bx, by, barW, bh);
+
+        feederCtx.fillStyle = '#475569';
+        feederCtx.font = 'bold 8px JetBrains Mono';
+        feederCtx.textAlign = 'center';
+        feederCtx.fillText(lbl, bx + barW / 2, fh - 3);
+      });
+    }
+
+    /* =====================================================================
+       12. CAMERA PRESETS & UI EVENT BINDINGS
+       ===================================================================== */
+    function moveCameraTo(presetKey) {
+      const presets = {
+        hero:     { pos: new THREE.Vector3(-2.80, 2.00,  3.80), target: new THREE.Vector3( 0.00, 1.05,  0.00) },
+        acbs:     { pos: new THREE.Vector3(-0.75, 0.95,  2.25), target: new THREE.Vector3(-0.42, 0.88,  0.12) },
+        metering: { pos: new THREE.Vector3(-0.20, 1.82,  2.15), target: new THREE.Vector3( 0.00, 1.72,  0.48) },
+        feeders:  { pos: new THREE.Vector3( 0.85, 1.05,  2.25), target: new THREE.Vector3( 0.42, 0.98,  0.12) },
+        bus440:   { pos: new THREE.Vector3(-1.45, 1.95, -2.35), target: new THREE.Vector3( 0.00, 1.56, -0.25) },
+        tx220:    { pos: new THREE.Vector3( 1.55, 0.82, -2.15), target: new THREE.Vector3( 0.42, 0.42, -0.20) }
+      };
+
+      const p = presets[presetKey] || presets.hero;
+      camTargetPos.copy(p.pos);
+      camTargetLook.copy(p.target);
+      isCameraTweening = true;
+
+      const sel = document.getElementById('select-camera-preset');
+      if (sel && sel.value !== presetKey) sel.value = presetKey;
+    }
+
+    function updateCameraTween() {
+      if (isCameraTweening) {
+        camera.position.lerp(camTargetPos, 0.10);
+        controls.target.lerp(camTargetLook, 0.10);
+        if (camera.position.distanceTo(camTargetPos) < 0.03 && controls.target.distanceTo(camTargetLook) < 0.03) {
+          isCameraTweening = false;
+        }
+      }
+      controls.update();
+    }
+
+    function toggleCutaway() {
+      state.cutawayGlass = !state.cutawayGlass;
+      applyIsolationAndCutaway();
+    }
+
+    function toggleLabels() {
+      state.labelsVisible = !state.labelsVisible;
+      document.getElementById('btn-labels-toggle').classList.toggle('active', state.labelsVisible);
+      document.getElementById('btn-top-labels').classList.toggle('text-orange-700', state.labelsVisible);
+      document.getElementById('btn-top-labels').classList.toggle('text-slate-600', !state.labelsVisible);
+    }
+
+    // Bind Subsystem Isolation Buttons
+    document.querySelectorAll('.subsystem-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        selectSubsystem(btn.dataset.sub);
+        resetIdleTimer();
+      });
+    });
+
+    document.getElementById('btn-show-all').addEventListener('click', () => {
+      state.activeSubsystem = null;
+      selectSubsystem(null);
+      resetIdleTimer();
+    });
+
+    document.getElementById('select-camera-preset').addEventListener('change', (e) => {
+      moveCameraTo(e.target.value);
+      resetIdleTimer();
+    });
+
+    document.getElementById('btn-cutaway-toggle').addEventListener('click', () => {
+      toggleCutaway();
+      resetIdleTimer();
+    });
+    document.getElementById('btn-top-xray').addEventListener('click', () => {
+      toggleCutaway();
+      resetIdleTimer();
+    });
+
+    document.getElementById('btn-labels-toggle').addEventListener('click', () => {
+      toggleLabels();
+      resetIdleTimer();
+    });
+    document.getElementById('btn-top-labels').addEventListener('click', () => {
+      toggleLabels();
+      resetIdleTimer();
+    });
+
+    document.getElementById('btn-top-autorotate').addEventListener('click', () => {
+      state.autoRotateOrbit = !state.autoRotateOrbit;
+      document.getElementById('btn-top-autorotate').classList.toggle('text-orange-700', state.autoRotateOrbit);
+      document.getElementById('btn-top-autorotate').classList.toggle('font-semibold', state.autoRotateOrbit);
+      resetIdleTimer();
+    });
+
+    function toggleTelemetryDrawer() {
+      state.showGraphs = !state.showGraphs;
+      document.getElementById('btn-graphs-toggle').classList.toggle('active', state.showGraphs);
+      document.getElementById('telemetry-drawer').classList.toggle('hidden', !state.showGraphs);
+    }
+    document.getElementById('btn-graphs-toggle').addEventListener('click', toggleTelemetryDrawer);
+    document.getElementById('btn-collapse-telemetry').addEventListener('click', toggleTelemetryDrawer);
+
+    // Essential Feeder Load Demand Slider
+    const sliderLoad = document.getElementById('slider-load');
+    function setEssentialLoad(kw) {
+      state.loadKw = kw;
+      sliderLoad.value = kw;
+      const m = computeEsbModel();
+      document.getElementById('val-load-slider').textContent = `${Math.round(kw)} kW (${Math.round(m.lineAmps440)} A @ 440V)`;
+      updatePmsScreenTexture(state.isBlackoutMode, state.isSyncCheckActive, Math.round(state.loadKw), Math.round(m.lineAmps440));
+      resetIdleTimer();
+    }
+    sliderLoad.addEventListener('input', (e) => setEssentialLoad(parseFloat(e.target.value)));
+    document.getElementById('btn-load-harbor').addEventListener('click', () => setEssentialLoad(65));
+    document.getElementById('btn-load-sea').addEventListener('click', () => setEssentialLoad(184));
+    document.getElementById('btn-load-fire').addEventListener('click', () => setEssentialLoad(295));
+
+    // Interactive `TRANSFER MODE: NORMAL (MAIN BUS TIE CLOSED)` ↔ `BLACKOUT (TIE OPEN · EDG ACB CLOSED)` Button
+    function applyTransferModeVisuals() {
+      const btn = document.getElementById('btn-transfer-mode');
+      const lbl = document.getElementById('lbl-transfer-btn');
+      const m = computeEsbModel();
+
+      if (state.isBlackoutMode) {
+        btn.className = 'w-full px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[11px] font-semibold shadow-sm transition flex items-center justify-center gap-1.5';
+        lbl.textContent = '🚨 BLACKOUT (TIE OPEN · EDG ACB CLOSED)';
+
+        // Update 3D ACB Mechanical Flags & Door Mimic LEDs
+        if (tieAcbFlagMesh && edgAcbFlagMesh) {
+          tieAcbFlagMesh.userData.origMaterial.color.setHex(0x16a34a); // Green OPEN (O)
+          tieAcbFlagMesh.userData.ghostMaterial.color.setHex(0x16a34a);
+          edgAcbFlagMesh.userData.origMaterial.color.setHex(0xdc2626); // Red CLOSED (I)
+          edgAcbFlagMesh.userData.ghostMaterial.color.setHex(0xdc2626);
+        }
+        if (mimicTieLedMesh && mimicEdgLedMesh && mimicEdgGenLedMesh) {
+          mimicTieLedMesh.userData.origMaterial.color.setHex(0x475569);
+          mimicEdgLedMesh.userData.origMaterial.color.setHex(0xdc2626);
+          mimicEdgGenLedMesh.userData.origMaterial.color.setHex(0x10b981);
+        }
+      } else {
+        btn.className = 'w-full px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold shadow-sm transition flex items-center justify-center gap-1.5';
+        lbl.textContent = '⚡ MODE: NORMAL (MAIN BUS TIE CLOSED)';
+
+        if (tieAcbFlagMesh && edgAcbFlagMesh) {
+          tieAcbFlagMesh.userData.origMaterial.color.setHex(0xdc2626); // Red CLOSED (I)
+          tieAcbFlagMesh.userData.ghostMaterial.color.setHex(0xdc2626);
+          edgAcbFlagMesh.userData.origMaterial.color.setHex(0x16a34a); // Green OPEN (O)
+          edgAcbFlagMesh.userData.ghostMaterial.color.setHex(0x16a34a);
+        }
+        if (mimicTieLedMesh && mimicEdgLedMesh && mimicEdgGenLedMesh) {
+          mimicTieLedMesh.userData.origMaterial.color.setHex(0x10b981);
+          mimicEdgLedMesh.userData.origMaterial.color.setHex(0x475569);
+          mimicEdgGenLedMesh.userData.origMaterial.color.setHex(0x475569);
+        }
+      }
+
+      updatePmsScreenTexture(state.isBlackoutMode, state.isSyncCheckActive, Math.round(state.loadKw), Math.round(m.lineAmps440));
+    }
+
+    document.getElementById('btn-transfer-mode').addEventListener('click', () => {
+      state.isBlackoutMode = !state.isBlackoutMode;
+      applyTransferModeVisuals();
+      if (state.isBlackoutMode) {
+        showInterlockToast('SOLAS Blackout Transfer: Bus-Tie ACB 52-BT tripped OPEN, walking-beam interlock pivoted, & EDG ACB 52-EDG CLOSED onto ESB!');
+      } else {
+        showInterlockToast('Return to Normal Supply: EDG Incomer ACB 52-EDG opened & Main Switchboard Bus-Tie ACB 52-BT CLOSED.');
+      }
+      resetIdleTimer();
+    });
+
+    // Return-to-Normal Synchroscope (`ANSI 25`) Button
+    document.getElementById('btn-sync-check').addEventListener('click', () => {
+      state.isSyncCheckActive = !state.isSyncCheckActive;
+      const lbl = document.getElementById('lbl-sync-btn');
+      lbl.textContent = state.isSyncCheckActive ? '🔄 SYNC CHECK: ACTIVE' : '🔄 SYNC CHECK: OFF';
+      const m = computeEsbModel();
+      updatePmsScreenTexture(state.isBlackoutMode, state.isSyncCheckActive, Math.round(state.loadKw), Math.round(m.lineAmps440));
+      if (state.isSyncCheckActive) {
+        showInterlockToast('ANSI 25 Synchroscope Energized: Matching EDG & Main 440V Switchboard frequency and phase angle for blackless transfer.');
+      }
+      resetIdleTimer();
+    });
+
+    // Open / Close ESB Doors Button
+    document.getElementById('btn-toggle-doors').addEventListener('click', () => {
+      state.isDoorsOpen = !state.isDoorsOpen;
+      resetIdleTimer();
+    });
+
+    // Explode Assembly Slider (with Smooth Wide-Framing Camera Pullback)
+    const sliderExplode = document.getElementById('slider-explode');
+    function setExplodeTarget(factor) {
+      state.targetExplodeFactor = factor;
+      sliderExplode.value = Math.round(factor * 100);
+      document.getElementById('val-explode').textContent = `${Math.round(factor * 100)}%`;
+
+      camTargetPos.set(
+        -2.80 - factor * 1.45,
+         2.00 + factor * 0.95,
+         3.80 + factor * 2.35
+      );
+      camTargetLook.set(0.0, 1.05 + factor * 0.15, 0.0);
+      isCameraTweening = true;
+      resetIdleTimer();
+    }
+
+    sliderExplode.addEventListener('input', (e) => {
+      setExplodeTarget(parseFloat(e.target.value) / 100);
+    });
+    document.getElementById('btn-assemble-all').addEventListener('click', () => {
+      setExplodeTarget(0.0);
+    });
+    document.getElementById('btn-explode-all').addEventListener('click', () => {
+      setExplodeTarget(1.0);
+    });
+
+    // Reset View & Zoom Buttons
+    function resetViewAll() {
+      state.autoRotateOrbit = false;
+      document.getElementById('btn-top-autorotate').classList.remove('text-orange-700', 'font-semibold');
+      moveCameraTo('hero');
+      state.targetExplodeFactor = 0.0;
+      sliderExplode.value = 0;
+      document.getElementById('val-explode').textContent = '0%';
+      state.activeSubsystem = null;
+      selectSubsystem(null);
+      resetIdleTimer();
+    }
+    document.getElementById('btn-reset-cam').addEventListener('click', resetViewAll);
+    document.getElementById('btn-top-reset').addEventListener('click', resetViewAll);
+
+    document.getElementById('btn-zoom-in').addEventListener('click', () => {
+      isCameraTweening = false;
+      const offset = camera.position.clone().sub(controls.target);
+      offset.setLength(Math.max(controls.minDistance, offset.length() * 0.88));
+      camera.position.copy(controls.target).add(offset);
+      controls.update();
+    });
+
+    document.getElementById('btn-zoom-out').addEventListener('click', () => {
+      isCameraTweening = false;
+      const offset = camera.position.clone().sub(controls.target);
+      offset.setLength(Math.min(controls.maxDistance, offset.length() * 1.14));
+      camera.position.copy(controls.target).add(offset);
+      controls.update();
+    });
+
+    // Proof Modal
+    const modalProof = document.getElementById('modal-proof');
+    document.getElementById('btn-math-proof').addEventListener('click', () => {
+      modalProof.classList.remove('hidden');
+      resetIdleTimer();
+    });
+    document.getElementById('btn-close-proof').addEventListener('click', () => {
+      modalProof.classList.add('hidden');
+    });
+
+    // 3D Raycaster Click Inspection
+    const downPos = { x: 0, y: 0 };
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      downPos.x = e.clientX;
+      downPos.y = e.clientY;
+    });
+    renderer.domElement.addEventListener('pointerup', (e) => {
+      if (Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y) > 5) return;
+      const vp = getViewportSize();
+      mouseVec.x = ((e.clientX - vp.left) / vp.width) * 2 - 1;
+      mouseVec.y = -((e.clientY - vp.top) / vp.height) * 2 + 1;
+      raycaster.setFromCamera(mouseVec, camera);
+      const meshes = [];
+      for (const k in subsystems) {
+        subsystems[k].traverse((o) => { if (o.isMesh && o.userData.subsystemKey) meshes.push(o); });
+      }
+      const hits = raycaster.intersectObjects(meshes, false);
+      if (hits.length > 0) {
+        const subKey = hits[0].object.userData.subsystemKey;
+        if (subKey && subsystemMeta[subKey]) {
+          selectSubsystem(subKey);
+        }
+      }
+    });
+
+    /* =====================================================================
+       13. AUTO-TOUR SYSTEM
+       ===================================================================== */
+    function resetIdleTimer() {
+      state.idleTimer = 0;
+    }
+
+    function startAutoTour() {
+      state.autoTourActive = true;
+      state.tourStep = 0;
+      state.tourStepTimer = 0;
+      document.getElementById('tour-pointer').classList.remove('hidden');
+    }
+
+    function stopAutoTour() {
+      state.autoTourActive = false;
+      document.getElementById('tour-pointer').classList.add('hidden');
+      state.activeSubsystem = null;
+      selectSubsystem(null);
+    }
+
+    document.getElementById('btn-start-tour').addEventListener('click', () => {
+      if (state.autoTourActive) stopAutoTour(); else startAutoTour();
+    });
+
+    ['pointerdown', 'wheel', 'keydown', 'touchstart'].forEach((evt) => {
+      window.addEventListener(evt, () => {
+        if (state.autoTourActive) stopAutoTour();
+        resetIdleTimer();
+      }, { passive: true });
+    });
+
+    function updateAutoTour(deltaSec) {
+      if (!state.autoTourActive) {
+        state.idleTimer += deltaSec;
+        if (state.idleTimer >= 28.0) {
+          startAutoTour();
+        }
+        return;
+      }
+
+      state.tourStepTimer += deltaSec;
+      const tourKeys = [
+        'esb_frame',
+        'esb_doors',
+        'interlock_tie_acb',
+        'metering_synchro_panel',
+        'essential_feeder_mccbs',
+        'esb_busbar_440v',
+        'esb_busbar_220v'
+      ];
+      const tourCams = ['hero', 'hero', 'acbs', 'metering', 'feeders', 'bus440', 'tx220'];
+
+      if (state.tourStepTimer >= 4.2) {
+        state.tourStepTimer = 0;
+        state.tourStep = (state.tourStep + 1) % (tourKeys.length + 1);
+
+        if (state.tourStep < tourKeys.length) {
+          const key = tourKeys[state.tourStep];
+          state.activeSubsystem = null;
+          selectSubsystem(key);
+          moveCameraTo(tourCams[state.tourStep]);
+
+          const btn = document.querySelector(`.subsystem-btn[data-sub="${key}"]`);
+          const ptr = document.getElementById('tour-pointer');
+          if (btn && ptr) {
+            const rect = btn.getBoundingClientRect();
+            ptr.style.left = `${rect.right + 16}px`;
+            ptr.style.top = `${rect.top + rect.height / 2}px`;
+            document.getElementById('tour-tag').textContent = subsystemMeta[key].title;
+          }
+        } else {
+          state.activeSubsystem = null;
+          selectSubsystem(null);
+          setExplodeTarget(0.90);
+          setTimeout(() => {
+            setExplodeTarget(0.0);
+          }, 2600);
+        }
+      }
+    }
+
+    /* =====================================================================
+       14. MAIN ANIMATION LOOP & RESPONSIVE RESIZE
+       ===================================================================== */
+    let lastTimestamp = performance.now();
+
+    function animate(timestamp) {
+      requestAnimationFrame(animate);
+      const deltaSec = Math.min((timestamp - lastTimestamp) / 1000, 0.1);
+      lastTimestamp = timestamp;
+
+      updateKinematics(deltaSec);
+      updateCameraTween();
+      updateCallouts();
+      updateAutoTour(deltaSec);
+
+      renderer.render(scene, camera);
+    }
+
+    function onWindowResize() {
+      const vp = getViewportSize();
+      camera.aspect = vp.width / vp.height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(vp.width, vp.height);
+    }
+    window.addEventListener('resize', onWindowResize);
+
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

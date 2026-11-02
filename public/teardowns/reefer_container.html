@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>440 V 40-Foot High-Cube Marine Refrigerated Container (ISO Reefer) — 3D CAD Digital Twin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #f2f4f7;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #0f172a;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    #canvas-container {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+    }
+    .hud-glass {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(203, 213, 225, 0.92);
+      box-shadow: 0 10px 30px -8px rgba(15, 23, 42, 0.08), 0 4px 10px -2px rgba(15, 23, 42, 0.04);
+    }
+    .toolbar-btn {
+      transition: all 0.16s ease;
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+    .toolbar-btn:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+      color: #0f172a;
+    }
+    .toolbar-btn.active {
+      background: #fff7ed;
+      border-color: #ea580c;
+      color: #9a3412;
+      font-weight: 600;
+    }
+    .part-chip {
+      transition: all 0.15s ease;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: #475569;
+    }
+    .part-chip:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      color: #0f172a;
+    }
+    .part-chip.active {
+      background: #ea580c;
+      border-color: #c2410c;
+      color: #ffffff;
+    }
+    .mode-pill {
+      transition: all 0.15s ease;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #475569;
+    }
+    .mode-pill:hover {
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+    .mode-pill.active-frozen {
+      background: #0284c7;
+      border-color: #0369a1;
+      color: #ffffff;
+      font-weight: 700;
+    }
+    .mode-pill.active-chilled {
+      background: #059669;
+      border-color: #047857;
+      color: #ffffff;
+      font-weight: 700;
+    }
+    .mode-pill.active-defrost {
+      background: #ea580c;
+      border-color: #c2410c;
+      color: #ffffff;
+      font-weight: 700;
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #ea580c;
+      border: 2px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.3);
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+    .callout-badge {
+      position: absolute;
+      width: 180px;
+      pointer-events: auto;
+      transform: translateY(-50%);
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid rgba(203, 213, 225, 0.95);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+      border-radius: 10px;
+      padding: 6px 10px;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .callout-badge:hover {
+      border-color: #94a3b8;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
+    }
+    .callout-badge.selected {
+      background: #fff7ed;
+      border-color: #ea580c;
+      box-shadow: 0 6px 18px rgba(234, 88, 12, 0.18);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 3D WebGL Viewport -->
+  <div id="canvas-container"></div>
+
+  <!-- Divided Left/Right Callout Badges & SVG Leader Lines Overlay -->
+  <div id="callouts-overlay" class="fixed inset-0 pointer-events-none z-10 overflow-hidden">
+    <svg id="leader-svg" class="w-full h-full block"></svg>
+    <div id="badges-layer" class="absolute inset-0 pointer-events-none"></div>
+  </div>
+
+  <!-- Top-Left Header & Sub-Assembly Isolation Bar -->
+  <header class="fixed top-4 left-4 z-20 max-w-xl pointer-events-auto flex flex-col gap-2">
+    <div class="hud-glass rounded-2xl px-4 py-3">
+      <div class="flex items-center gap-2.5">
+        <span class="px-2 py-0.5 rounded-md bg-sky-100 text-sky-800 mono text-[11px] font-bold">ISO 1496-2 · IEC 60092-509</span>
+        <h1 class="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+          440 V 40-Foot High-Cube Integral Marine Refrigerated Container
+        </h1>
+      </div>
+      <p class="text-[11px] text-slate-500 mt-0.5 mono">
+        Nose-Mount Reefer Unit · Bottom-Air Delivery T-Bar Floor · Air &amp; Seawater Dual Condenser
+      </p>
+
+      <!-- Sub-Assembly Quick Filter Chips -->
+      <div class="flex flex-wrap items-center gap-1.5 mt-2.5 pt-2.5 border-t border-slate-200/80" id="part-chips-bar">
+        <button class="part-chip active px-2.5 py-1 rounded-lg text-[11px] font-semibold" data-part="all">Show All</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="container_shell">CS · Cutaway Shell &amp; T-Floor</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="nose_frame_chassis">NF · Nose Frame &amp; Doors</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="compressor_receiver">CM · 440V Compressor &amp; Receiver</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="condenser_fan_coil">CF · Air Condenser &amp; Fan</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="evaporator_blowers">EB · Evaporator &amp; Twin Blowers</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="control_box_pti">CB · Controller &amp; 32A CEE Plug</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="water_cooled_condenser">WC · CuNi Seawater Condenser</button>
+      </div>
+    </div>
+
+    <!-- Active Sub-Assembly Inspector & Live Reefer Telemetry Card -->
+    <div id="part-info-card" class="hud-glass rounded-xl px-3.5 py-2.5 text-xs max-w-md">
+      <div class="flex items-center justify-between">
+        <span id="info-badge" class="mono text-[10px] font-bold uppercase text-orange-700">ISO REEFER OVERVIEW · 7 SUB-ASSEMBLIES</span>
+        <span id="info-spec" class="mono text-[10px] text-slate-400">440 V · 3P+E · 60 Hz · R-452A / CO2</span>
+      </div>
+      <div id="info-title" class="font-semibold text-slate-900 mt-0.5">Bottom-Air Delivery Integral Marine Reefer Unit</div>
+      <p id="info-desc" class="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+        Twin upper axial evaporator fans draw return air from the top of the cargo load, force it across the finned evaporator coil down the front baffle wall, and distribute chilled air evenly along the extruded aluminum T-bar floor channels.
+      </p>
+      <div class="grid grid-cols-4 gap-1.5 mt-2 pt-2 border-t border-slate-200/80 text-center mono">
+        <div class="bg-slate-50 rounded-lg py-1 px-1.5 border border-slate-200/60">
+          <span class="text-[9px] text-slate-400 block">SETPOINT</span>
+          <span id="tel-set" class="text-[11px] font-bold text-sky-700">-25.0 °C</span>
+        </div>
+        <div class="bg-slate-50 rounded-lg py-1 px-1.5 border border-slate-200/60">
+          <span class="text-[9px] text-slate-400 block">SUPPLY / RET</span>
+          <span id="tel-sup" class="text-[11px] font-bold text-emerald-700">-25.2 / -23.8</span>
+        </div>
+        <div class="bg-slate-50 rounded-lg py-1 px-1.5 border border-slate-200/60">
+          <span class="text-[9px] text-slate-400 block">440V DRAW</span>
+          <span id="tel-kw" class="text-[11px] font-bold text-slate-800">11.4 kW · 18A</span>
+        </div>
+        <div class="bg-slate-50 rounded-lg py-1 px-1.5 border border-slate-200/60">
+          <span class="text-[9px] text-slate-400 block">DISCH / SUCT</span>
+          <span id="tel-bar" class="text-[11px] font-bold text-orange-600">18.5 / 2.1b</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Top-Right Pill Toolbar -->
+  <nav class="fixed top-4 right-4 z-20 pointer-events-auto flex flex-wrap items-center gap-1.5">
+    <button id="btn-reset-view" class="toolbar-btn px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm">
+      Reset View
+    </button>
+    <button id="btn-auto-rotate" class="toolbar-btn px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm">
+      Auto-Rotate
+    </button>
+    <button id="btn-toggle-labels" class="toolbar-btn active px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm">
+      Toggle Labels
+    </button>
+    <button id="btn-toggle-xray" class="toolbar-btn px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm">
+      X-Ray Shell &amp; Doors
+    </button>
+  </nav>
+
+  <!-- Bottom Dock Control Bar (Explode Slider & 3-Mode Operating Selector) -->
+  <footer class="fixed bottom-4 left-1/2 -translate-x-1/2 z-20 w-[95vw] max-w-4xl hud-glass rounded-2xl px-5 py-3.5 pointer-events-auto">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+
+      <!-- 1. Explode Assembly Slider (0% to 100%) -->
+      <div class="md:col-span-5 flex flex-col gap-1">
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-semibold text-slate-700">Explode Assembly</span>
+          <span id="lbl-explode-val" class="mono text-[11px] font-bold text-orange-700">0% · ASSEMBLED</span>
+        </div>
+        <input id="slider-explode" type="range" min="0" max="100" value="0" step="1" />
+        <div class="flex justify-between text-[9px] mono text-slate-400">
+          <button id="btn-exp-0" class="hover:text-slate-800">0% Assembled</button>
+          <button id="btn-exp-50" class="hover:text-slate-800">50% Inspect</button>
+          <button id="btn-exp-100" class="hover:text-slate-800">100% Teardown</button>
+        </div>
+      </div>
+
+      <!-- 2. Operating Mode Selector (Frozen -25°C / Chilled +2°C / Defrost Cycle) -->
+      <div class="md:col-span-7 flex flex-col gap-1.5">
+        <div class="flex items-center justify-between text-[11px]">
+          <span class="font-semibold text-slate-700">Reefer Operating Mode</span>
+          <span id="lbl-mode-status" class="mono text-[10px] font-bold text-sky-700">FROZEN CARGO · HIGH SPEED FANS (3600/1800 RPM)</span>
+        </div>
+        <div class="grid grid-cols-3 gap-1.5">
+          <button id="btn-mode-frozen" class="mode-pill active-frozen py-2 px-2.5 rounded-xl text-[11px] mono text-center shadow-sm">
+            ❄ FROZEN (-25.0°C · High)
+          </button>
+          <button id="btn-mode-chilled" class="mode-pill py-2 px-2.5 rounded-xl text-[11px] mono text-center shadow-sm">
+            🍏 CHILLED (+2.0°C · Mod)
+          </button>
+          <button id="btn-mode-defrost" class="mode-pill py-2 px-2.5 rounded-xl text-[11px] mono text-center shadow-sm">
+            🔥 DEFROST (Fans Off · Heat)
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- Three.js ES Module Application -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+    /* =====================================================================
+       1. SCENE, RENDERER, CAMERA & SMOOTH CLAMPED WHEEL ZOOM (MANDATORY)
+       ===================================================================== */
+    const container = document.getElementById('canvas-container');
+    const leaderSvg = document.getElementById('leader-svg');
+    const badgesLayer = document.getElementById('badges-layer');
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf2f4f7);
+
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environmentIntensity = 0.85;
+
+    const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 120);
+    const DEFAULT_CAM_POS = new THREE.Vector3(-5.5, 2.75, 5.8);
+    const DEFAULT_CAM_TARGET = new THREE.Vector3(0.0, 1.05, 0.0);
+    camera.position.copy(DEFAULT_CAM_POS);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.copy(DEFAULT_CAM_TARGET);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.enablePan = true;
+    controls.enableZoom = false; // Mandatory custom non-jumping wheel zoom below
+    controls.minDistance = 1.8;
+    controls.maxDistance = 18.0;
+    controls.maxPolarAngle = Math.PI * 0.495;
+    controls.update();
+
+    let isCameraTweening = false;
+    const tweenPos = DEFAULT_CAM_POS.clone();
+    const tweenTarget = DEFAULT_CAM_TARGET.clone();
+
+    controls.addEventListener('start', () => {
+      isCameraTweening = false;
+    });
+
+    // Smooth Non-Jumping Wheel Zoom (4.2% per scroll notch, clamped between 1.8m and 12.0m)
+    renderer.domElement.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = THREE.MathUtils.clamp(e.deltaY, -100, 100);
+      const zoomFactor = 1 + (delta > 0 ? 0.042 : -0.042) * (Math.abs(delta) / 100);
+      const offset = camera.position.clone().sub(controls.target);
+      const newDist = THREE.MathUtils.clamp(offset.length() * zoomFactor, controls.minDistance, controls.maxDistance);
+      offset.setLength(newDist);
+      camera.position.copy(controls.target).add(offset);
+    }, { passive: false });
+
+    // Studio Lighting
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xdbe2ea, 1.20);
+    scene.add(hemiLight);
+
+    const keyLight = new THREE.DirectionalLight(0xfffdf9, 1.35);
+    keyLight.position.set(-5.0, 8.5, 6.0);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.width = 2048;
+    keyLight.shadow.mapSize.height = 2048;
+    keyLight.shadow.bias = -0.0003;
+    keyLight.shadow.camera.near = 0.5;
+    keyLight.shadow.camera.far = 25;
+    keyLight.shadow.camera.left = -4.5;
+    keyLight.shadow.camera.right = 4.5;
+    keyLight.shadow.camera.top = 4.5;
+    keyLight.shadow.camera.bottom = -4.5;
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0xe2e8f0, 0.88);
+    fillLight.position.set(6.0, 5.0, -5.0);
+    scene.add(fillLight);
+
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.55);
+    rimLight.position.set(-2.0, 4.0, -7.0);
+    scene.add(rimLight);
+
+    // Wide Studio Plinth & Drafting Grid sized for the 5.20 m (Twice-Length) 40-Foot High-Cube Reefer & Wide Exploded View
+    const FLOOR_Y = -0.02;
+    const plinthGroup = new THREE.Group();
+    const plinthTop = new THREE.Mesh(
+      new THREE.BoxGeometry(11.6, 0.06, 5.4),
+      new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.85, metalness: 0.05 })
+    );
+    plinthTop.position.set(-0.20, FLOOR_Y - 0.03, 0.15);
+    plinthTop.receiveShadow = true;
+    plinthGroup.add(plinthTop);
+
+    const plinthCurb = new THREE.Mesh(
+      new THREE.BoxGeometry(11.8, 0.06, 5.6),
+      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.80, metalness: 0.08 })
+    );
+    plinthCurb.position.set(-0.20, FLOOR_Y - 0.07, 0.15);
+    plinthCurb.receiveShadow = true;
+    plinthGroup.add(plinthCurb);
+    scene.add(plinthGroup);
+
+    const gridHelper = new THREE.GridHelper(28, 56, 0xdde2e8, 0xe8ecf0);
+    gridHelper.position.y = FLOOR_Y - 0.095;
+    scene.add(gridHelper);
+
+    const shadowPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(36, 36),
+      new THREE.ShadowMaterial({ opacity: 0.15 })
+    );
+    shadowPlane.rotation.x = -Math.PI / 2;
+    shadowPlane.position.y = FLOOR_Y + 0.002;
+    shadowPlane.receiveShadow = true;
+    scene.add(shadowPlane);
+
+    /* =====================================================================
+       2. LIGHT-BALANCED PHYSICALLY BASED MATERIAL PALETTE
+       ===================================================================== */
+    function createCorrugatedBumpTexture() {
+      const c = document.createElement('canvas');
+      c.width = 256;
+      c.height = 64;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#808080';
+      ctx.fillRect(0, 0, 256, 64);
+      for (let x = 0; x < 256; x += 16) {
+        ctx.fillStyle = '#a8a8a8';
+        ctx.fillRect(x, 0, 8, 64);
+        ctx.fillStyle = '#5c5c5c';
+        ctx.fillRect(x + 8, 0, 8, 64);
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(8, 1);
+      return tex;
+    }
+
+    function createFinnedCoilTexture() {
+      const c = document.createElement('canvas');
+      c.width = 128;
+      c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#c8703b';
+      ctx.fillRect(0, 0, 128, 128);
+      ctx.fillStyle = '#9a4f22';
+      for (let y = 0; y < 128; y += 4) {
+        ctx.fillRect(0, y, 128, 2);
+      }
+      ctx.fillStyle = '#e2986b';
+      for (let x = 0; x < 128; x += 16) {
+        ctx.fillRect(x, 0, 4, 128);
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(3, 3);
+      return tex;
+    }
+
+    const corrBumpTex = createCorrugatedBumpTexture();
+    const finCoilTex = createFinnedCoilTexture();
+
+    // Lighter, Soft Industrial CAD Materials
+    const matReeferWhite = new THREE.MeshStandardMaterial({
+      color: 0xf1f5f9, // Insulated White Reefershell Corrugated Corten Steel
+      roughness: 0.32,
+      metalness: 0.22,
+      bumpMap: corrBumpTex,
+      bumpScale: 0.003,
+      side: THREE.DoubleSide
+    });
+    const matSmoothWhite = new THREE.MeshStandardMaterial({
+      color: 0xf8fafc,
+      roughness: 0.30,
+      metalness: 0.18,
+      side: THREE.DoubleSide
+    });
+    const matAlumFrame = new THREE.MeshStandardMaterial({
+      color: 0xcbd5e1, // Anodized Aluminum T-Bar Floor & Reefer Frame
+      roughness: 0.28,
+      metalness: 0.78,
+      side: THREE.DoubleSide
+    });
+    const matCornerCasting = new THREE.MeshStandardMaterial({
+      color: 0x94a3b8, // Soft cool steel for ISO corner castings & base rails
+      roughness: 0.40,
+      metalness: 0.45
+    });
+    const matCompressorSlate = new THREE.MeshStandardMaterial({
+      color: 0x526273, // Softened Slate for Semi-Hermetic Reciprocating/Scroll Compressor (lighter than harsh black)
+      roughness: 0.38,
+      metalness: 0.48
+    });
+    const matReceiverBlue = new THREE.MeshStandardMaterial({
+      color: 0x3b82f6, // Refrigerant Receiver & Filter-Drier marine blue
+      roughness: 0.34,
+      metalness: 0.30
+    });
+    const matCopperCoil = new THREE.MeshStandardMaterial({
+      color: 0xd97742, // Copper & Aluminum Finned Condenser / Evaporator Coils
+      map: finCoilTex,
+      roughness: 0.26,
+      metalness: 0.82
+    });
+    const matCopperPipe = new THREE.MeshStandardMaterial({
+      color: 0xd97742,
+      roughness: 0.22,
+      metalness: 0.88
+    });
+    const matSafetyRed = new THREE.MeshStandardMaterial({
+      color: 0xdc2626, // Safety Red CEE 32A 440V Shore/Deck Plug
+      roughness: 0.35,
+      metalness: 0.20
+    });
+    const matPuFoamYellow = new THREE.MeshStandardMaterial({
+      color: 0xfde047, // Internal Polyurethane Foam Insulation Layer
+      roughness: 0.65,
+      metalness: 0.05
+    });
+    const matStainlessInner = new THREE.MeshStandardMaterial({
+      color: 0xe2e8f0, // Food-grade stainless inner liner & locking bars
+      roughness: 0.22,
+      metalness: 0.84,
+      side: THREE.DoubleSide
+    });
+    const matBrass = new THREE.MeshStandardMaterial({
+      color: 0xd4af37, // Brass Hansen couplings & service valves
+      roughness: 0.24,
+      metalness: 0.85
+    });
+    const matCableSlate = new THREE.MeshStandardMaterial({
+      color: 0x64748b, // Soft slate flexible power cable
+      roughness: 0.55,
+      metalness: 0.18
+    });
+    const matDefrostRod = new THREE.MeshStandardMaterial({
+      color: 0x94a3b8,
+      emissive: 0xea580c,
+      emissiveIntensity: 0.0,
+      roughness: 0.30,
+      metalness: 0.70
+    });
+    const matXrayGlass = new THREE.MeshPhysicalMaterial({
+      color: 0x93c5fd,
+      transparent: true,
+      opacity: 0.22,
+      roughness: 0.08,
+      transmission: 0.84,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+
+    // Dynamic Canvas Texture for Microprocessor Temperature Controller LCD
+    const lcdCanvas = document.createElement('canvas');
+    lcdCanvas.width = 512;
+    lcdCanvas.height = 256;
+    const lcdCtx = lcdCanvas.getContext('2d');
+    const lcdScreenTex = new THREE.CanvasTexture(lcdCanvas);
+    lcdScreenTex.colorSpace = THREE.SRGBColorSpace;
+
+    function updateControllerLcdCanvas(mode) {
+      lcdCtx.fillStyle = '#0f172a';
+      lcdCtx.fillRect(0, 0, 512, 256);
+      lcdCtx.strokeStyle = '#38bdf8';
+      lcdCtx.lineWidth = 5;
+      lcdCtx.strokeRect(8, 8, 496, 240);
+
+      if (mode === 'frozen') {
+        lcdCtx.fillStyle = '#0369a1';
+        lcdCtx.fillRect(16, 16, 480, 44);
+        lcdCtx.fillStyle = '#ffffff';
+        lcdCtx.font = 'bold 21px JetBrains Mono, monospace';
+        lcdCtx.fillText('MODE: FROZEN CARGO · HIGH SPEED', 28, 45);
+
+        lcdCtx.fillStyle = '#38bdf8';
+        lcdCtx.font = 'bold 24px JetBrains Mono, monospace';
+        lcdCtx.fillText('SETPOINT: -25.0°C  SUPPLY: -25.2°C', 24, 98);
+        lcdCtx.fillStyle = '#4ade80';
+        lcdCtx.fillText('RETURN:   -23.8°C  RH: 68%  PTI OK', 24, 142);
+        lcdCtx.fillStyle = '#e2e8f0';
+        lcdCtx.font = '600 17px JetBrains Mono, monospace';
+        lcdCtx.fillText('440V 3P 60Hz  |  18.0 A  |  11.4 kW', 24, 188);
+        lcdCtx.fillText('USDA 1: -25.1°C  USDA 2: -24.9°C', 24, 222);
+      } else if (mode === 'chilled') {
+        lcdCtx.fillStyle = '#047857';
+        lcdCtx.fillRect(16, 16, 480, 44);
+        lcdCtx.fillStyle = '#ffffff';
+        lcdCtx.font = 'bold 21px JetBrains Mono, monospace';
+        lcdCtx.fillText('MODE: CHILLED FRUIT · MODULATING', 28, 45);
+
+        lcdCtx.fillStyle = '#4ade80';
+        lcdCtx.font = 'bold 24px JetBrains Mono, monospace';
+        lcdCtx.fillText('SETPOINT:  +2.0°C  SUPPLY:  +1.9°C', 24, 98);
+        lcdCtx.fillStyle = '#38bdf8';
+        lcdCtx.fillText('RETURN:    +2.6°C  RH: 88%  VENT 35%', 24, 142);
+        lcdCtx.fillStyle = '#e2e8f0';
+        lcdCtx.font = '600 17px JetBrains Mono, monospace';
+        lcdCtx.fillText('440V 3P 60Hz  |   9.7 A  |   6.2 kW', 24, 188);
+        lcdCtx.fillText('USDA 1: +2.0°C   USDA 2: +2.1°C', 24, 222);
+      } else {
+        lcdCtx.fillStyle = '#c2410c';
+        lcdCtx.fillRect(16, 16, 480, 44);
+        lcdCtx.fillStyle = '#ffffff';
+        lcdCtx.font = 'bold 21px JetBrains Mono, monospace';
+        lcdCtx.fillText('MODE: ELECTRIC DEFROST CYCLE', 28, 45);
+
+        lcdCtx.fillStyle = '#fb923c';
+        lcdCtx.font = 'bold 24px JetBrains Mono, monospace';
+        lcdCtx.fillText('FANS: STOPPED      HEATERS: 6.0 kW ON', 24, 98);
+        lcdCtx.fillStyle = '#facc15';
+        lcdCtx.fillText('COIL TEMP: +18.4°C  DRAIN: OPEN', 24, 142);
+        lcdCtx.fillStyle = '#e2e8f0';
+        lcdCtx.font = '600 17px JetBrains Mono, monospace';
+        lcdCtx.fillText('440V 3P 60Hz  |   8.9 A  |   6.0 kW', 24, 188);
+        lcdCtx.fillText('TERMINATION TARGET: +12.0°C COIL', 24, 222);
+      }
+      lcdScreenTex.needsUpdate = true;
+    }
+    updateControllerLcdCanvas('frozen');
+
+    /* =====================================================================
+       3. SEVEN COHESIVE FUNCTIONAL SUB-ASSEMBLIES (`parts` REGISTRY)
+          With Wide, Zero-Overlap Exploded Teardown Vectors (y >= 0 strictly!)
+       ===================================================================== */
+    const parts = {
+      container_shell: {
+        code: 'CS',
+        name: 'Cutaway 40ft High-Cube Shell & T-Bar Floor',
+        spec: 'ISO 1496-2 · 5.20m Scaled · PU Foam & T-Floor',
+        desc: 'Twice-length (5.20 m) corrugated white Corten steel 40-foot High-Cube container shell with a 3-bay cutaway inspection window revealing the yellow polyurethane foam core, extruded aluminum T-bar floor grating, 28 underfloor cross-members, forklift pockets, palletized frozen cargo crates, and rear double doors.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(1.65, 0.00, 0.00),
+        anchor: new THREE.Vector3(0.65, 1.05, 0.76)
+      },
+      nose_frame_chassis: {
+        code: 'NF',
+        name: 'Nose-Mount Aluminum Reefer Frame & Doors',
+        spec: 'Marine-Grade Aluminum Bulkhead · Fresh-Air Vent',
+        desc: 'Structural marine-grade aluminum bulkhead frame bolted into the forward nose opening (-2.60 m), separating the -25°C cargo space from the ambient machinery bay, complete with hinged service access doors and adjustable fresh-air make-up vent disk.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(-0.45, 0.00, 0.00),
+        anchor: new THREE.Vector3(-2.60, 1.02, -0.55)
+      },
+      compressor_receiver: {
+        code: 'CM',
+        name: '440 V Semi-Hermetic Compressor & Receiver',
+        spec: 'Reciprocating/Scroll 440V · Liquid Receiver',
+        desc: '440 V 3-phase semi-hermetic refrigerant compressor with bolted cylinder heads, suction accumulator, oil separator, horizontal liquid refrigerant receiver tank with dual sight glasses, filter-drier, and copper refrigeration piping.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(-2.45, 0.04, -1.05),
+        anchor: new THREE.Vector3(-2.72, 0.45, -0.22)
+      },
+      condenser_fan_coil: {
+        code: 'CF',
+        name: 'Air-Cooled Copper Condenser Coil & Axial Fan',
+        spec: 'Copper-Tube Aluminum-Fin · 5-Blade Axial Fan',
+        desc: 'High-efficiency copper-tube aluminum-fin condenser radiator coil with hairpin return bends, sub-cooling circuit, a 5-blade axial condenser cooling fan driven by a 440 V weatherproof motor, and a protective wire safety grille.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(-1.65, 0.38, 0.00),
+        anchor: new THREE.Vector3(-2.75, 0.82, 0.08)
+      },
+      evaporator_blowers: {
+        code: 'EB',
+        name: 'Upper Evaporator Coil & Twin Circulation Fans',
+        spec: 'Multi-Row Evaporator · Electric Defrost Rods',
+        desc: 'Mounted inside the upper cold plenum behind the nose bulkhead, featuring a multi-row finned copper evaporator coil, electric defrost heating rods, condensate pan, and twin high-velocity axial fans driving bottom-air delivery.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(-0.45, 1.18, 0.00),
+        anchor: new THREE.Vector3(-2.35, 1.58, 0.0)
+      },
+      control_box_pti: {
+        code: 'CB',
+        name: 'Digital Temperature Controller & 440V CEE Plug',
+        spec: 'Microprocessor PTI · USDA Ports · 32A 4-Pin Plug',
+        desc: 'Weatherproof control cabinet housing the glowing cyan LCD microprocessor controller, internal 440 V phase-reversal contactors, USDA pulp-temperature sensor ports, and an 18 m coiled 440 V 32 A 4-pin CEE shore/deck cable and plug.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(-1.55, 0.62, 1.35),
+        anchor: new THREE.Vector3(-2.75, 1.15, 0.48)
+      },
+      water_cooled_condenser: {
+        code: 'WC',
+        name: 'Below-Deck CuNi Seawater Shell & Tube Condenser',
+        spec: '90/10 Copper-Nickel · Hansen Quick Couplings',
+        desc: 'Auxiliary Copper-Nickel (CuNi) shell-and-tube water-cooled condenser with brass Hansen quick-connect seawater supply/return couplings and pressure-regulating water valve for operation in enclosed below-deck cargo holds.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(-2.45, 0.04, 1.05),
+        anchor: new THREE.Vector3(-2.70, 0.42, 0.35)
+      }
+    };
+
+    for (const key in parts) {
+      scene.add(parts[key].group);
+    }
+
+    // Kinematic & X-Ray References
+    const xrayMeshes = [];
+    let condenserFanGroup = null;
+    let evapFanGroup1 = null;
+    let evapFanGroup2 = null;
+    const airflowArrows = [];
+
+    /* =====================================================================
+       3.1 BUILD `container_shell` — TWICE-LENGTH (5.20 m) 40FT CONTAINER & T-BAR FLOOR
+       ===================================================================== */
+    function buildContainerShell() {
+      const grp = parts.container_shell.group;
+      // Twice-length container shell spans X = -2.60 m (nose) to +2.60 m (rear doors), total length = 5.20 m
+
+      // Bottom & Top Longitudinal Side Rails (`5.04 m` long)
+      [-0.74, 0.74].forEach((zr) => {
+        const botRail = new THREE.Mesh(new THREE.BoxGeometry(5.04, 0.08, 0.06), matCornerCasting);
+        botRail.position.set(0, 0.16, zr);
+        botRail.castShadow = true;
+        grp.add(botRail);
+
+        const topRail = new THREE.Mesh(new THREE.BoxGeometry(5.04, 0.06, 0.06), matCornerCasting);
+        topRail.position.set(0, 1.93, zr);
+        grp.add(topRail);
+      });
+
+      // 24 Transverse Underfloor I-Beam Cross-Members & Forklift Pocket Tunnels along the 5.20 m underbody
+      for (let xm = -2.35; xm <= 2.35; xm += 0.22) {
+        const crossMember = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.065, 1.46), matCornerCasting);
+        crossMember.position.set(xm, 0.15, 0);
+        grp.add(crossMember);
+      }
+
+      // Twin Reinforced Forklift Pocket Tunnels near Center of Base Rail (`X = -0.55 m` and `+0.55 m`)
+      [-0.55, 0.55].forEach((xfp) => {
+        const pocket = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.095, 1.56), matAlumFrame);
+        pocket.position.set(xfp, 0.155, 0);
+        grp.add(pocket);
+      });
+
+      // 8 ISO Corner Castings with Twistlock Apertures (`X = -2.54 m` and `+2.54 m`)
+      [-2.54, 2.54].forEach((xc) => {
+        [0.16, 1.93].forEach((yc) => {
+          [-0.735, 0.735].forEach((zc) => {
+            const casting = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.11, 0.11), matCornerCasting);
+            casting.position.set(xc, yc, zc);
+            casting.castShadow = true;
+            grp.add(casting);
+
+            const hole = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.024, 0.024, 0.116, 16),
+              new THREE.MeshBasicMaterial({ color: 0x334155 })
+            );
+            hole.position.set(xc, yc, zc);
+            grp.add(hole);
+          });
+        });
+      });
+
+      // Multi-Layer Insulated Floor Slab (`5.04 m` long, `Y = 0.18 m` to `0.26 m`): Yellow PU Foam Core
+      const floorFoam = new THREE.Mesh(new THREE.BoxGeometry(5.02, 0.06, 1.48), matPuFoamYellow);
+      floorFoam.position.set(0, 0.21, 0);
+      grp.add(floorFoam);
+
+      // Extruded Aluminum T-Bar Airflow Floor Grating (`0xcbd5e1`, running 4.92 m from X = -2.42 m to +2.48 m at Y = 0.265 m)
+      for (let zt = -0.66; zt <= 0.66; zt += 0.055) {
+        const tBar = new THREE.Mesh(new THREE.BoxGeometry(4.90, 0.034, 0.028), matAlumFrame);
+        tBar.position.set(0.03, 0.26, zt);
+        tBar.receiveShadow = true;
+        grp.add(tBar);
+      }
+
+      // Far Side Wall (`Z = -0.75 m`, `5.04 m` long): Outer Corrugated White Steel + Inner Stainless Liner with Vertical Muffler Channels
+      const farWallOuter = new THREE.Mesh(new THREE.BoxGeometry(5.02, 1.76, 0.025), matReeferWhite);
+      farWallOuter.position.set(0, 1.05, -0.76);
+      farWallOuter.castShadow = true;
+      farWallOuter.receiveShadow = true;
+      grp.add(farWallOuter);
+      xrayMeshes.push(farWallOuter);
+
+      const farWallInner = new THREE.Mesh(new THREE.BoxGeometry(4.98, 1.66, 0.015), matStainlessInner);
+      farWallInner.position.set(0, 1.05, -0.72);
+      grp.add(farWallInner);
+      xrayMeshes.push(farWallInner);
+
+      // Roof Sandwich Panel (`5.04 m` long, `Y = 1.92 m`): Outer White Corrugated Steel + Yellow PU Foam Core
+      const roofOuter = new THREE.Mesh(new THREE.BoxGeometry(5.04, 0.028, 1.54), matReeferWhite);
+      roofOuter.position.set(0, 1.94, 0);
+      roofOuter.castShadow = true;
+      grp.add(roofOuter);
+      xrayMeshes.push(roofOuter);
+
+      const roofFoam = new THREE.Mesh(new THREE.BoxGeometry(5.00, 0.055, 1.48), matPuFoamYellow);
+      roofFoam.position.set(0, 1.895, 0);
+      grp.add(roofFoam);
+      xrayMeshes.push(roofFoam);
+
+      // Near Side Wall (`Z = +0.74 m`, `5.02 m` wide) with 3-Bay Architectural Cutout Windows & Structural Stanchions
+      const wallW = 5.02, wallH = 1.76;
+      const wallShape = new THREE.Shape();
+      wallShape.moveTo(-wallW / 2, -wallH / 2);
+      wallShape.lineTo(wallW / 2, -wallH / 2);
+      wallShape.lineTo(wallW / 2, wallH / 2);
+      wallShape.lineTo(-wallW / 2, wallH / 2);
+      wallShape.closePath();
+
+      const foamShape = new THREE.Shape();
+      foamShape.moveTo(-wallW / 2, -wallH / 2);
+      foamShape.lineTo(wallW / 2, -wallH / 2);
+      foamShape.lineTo(wallW / 2, wallH / 2);
+      foamShape.lineTo(-wallW / 2, wallH / 2);
+      foamShape.closePath();
+
+      // 3 Panoramic Cutaway Windows along the 5.02 m Side Wall revealing the Yellow PU Foam Core & Internal Cargo Airflow!
+      [-1.40, 0.0, 1.40].forEach((wx) => {
+        const cutHole = new THREE.Path();
+        cutHole.moveTo(wx - 0.56, -0.58);
+        cutHole.lineTo(wx + 0.56, -0.58);
+        cutHole.lineTo(wx + 0.56, 0.60);
+        cutHole.lineTo(wx - 0.56, 0.60);
+        cutHole.closePath();
+        wallShape.holes.push(cutHole);
+
+        const foamHole = new THREE.Path();
+        foamHole.moveTo(wx - 0.51, -0.53);
+        foamHole.lineTo(wx + 0.51, -0.53);
+        foamHole.lineTo(wx + 0.51, 0.55);
+        foamHole.lineTo(wx - 0.51, 0.55);
+        foamHole.closePath();
+        foamShape.holes.push(foamHole);
+      });
+
+      const outerCutGeo = new THREE.ExtrudeGeometry(wallShape, { depth: 0.020, bevelEnabled: false });
+      const nearWallOuter = new THREE.Mesh(outerCutGeo, matReeferWhite);
+      nearWallOuter.position.set(0, 1.05, 0.75);
+      nearWallOuter.castShadow = true;
+      grp.add(nearWallOuter);
+      xrayMeshes.push(nearWallOuter);
+
+      const foamCutGeo = new THREE.ExtrudeGeometry(foamShape, { depth: 0.048, bevelEnabled: false });
+      const nearWallFoam = new THREE.Mesh(foamCutGeo, matPuFoamYellow);
+      nearWallFoam.position.set(0, 1.05, 0.702);
+      grp.add(nearWallFoam);
+      xrayMeshes.push(nearWallFoam);
+
+      // Internal Front Air-Delivery Baffle Wall (`X = -2.14 m`) with Bottom Kick-Plate Grille guiding chilled air into the T-bar floor
+      const baffleWall = new THREE.Mesh(new THREE.BoxGeometry(0.018, 1.02, 1.38), matStainlessInner);
+      baffleWall.position.set(-2.14, 0.88, 0);
+      grp.add(baffleWall);
+
+      // 6 Slotted Palletized Frozen Cargo Boxes resting on the T-Bar Floor (showing bottom-up airflow path through cargo)
+      const matCargoCrate = new THREE.MeshStandardMaterial({
+        color: 0xe2e8f0,
+        roughness: 0.55,
+        metalness: 0.08,
+        transparent: true,
+        opacity: 0.52,
+        depthWrite: false
+      });
+      [-1.35, -0.25, 0.85, 1.85].forEach((xPal) => {
+        // Slatted pallet base on T-bars
+        const palletBase = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.045, 1.18), matAlumFrame);
+        palletBase.position.set(xPal, 0.30, -0.05);
+        grp.add(palletBase);
+
+        // Translucent Cargo Carton Stack with Ventilation Chimneys
+        [-0.28, 0.22].forEach((zCarton) => {
+          const carton = new THREE.Mesh(new THREE.BoxGeometry(0.72, 1.02, 0.48), matCargoCrate);
+          carton.position.set(xPal, 0.84, zCarton);
+          grp.add(carton);
+        });
+      });
+
+      // Red "MAX LOAD LINE" Striping & Temperature Probe Cable along Inner Wall
+      const maxLoadStripe = new THREE.Mesh(
+        new THREE.BoxGeometry(4.85, 0.022, 0.006),
+        new THREE.MeshBasicMaterial({ color: 0xdc2626 })
+      );
+      maxLoadStripe.position.set(0.05, 1.66, -0.71);
+      grp.add(maxLoadStripe);
+
+      // Rear Double Cargo Doors (`X = +2.56 m`) with EPDM Perimeter Gaskets, 4 Chrome Locking Bars & Hinges
+      [-0.37, 0.37].forEach((zd, dIdx) => {
+        const doorLeaf = new THREE.Mesh(new THREE.BoxGeometry(0.045, 1.72, 0.71), matSmoothWhite);
+        doorLeaf.position.set(2.56, 1.05, zd);
+        doorLeaf.castShadow = true;
+        grp.add(doorLeaf);
+        xrayMeshes.push(doorLeaf);
+
+        const gasket = new THREE.Mesh(new THREE.BoxGeometry(0.050, 1.75, 0.73), matCornerCasting);
+        gasket.position.set(2.552, 1.05, zd);
+        grp.add(gasket);
+        xrayMeshes.push(gasket);
+
+        // 4 Heavy Door Hinge Leaves along Outer Edges
+        [-0.64, -0.22, 0.22, 0.64].forEach((yh) => {
+          const hingePin = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.06, 0.08), matCornerCasting);
+          hingePin.position.set(2.57, 1.05 + yh, zd + (dIdx === 0 ? -0.34 : 0.34));
+          grp.add(hingePin);
+        });
+
+        // 2 Vertical Chrome Locking Rods per Door Leaf (4 Total) with Cam Keepers & Latching Handles
+        [-0.18, 0.18].forEach((zBarOff) => {
+          const zBar = zd + zBarOff;
+          const lockRod = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1.68, 14), matStainlessInner);
+          lockRod.position.set(2.598, 1.05, zBar);
+          grp.add(lockRod);
+
+          const handle = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.04, 0.16), matStainlessInner);
+          handle.position.set(2.61, 0.78, zBar + (dIdx === 0 ? 0.06 : -0.06));
+          grp.add(handle);
+        });
+      });
+
+      // 14 Animated Chilled Airflow Streamline Arrows circulating along the 5.20 m T-Bar Floor and Cargo Return
+      for (let i = 0; i < 14; i++) {
+        const arrowMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.78 });
+        const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.026, 0.085, 12), arrowMat);
+        arrow.rotation.z = -Math.PI / 2; // Pointing +X along T-bar floor
+        const xPos = -2.10 + (i / 14) * 4.40;
+        arrow.position.set(xPos, 0.32, (i % 2 === 0) ? -0.22 : 0.22);
+        grp.add(arrow);
+        airflowArrows.push({ mesh: arrow, baseT: i / 14, isFloor: true });
+      }
+      for (let i = 0; i < 12; i++) {
+        const arrowMat = new THREE.MeshBasicMaterial({ color: 0x0284c7, transparent: true, opacity: 0.68 });
+        const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.026, 0.085, 12), arrowMat);
+        arrow.rotation.z = Math.PI / 2; // Pointing -X along upper return plenum
+        const xPos = 2.30 - (i / 12) * 4.40;
+        arrow.position.set(xPos, 1.62, (i % 2 === 0) ? -0.22 : 0.22);
+        grp.add(arrow);
+        airflowArrows.push({ mesh: arrow, baseT: i / 12, isFloor: false });
+      }
+    }
+
+    /* =====================================================================
+       3.2 BUILD `nose_frame_chassis` — NOSE-MOUNT ALUMINUM REEFER FRAME
+       ===================================================================== */
+    function buildNoseFrameChassis() {
+      const grp = parts.nose_frame_chassis.group;
+      const nx = -2.58;
+
+      // Structural Marine-Grade Aluminum Bulkhead Wall (`1.74 m` high × `1.44 m` wide at `X = -2.54 m`)
+      const bulkheadPlate = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.72, 1.42), matAlumFrame);
+      bulkheadPlate.position.set(nx + 0.04, 1.05, 0);
+      bulkheadPlate.castShadow = true;
+      grp.add(bulkheadPlate);
+
+      // Perimeter Bolted Aluminum Mounting Flange with 28 Stainless Bolts
+      const flangeTop = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.05, 1.46), matAlumFrame);
+      flangeTop.position.set(nx - 0.04, 1.89, 0);
+      grp.add(flangeTop);
+
+      const flangeBot = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.07, 1.46), matAlumFrame);
+      flangeBot.position.set(nx - 0.08, 0.22, 0);
+      grp.add(flangeBot);
+
+      [-0.71, 0.0, 0.71].forEach((zs) => {
+        const sideChannel = new THREE.Mesh(new THREE.BoxGeometry(0.24, 1.72, 0.045), matAlumFrame);
+        sideChannel.position.set(nx - 0.07, 1.05, zs);
+        grp.add(sideChannel);
+      });
+
+      // Horizontal Mid-Shelf Dividing Upper Evaporator Plenum (`Y > 1.28 m`) from Lower Condenser/Compressor Bay (`Y < 1.28 m`)
+      const midShelf = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.035, 1.42), matAlumFrame);
+      midShelf.position.set(nx - 0.08, 1.28, 0);
+      grp.add(midShelf);
+
+      // Upper Front Hinged Evaporator Access Panel (`Y = 1.32 m` to `1.86 m`) with Louvers & Fresh-Air Make-Up Vent Disk
+      const upperAccessPanel = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.52, 1.38), matSmoothWhite);
+      upperAccessPanel.position.set(nx - 0.16, 1.58, 0);
+      upperAccessPanel.castShadow = true;
+      grp.add(upperAccessPanel);
+      xrayMeshes.push(upperAccessPanel);
+
+      // Stamped Protection Louvers across Upper Access Panel
+      [-0.42, 0.36].forEach((zLouv) => {
+        for (let l = -2; l <= 2; l++) {
+          const slat = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.016, 0.32), matAlumFrame);
+          slat.position.set(nx - 0.175, 1.58 + l * 0.042, zLouv);
+          grp.add(slat);
+          xrayMeshes.push(slat);
+        }
+      });
+
+      // Adjustable Rotary Fresh-Air Make-Up Vent Slide Disk (`0–260 m³/h` CO2/ethylene exchange for chilled fruit)
+      const ventDisc = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.025, 24), matAlumFrame);
+      ventDisc.rotation.z = Math.PI / 2;
+      ventDisc.position.set(nx - 0.175, 1.58, -0.04);
+      grp.add(ventDisc);
+
+      const ventHandle = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.18, 0.025), matCompressorSlate);
+      ventHandle.position.set(nx - 0.19, 1.58, -0.04);
+      ventHandle.rotation.x = 0.45;
+      grp.add(ventHandle);
+    }
+
+    /* =====================================================================
+       3.3 BUILD `compressor_receiver` — 440 V COMPRESSOR & RECEIVER
+       ===================================================================== */
+    function buildCompressorReceiver() {
+      const grp = parts.compressor_receiver.group;
+      const cx = -2.72, cy = 0.45, cz = -0.22;
+
+      // 440 V Semi-Hermetic Reciprocating / Scroll Refrigerant Compressor Body (`0x526273` Soft Slate)
+      const compCrankcase = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.24, 0.30), matCompressorSlate);
+      compCrankcase.position.set(cx, cy, cz - 0.12);
+      compCrankcase.castShadow = true;
+      grp.add(compCrankcase);
+
+      const compMotorBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.115, 0.24, 24), matCompressorSlate);
+      compMotorBarrel.rotation.x = Math.PI / 2;
+      compMotorBarrel.position.set(cx, cy, cz + 0.08);
+      compMotorBarrel.castShadow = true;
+      grp.add(compMotorBarrel);
+
+      // Bolted Finned Cylinder Heads (Top & Angled Banks)
+      [-0.08, 0.08].forEach((zHead) => {
+        const cylHead = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.06, 0.12), matAlumFrame);
+        cylHead.position.set(cx, cy + 0.14, cz - 0.12 + zHead);
+        grp.add(cylHead);
+      });
+
+      // Vertical Suction Accumulator & Oil Separator Cylinders alongside Compressor
+      const suctAccum = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.32, 20), matReceiverBlue);
+      suctAccum.position.set(cx + 0.04, cy + 0.08, cz - 0.34);
+      suctAccum.castShadow = true;
+      grp.add(suctAccum);
+
+      // Compressor Oil Sight Glass & Brass Suction/Discharge Service King Valves
+      const oilSight = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.015, 16), matBrass);
+      oilSight.rotation.z = Math.PI / 2;
+      oilSight.position.set(cx - 0.125, cy - 0.04, cz - 0.12);
+      grp.add(oilSight);
+
+      [-0.06, 0.06].forEach((zv) => {
+        const valve = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.08, 14), matBrass);
+        valve.position.set(cx, cy + 0.20, cz - 0.12 + zv);
+        grp.add(valve);
+      });
+
+      // Horizontal Liquid Refrigerant Receiver Tank (`0x3b82f6`) with Dual Liquid Level Bullseye Sight Glasses
+      const receiverTank = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.068, 0.44, 24), matReceiverBlue);
+      receiverTank.rotation.x = Math.PI / 2;
+      receiverTank.position.set(cx + 0.02, cy - 0.14, cz);
+      receiverTank.castShadow = true;
+      grp.add(receiverTank);
+
+      [-0.08, 0.08].forEach((zs) => {
+        const sight = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.02, 14), matBrass);
+        sight.rotation.z = Math.PI / 2;
+        sight.position.set(cx - 0.05, cy - 0.14, cz + zs);
+        grp.add(sight);
+      });
+
+      // Liquid Line Filter-Drier & Electronic Expansion Valve (EEV)
+      const filterDrier = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.18, 18), matReceiverBlue);
+      filterDrier.position.set(cx - 0.06, cy + 0.06, cz - 0.44);
+      grp.add(filterDrier);
+
+      // Curved Copper Suction & Discharge Refrigeration Lines (`0xd97742`)
+      const dischCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(cx, cy + 0.22, cz - 0.06),
+        new THREE.Vector3(cx - 0.08, cy + 0.36, cz + 0.10),
+        new THREE.Vector3(-2.75, 0.72, 0.02)
+      ]);
+      const dischPipe = new THREE.Mesh(new THREE.TubeGeometry(dischCurve, 20, 0.012, 10, false), matCopperPipe);
+      grp.add(dischPipe);
+
+      const suctCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(cx, cy + 0.22, cz - 0.18),
+        new THREE.Vector3(cx + 0.06, 0.95, cz - 0.25),
+        new THREE.Vector3(-2.42, 1.42, -0.25)
+      ]);
+      const suctPipe = new THREE.Mesh(new THREE.TubeGeometry(suctCurve, 20, 0.015, 10, false), matCopperPipe);
+      grp.add(suctPipe);
+    }
+
+    /* =====================================================================
+       3.4 BUILD `condenser_fan_coil` — AIR CONDENSER COIL & 5-BLADE FAN
+       ===================================================================== */
+    function buildCondenserFanCoil() {
+      const grp = parts.condenser_fan_coil.group;
+      const fx = -2.75, fy = 0.82, fz = 0.08;
+
+      // Rectangular Copper-Tube Aluminum-Fin Condenser Radiator Coil (`0xd97742`)
+      const coilBlock = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.50, 0.50), matCopperCoil);
+      coilBlock.position.set(fx + 0.04, fy, fz);
+      coilBlock.castShadow = true;
+      grp.add(coilBlock);
+
+      // Copper U-Bend Hairpin Return Loops along Both Sides of Condenser Coil
+      for (let r = -0.20; r <= 0.20; r += 0.05) {
+        [-0.255, 0.255].forEach((zSide) => {
+          const uBend = new THREE.Mesh(new THREE.TorusGeometry(0.018, 0.006, 8, 16, Math.PI), matCopperPipe);
+          uBend.rotation.y = Math.PI / 2;
+          uBend.position.set(fx + 0.04, fy + r, fz + zSide);
+          grp.add(uBend);
+        });
+      }
+
+      // Cylindrical Fan Shroud Venturi & Protective Wire Grille (`X = -2.76 m`)
+      const shroud = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.22, 0.06, 32, 1, true), matSmoothWhite);
+      shroud.rotation.z = Math.PI / 2;
+      shroud.position.set(fx - 0.02, fy, fz);
+      grp.add(shroud);
+
+      // Protective Concentric Wire Grille Rings & Radial Spokes
+      [0.07, 0.13, 0.19].forEach((rg) => {
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(rg, 0.0035, 8, 28), matCompressorSlate);
+        ring.rotation.y = Math.PI / 2;
+        ring.position.set(fx - 0.055, fy, fz);
+        grp.add(ring);
+      });
+
+      // Concentric Rotating 5-Blade Axial Condenser Cooling Fan (`condenserFanGroup`) aligned strictly along X-axis!
+      condenserFanGroup = new THREE.Group();
+      condenserFanGroup.position.set(fx - 0.02, fy, fz);
+      grp.add(condenserFanGroup);
+
+      const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.05, 20), matCompressorSlate);
+      hub.rotation.z = Math.PI / 2;
+      condenserFanGroup.add(hub);
+
+      for (let b = 0; b < 5; b++) {
+        const ba = (b / 5) * Math.PI * 2;
+        const carrier = new THREE.Group();
+        carrier.rotation.x = ba;
+        condenserFanGroup.add(carrier);
+
+        const blade = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.14, 0.055), matSafetyRed);
+        blade.position.set(0, 0.11, 0);
+        blade.rotation.y = 0.38;
+        carrier.add(blade);
+      }
+    }
+
+    /* =====================================================================
+       3.5 BUILD `evaporator_blowers` — UPPER EVAPORATOR COIL & TWIN FANS
+       ===================================================================== */
+    function buildEvaporatorBlowers() {
+      const grp = parts.evaporator_blowers.group;
+      const ex = -2.35, ey = 1.56;
+
+      // Multi-Row Finned Copper Evaporator Cooling Coil (`1.26 m` wide along Z)
+      const evapCoil = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.30, 1.24), matCopperCoil);
+      evapCoil.position.set(ex, ey - 0.06, 0);
+      evapCoil.castShadow = true;
+      grp.add(evapCoil);
+
+      // Copper U-Bend Hairpin Return Headers on Both Ends of Evaporator Coil
+      for (let yLoop = -0.10; yLoop <= 0.10; yLoop += 0.05) {
+        [-0.63, 0.63].forEach((zEnd) => {
+          const loop = new THREE.Mesh(new THREE.TorusGeometry(0.018, 0.006, 8, 16), matCopperPipe);
+          loop.position.set(ex, ey - 0.06 + yLoop, zEnd);
+          grp.add(loop);
+        });
+      }
+
+      // Stainless Condensate Drip Pan & Drain Tube beneath Evaporator Coil
+      const dripPan = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.025, 1.28), matStainlessInner);
+      dripPan.position.set(ex, ey - 0.22, 0);
+      grp.add(dripPan);
+
+      // 4 Stainless Electric Defrost Heating Rods (`matDefrostRod`, glow orange in DEFROST mode!)
+      [-0.08, -0.03, 0.03, 0.08].forEach((yr) => {
+        const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 1.28, 12), matDefrostRod);
+        rod.rotation.x = Math.PI / 2;
+        rod.position.set(ex - 0.13, ey - 0.06 + yr, 0);
+        grp.add(rod);
+      });
+
+      // Twin High-Velocity Axial Evaporator Fans (`evapFanGroup1`, `evapFanGroup2` at `Z = -0.34 m` and `+0.34 m`)
+      [-0.34, 0.34].forEach((zf, idx) => {
+        const shroud = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.08, 28, 1, true), matAlumFrame);
+        shroud.rotation.z = Math.PI / 2;
+        shroud.position.set(ex + 0.15, ey + 0.08, zf);
+        grp.add(shroud);
+
+        const fanGrp = new THREE.Group();
+        fanGrp.position.set(ex + 0.15, ey + 0.08, zf);
+        grp.add(fanGrp);
+        if (idx === 0) evapFanGroup1 = fanGrp;
+        else evapFanGroup2 = fanGrp;
+
+        const fHub = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.06, 18), matBrass);
+        fHub.rotation.z = Math.PI / 2;
+        fanGrp.add(fHub);
+
+        for (let b = 0; b < 7; b++) {
+          const ba = (b / 7) * Math.PI * 2;
+          const carrier = new THREE.Group();
+          carrier.rotation.x = ba;
+          fanGrp.add(carrier);
+
+          const blade = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.105, 0.038), matAlumFrame);
+          blade.position.set(0, 0.09, 0);
+          blade.rotation.y = 0.42;
+          carrier.add(blade);
+        }
+      });
+    }
+
+    /* =====================================================================
+       3.6 BUILD `control_box_pti` — CONTROLLER, USDA PORTS & 440V CEE PLUG
+       ===================================================================== */
+    function buildControlBoxPti() {
+      const grp = parts.control_box_pti.group;
+      const bx = -2.75, by = 1.04, bz = 0.48;
+
+      // Weatherproof White/Light-Grey Control Cabinet (`0.16 m × 0.46 m × 0.36 m`)
+      const cabinet = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.46, 0.36), matSmoothWhite);
+      cabinet.position.set(bx, by, bz);
+      cabinet.castShadow = true;
+      grp.add(cabinet);
+
+      const doorBezel = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.42, 0.32), matAlumFrame);
+      doorBezel.position.set(bx - 0.082, by, bz);
+      grp.add(doorBezel);
+
+      // Glowing Cyan LCD Temperature Controller Screen (`SETPOINT: -25.0°C · SUPPLY: -25.2°C`)
+      const lcdMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.26, 0.13),
+        new THREE.MeshBasicMaterial({ map: lcdScreenTex })
+      );
+      lcdMesh.rotation.y = -Math.PI / 2;
+      lcdMesh.position.set(bx - 0.093, by + 0.10, bz);
+      grp.add(lcdMesh);
+
+      // Tactile Membrane Keypad & 3 USDA Pulp-Temperature Sensor Receptacle Caps
+      const keypad = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.09, 0.18), matCompressorSlate);
+      keypad.position.set(bx - 0.092, by - 0.04, bz - 0.04);
+      grp.add(keypad);
+
+      [-0.08, 0.0, 0.08].forEach((zu) => {
+        const usdaPort = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.022, 14), matBrass);
+        usdaPort.rotation.z = Math.PI / 2;
+        usdaPort.position.set(bx - 0.094, by - 0.14, bz + zu);
+        grp.add(usdaPort);
+      });
+
+      // Coiled 18 m 440 V 32 A 4-Pin CEE Power Cable & Safety-Red Plug (`0xdc2626`, `3P+E`, `3h` clock position)
+      for (let c = 0; c < 5; c++) {
+        const coilLoop = new THREE.Mesh(new THREE.TorusGeometry(0.095, 0.012, 10, 28), matCableSlate);
+        coilLoop.rotation.y = Math.PI / 2;
+        coilLoop.position.set(bx - 0.03 - c * 0.020, by - 0.36, bz);
+        coilLoop.castShadow = true;
+        grp.add(coilLoop);
+      }
+
+      // Red 440 V 32 A CEE Watertight Marine Reefer Plug with Brass Bayonet Locking Ring
+      const plugBody = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.022, 0.11, 20), matSafetyRed);
+      plugBody.rotation.z = Math.PI / 4;
+      plugBody.position.set(bx - 0.14, by - 0.38, bz + 0.11);
+      plugBody.castShadow = true;
+      grp.add(plugBody);
+
+      const plugCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.034, 0.028, 20), matSafetyRed);
+      plugCollar.rotation.z = Math.PI / 4;
+      plugCollar.position.set(bx - 0.17, by - 0.41, bz + 0.11);
+      grp.add(plugCollar);
+    }
+
+    /* =====================================================================
+       3.7 BUILD `water_cooled_condenser` — BELOW-DECK CuNi SEAWATER CONDENSER
+       ===================================================================== */
+    function buildWaterCooledCondenser() {
+      const grp = parts.water_cooled_condenser.group;
+      const wx = -2.70, wy = 0.42, wz = 0.35;
+
+      // Copper-Nickel (CuNi 90/10) Shell-and-Tube Water-Cooled Condenser Vessel (`0xd97742` / `0xd4af37`)
+      const cuniShell = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.072, 0.36, 24), matCopperPipe);
+      cuniShell.rotation.x = Math.PI / 2;
+      cuniShell.position.set(wx, wy, wz);
+      cuniShell.castShadow = true;
+      grp.add(cuniShell);
+
+      // Front & Rear Bolted Bronze Water-Box Endbonnets
+      [-0.185, 0.185].forEach((zb) => {
+        const bonnet = new THREE.Mesh(new THREE.CylinderGeometry(0.080, 0.080, 0.026, 24), matBrass);
+        bonnet.rotation.x = Math.PI / 2;
+        bonnet.position.set(wx, wy, wz + zb);
+        grp.add(bonnet);
+      });
+
+      // Twin Brass Hansen Self-Sealing Quick-Connect Seawater Couplings (`INLET` Blue / `OUTLET` Red)
+      [-0.08, 0.08].forEach((zc, idx) => {
+        const coupling = new THREE.Mesh(new THREE.CylinderGeometry(0.020, 0.022, 0.075, 16), matBrass);
+        coupling.rotation.z = Math.PI / 2;
+        coupling.position.set(wx - 0.085, wy - 0.02, wz + zc);
+        grp.add(coupling);
+
+        const collar = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.024, 0.024, 0.022, 16),
+          idx === 0 ? matReceiverBlue : matSafetyRed
+        );
+        collar.rotation.z = Math.PI / 2;
+        collar.position.set(wx - 0.115, wy - 0.02, wz + zc);
+        grp.add(collar);
+      });
+
+      // Pressure-Regulating Seawater Control Valve above CuNi Condenser
+      const regValve = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.09, 16), matBrass);
+      regValve.position.set(wx - 0.02, wy + 0.10, wz);
+      grp.add(regValve);
+    }
+
+    buildContainerShell();
+    buildNoseFrameChassis();
+    buildCompressorReceiver();
+    buildCondenserFanCoil();
+    buildEvaporatorBlowers();
+    buildControlBoxPti();
+    buildWaterCooledCondenser();
+
+    /* =====================================================================
+       4. NATIVE-COLOR GHOST ISOLATION & EXPLODE DASHED CENTERLINES
+       ===================================================================== */
+    const state = {
+      explode: 0.0,
+      targetExplode: 0.0,
+      mode: 'frozen',        // 'frozen' (-25.0°C High Speed), 'chilled' (+2.0°C Modulating), 'defrost' (Fans Off, Heaters On)
+      fanSpeedFactor: 1.0,
+      targetFanSpeed: 1.0,
+      defrostGlow: 0.0,
+      targetDefrostGlow: 0.0,
+      selectedPart: 'all',
+      labelsOn: true,
+      xrayMode: false,
+      autoRotate: false,
+      time: 0
+    };
+
+    const explodeLines = [];
+
+    function prepareMaterialsAndGuideLines() {
+      for (const key in parts) {
+        const p = parts[key];
+        const origMap = new Map();
+        const ghostMap = new Map();
+
+        p.group.traverse((obj) => {
+          if (obj.isMesh && obj.material) {
+            obj.userData.partKey = key;
+            // Keep `matDefrostRod` direct on defrost heaters so emissive updates live
+            if (obj.material === matDefrostRod) {
+              const ghostClone = matDefrostRod.clone();
+              ghostClone.transparent = true;
+              ghostClone.opacity = 0.14;
+              ghostClone.depthWrite = false;
+              obj.userData.origMaterial = matDefrostRod;
+              obj.userData.ghostMaterial = ghostClone;
+              return;
+            }
+            if (!origMap.has(obj.material)) {
+              const origClone = obj.material.clone();
+              const ghostClone = origClone.clone();
+              ghostClone.transparent = true;
+              ghostClone.opacity = 0.14;
+              ghostClone.depthWrite = false;
+              origMap.set(obj.material, origClone);
+              ghostMap.set(obj.material, ghostClone);
+            }
+            obj.userData.origMaterial = origMap.get(obj.material);
+            obj.userData.ghostMaterial = ghostMap.get(obj.material);
+            obj.material = obj.userData.origMaterial;
+          }
+        });
+
+        const lMat = new THREE.LineDashedMaterial({
+          color: 0xea580c,
+          dashSize: 0.08,
+          gapSize: 0.05,
+          transparent: true,
+          opacity: 0.0
+        });
+        const lGeo = new THREE.BufferGeometry().setFromPoints([p.anchor.clone(), p.anchor.clone()]);
+        const line = new THREE.Line(lGeo, lMat);
+        line.computeLineDistances();
+        scene.add(line);
+        explodeLines.push({ key, line, base: p.anchor, vec: p.explodeVec });
+      }
+    }
+    prepareMaterialsAndGuideLines();
+
+    function applyMaterialIsolationAndXray() {
+      for (const k in parts) {
+        const p = parts[k];
+        const isTarget = (state.selectedPart === 'all' || state.selectedPart === k);
+        p.group.traverse((obj) => {
+          if (!obj.isMesh || !obj.userData.origMaterial) return;
+          if (isTarget) {
+            if (state.xrayMode && xrayMeshes.includes(obj)) {
+              obj.material = matXrayGlass;
+            } else {
+              obj.material = obj.userData.origMaterial;
+            }
+          } else {
+            obj.material = obj.userData.ghostMaterial;
+          }
+        });
+      }
+    }
+
+    function selectPart(partKey) {
+      state.selectedPart = partKey;
+
+      document.querySelectorAll('.part-chip').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.part === partKey);
+      });
+      document.querySelectorAll('.callout-badge').forEach((badge) => {
+        badge.classList.toggle('selected', badge.dataset.part === partKey);
+      });
+
+      if (partKey !== 'all' && parts[partKey]) {
+        const m = parts[partKey];
+        document.getElementById('info-badge').textContent = `${m.code} · SUB-ASSEMBLY INSPECTION`;
+        document.getElementById('info-title').textContent = m.name;
+        document.getElementById('info-spec').textContent = m.spec;
+        document.getElementById('info-desc').textContent = m.desc;
+      } else {
+        document.getElementById('info-badge').textContent = 'ISO REEFER OVERVIEW · 7 SUB-ASSEMBLIES';
+        document.getElementById('info-title').textContent = 'Bottom-Air Delivery Integral Marine Reefer Unit';
+        document.getElementById('info-spec').textContent = '440 V · 3P+E · 60 Hz · R-452A / CO2';
+        document.getElementById('info-desc').textContent = 'Twin upper axial evaporator fans draw return air from the top of the cargo load, force it across the finned evaporator coil down the front baffle wall, and distribute chilled air evenly along the extruded aluminum T-bar floor channels.';
+      }
+
+      applyMaterialIsolationAndXray();
+    }
+
+    /* =====================================================================
+       5. DIVIDED LEFT & RIGHT CALLOUT COLUMNS WITH LONG SVG LEADER LINES
+       ===================================================================== */
+    const calloutDefs = [
+      // Left Column (EB, NF, CF, CM at LEFT_X = 24px)
+      { key: 'evaporator_blowers',     code: 'EB', title: 'Evaporator & Twin Fans',    side: 'left' },
+      { key: 'nose_frame_chassis',     code: 'NF', title: 'Nose Frame & Vent Doors',   side: 'left' },
+      { key: 'condenser_fan_coil',     code: 'CF', title: 'Air Condenser & Axial Fan', side: 'left' },
+      { key: 'compressor_receiver',    code: 'CM', title: '440V Compressor & Receiver',side: 'left' },
+      // Right Column (CS, CB, WC at RIGHT_X = window.innerWidth - 204px)
+      { key: 'container_shell',        code: 'CS', title: 'Cutaway Shell & T-Floor',   side: 'right' },
+      { key: 'control_box_pti',        code: 'CB', title: 'Controller & 32A CEE Plug', side: 'right' },
+      { key: 'water_cooled_condenser', code: 'WC', title: 'CuNi Seawater Condenser',   side: 'right' }
+    ];
+
+    const calloutBadgesMap = new Map();
+
+    calloutDefs.forEach((def) => {
+      const badge = document.createElement('div');
+      badge.className = 'callout-badge';
+      badge.dataset.part = def.key;
+      badge.innerHTML = `
+        <div class="flex items-center justify-between gap-1.5">
+          <div class="flex items-center gap-1.5 truncate">
+            <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 mono text-[9px] font-bold">${def.code}</span>
+            <span class="text-[11px] font-semibold text-slate-800 truncate">${def.title}</span>
+          </div>
+          <span class="text-slate-400 text-[10px]">↗</span>
+        </div>
+      `;
+      badge.addEventListener('click', () => {
+        selectPart(state.selectedPart === def.key ? 'all' : def.key);
+      });
+      badgesLayer.appendChild(badge);
+
+      const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      polyline.setAttribute('fill', 'none');
+      polyline.setAttribute('stroke', '#94a3b8');
+      polyline.setAttribute('stroke-width', '1.3');
+      leaderSvg.appendChild(polyline);
+
+      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('r', '3.0');
+      dot.setAttribute('fill', '#ea580c');
+      leaderSvg.appendChild(dot);
+
+      calloutBadgesMap.set(def.key, { def, badge, polyline, dot, y: 0, anchorX: 0, anchorY: 0, visible: true });
+    });
+
+    function updateDividedCallouts() {
+      if (!state.labelsOn) {
+        badgesLayer.style.display = 'none';
+        leaderSvg.style.display = 'none';
+        return;
+      }
+      badgesLayer.style.display = 'block';
+      leaderSvg.style.display = 'block';
+
+      const leftItems = [];
+      const rightItems = [];
+      const tempV = new THREE.Vector3();
+
+      calloutDefs.forEach((def) => {
+        const item = calloutBadgesMap.get(def.key);
+        const p = parts[def.key];
+        tempV.copy(p.anchor).addScaledVector(p.explodeVec, state.explode);
+        tempV.project(camera);
+
+        if (tempV.z > 1.0) {
+          item.visible = false;
+          item.badge.style.display = 'none';
+          item.polyline.style.display = 'none';
+          item.dot.style.display = 'none';
+          return;
+        }
+
+        item.visible = true;
+        item.anchorX = (tempV.x * 0.5 + 0.5) * window.innerWidth;
+        item.anchorY = (-(tempV.y * 0.5) + 0.5) * window.innerHeight;
+        item.y = item.anchorY;
+
+        if (def.side === 'left') leftItems.push(item);
+        else rightItems.push(item);
+      });
+
+      function resolveCollision(arr) {
+        if (arr.length === 0) return;
+        arr.sort((a, b) => a.y - b.y);
+        const minY = 235;
+        const maxY = window.innerHeight - 135;
+        const MIN_GAP = 42;
+
+        arr[0].y = Math.max(minY, arr[0].y);
+        for (let i = 1; i < arr.length; i++) {
+          if (arr[i].y - arr[i - 1].y < MIN_GAP) {
+            arr[i].y = arr[i - 1].y + MIN_GAP;
+          }
+        }
+        const last = arr[arr.length - 1];
+        if (last.y > maxY) {
+          last.y = maxY;
+          for (let i = arr.length - 2; i >= 0; i--) {
+            if (arr[i + 1].y - arr[i].y < MIN_GAP) {
+              arr[i].y = Math.max(minY, arr[i + 1].y - MIN_GAP);
+            }
+          }
+        }
+      }
+
+      resolveCollision(leftItems);
+      resolveCollision(rightItems);
+
+      const LEFT_X = 24;
+      const RIGHT_X = window.innerWidth - 204;
+
+      calloutDefs.forEach((def) => {
+        const item = calloutBadgesMap.get(def.key);
+        if (!item.visible) return;
+
+        const colX = def.side === 'left' ? LEFT_X : RIGHT_X;
+        const badgeEdgeX = def.side === 'left' ? (LEFT_X + 180) : RIGHT_X;
+        const elbowX = def.side === 'left' ? (badgeEdgeX + 18) : (badgeEdgeX - 18);
+
+        item.badge.style.display = 'block';
+        item.badge.style.left = `${colX}px`;
+        item.badge.style.top = `${item.y}px`;
+
+        const isSelected = (state.selectedPart === def.key);
+        item.polyline.style.display = 'block';
+        item.polyline.setAttribute(
+          'points',
+          `${item.anchorX},${item.anchorY} ${elbowX},${item.y} ${badgeEdgeX},${item.y}`
+        );
+        item.polyline.setAttribute('stroke', isSelected ? '#ea580c' : '#94a3b8');
+        item.polyline.setAttribute('stroke-width', isSelected ? '2.0' : '1.3');
+
+        item.dot.style.display = 'block';
+        item.dot.setAttribute('cx', `${item.anchorX}`);
+        item.dot.setAttribute('cy', `${item.anchorY}`);
+      });
+    }
+
+    /* =====================================================================
+       6. UI CONTROLS & REEFER OPERATING MODE SELECTOR
+       ===================================================================== */
+    document.querySelectorAll('.part-chip').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        selectPart(btn.dataset.part);
+      });
+    });
+
+    const sliderExplode = document.getElementById('slider-explode');
+    function setExplode(pct) {
+      state.targetExplode = pct / 100;
+      sliderExplode.value = pct;
+      document.getElementById('lbl-explode-val').textContent = pct === 0 ? '0% · ASSEMBLED' : `${pct}% · EXPLODED`;
+
+      const f = state.targetExplode;
+      tweenPos.set(
+        DEFAULT_CAM_POS.x - f * 2.2,
+        DEFAULT_CAM_POS.y + f * 1.15,
+        DEFAULT_CAM_POS.z + f * 2.65
+      );
+      tweenTarget.set(-0.35 * f, 1.05 + 0.15 * f, 0.0);
+      isCameraTweening = true;
+    }
+    sliderExplode.addEventListener('input', (e) => setExplode(parseFloat(e.target.value)));
+    document.getElementById('btn-exp-0').addEventListener('click', () => setExplode(0));
+    document.getElementById('btn-exp-50').addEventListener('click', () => setExplode(50));
+    document.getElementById('btn-exp-100').addEventListener('click', () => setExplode(100));
+
+    // Operating Mode Selector Buttons
+    const btnFrozen = document.getElementById('btn-mode-frozen');
+    const btnChilled = document.getElementById('btn-mode-chilled');
+    const btnDefrost = document.getElementById('btn-mode-defrost');
+    const lblModeStatus = document.getElementById('lbl-mode-status');
+
+    function setOperatingMode(mode) {
+      state.mode = mode;
+      btnFrozen.className = 'mode-pill py-2 px-2.5 rounded-xl text-[11px] mono text-center shadow-sm' + (mode === 'frozen' ? ' active-frozen' : '');
+      btnChilled.className = 'mode-pill py-2 px-2.5 rounded-xl text-[11px] mono text-center shadow-sm' + (mode === 'chilled' ? ' active-chilled' : '');
+      btnDefrost.className = 'mode-pill py-2 px-2.5 rounded-xl text-[11px] mono text-center shadow-sm' + (mode === 'defrost' ? ' active-defrost' : '');
+
+      if (mode === 'frozen') {
+        state.targetFanSpeed = 1.0;
+        state.targetDefrostGlow = 0.0;
+        lblModeStatus.textContent = 'FROZEN CARGO · HIGH SPEED FANS (3600/1800 RPM)';
+        lblModeStatus.className = 'mono text-[10px] font-bold text-sky-700';
+        document.getElementById('tel-set').textContent = '-25.0 °C';
+        document.getElementById('tel-sup').textContent = '-25.2 / -23.8';
+        document.getElementById('tel-kw').textContent = '11.4 kW · 18A';
+        document.getElementById('tel-bar').textContent = '18.5 / 2.1b';
+      } else if (mode === 'chilled') {
+        state.targetFanSpeed = 0.48;
+        state.targetDefrostGlow = 0.0;
+        lblModeStatus.textContent = 'CHILLED FRUIT · MODULATING FANS & FRESH AIR VENT';
+        lblModeStatus.className = 'mono text-[10px] font-bold text-emerald-700';
+        document.getElementById('tel-set').textContent = '+2.0 °C';
+        document.getElementById('tel-sup').textContent = '+1.9 / +2.6';
+        document.getElementById('tel-kw').textContent = '6.2 kW · 9.7A';
+        document.getElementById('tel-bar').textContent = '14.2 / 4.8b';
+      } else {
+        state.targetFanSpeed = 0.0;
+        state.targetDefrostGlow = 1.25;
+        lblModeStatus.textContent = 'DEFROST CYCLE · FANS OFF · 6.0 kW HEATERS ACTIVE';
+        lblModeStatus.className = 'mono text-[10px] font-bold text-orange-700';
+        document.getElementById('tel-set').textContent = 'DEFROST';
+        document.getElementById('tel-sup').textContent = '+18.4°C COIL';
+        document.getElementById('tel-kw').textContent = '6.0 kW · 8.9A';
+        document.getElementById('tel-bar').textContent = 'PUMP-DOWN';
+      }
+
+      updateControllerLcdCanvas(mode);
+    }
+
+    btnFrozen.addEventListener('click', () => setOperatingMode('frozen'));
+    btnChilled.addEventListener('click', () => setOperatingMode('chilled'));
+    btnDefrost.addEventListener('click', () => setOperatingMode('defrost'));
+
+    document.getElementById('btn-reset-view').addEventListener('click', () => {
+      tweenPos.copy(DEFAULT_CAM_POS);
+      tweenTarget.copy(DEFAULT_CAM_TARGET);
+      isCameraTweening = true;
+      setExplode(0);
+      selectPart('all');
+    });
+
+    const btnAutoRotate = document.getElementById('btn-auto-rotate');
+    btnAutoRotate.addEventListener('click', () => {
+      state.autoRotate = !state.autoRotate;
+      controls.autoRotate = state.autoRotate;
+      controls.autoRotateSpeed = 1.3;
+      btnAutoRotate.classList.toggle('active', state.autoRotate);
+    });
+
+    const btnToggleLabels = document.getElementById('btn-toggle-labels');
+    btnToggleLabels.addEventListener('click', () => {
+      state.labelsOn = !state.labelsOn;
+      btnToggleLabels.classList.toggle('active', state.labelsOn);
+    });
+
+    const btnToggleXray = document.getElementById('btn-toggle-xray');
+    btnToggleXray.addEventListener('click', () => {
+      state.xrayMode = !state.xrayMode;
+      btnToggleXray.classList.toggle('active', state.xrayMode);
+      applyMaterialIsolationAndXray();
+    });
+
+    // 3D Raycaster Click to Isolate Sub-Assembly
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    let pointerDownPos = { x: 0, y: 0 };
+
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      pointerDownPos = { x: e.clientX, y: e.clientY };
+    });
+    renderer.domElement.addEventListener('pointerup', (e) => {
+      if (Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y) > 5) return;
+      pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const allMeshes = [];
+      for (const k in parts) {
+        parts[k].group.traverse((o) => { if (o.isMesh) allMeshes.push(o); });
+      }
+      const hits = raycaster.intersectObjects(allMeshes, false);
+      if (hits.length > 0) {
+        const hitKey = hits[0].object.userData.partKey;
+        if (hitKey) {
+          selectPart(state.selectedPart === hitKey ? 'all' : hitKey);
+        }
+      }
+    });
+
+    /* =====================================================================
+       7. MAIN ANIMATION LOOP & CONCENTRIC FAN / AIRFLOW KINEMATICS
+       ===================================================================== */
+    let lastTime = performance.now();
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+      state.time += dt;
+
+      // Smooth Explode, Fan Speed & Defrost Heater Glow Interpolation
+      state.explode += (state.targetExplode - state.explode) * 0.12;
+      state.fanSpeedFactor += (state.targetFanSpeed - state.fanSpeedFactor) * Math.min(1.0, dt * 4.0);
+      state.defrostGlow += (state.targetDefrostGlow - state.defrostGlow) * Math.min(1.0, dt * 4.0);
+      matDefrostRod.emissiveIntensity = state.defrostGlow;
+
+      // Apply Explode Vectors & Dashed Guide Lines
+      for (const key in parts) {
+        const p = parts[key];
+        p.group.position.copy(p.explodeVec).multiplyScalar(state.explode);
+      }
+
+      explodeLines.forEach((g) => {
+        if (state.explode > 0.02) {
+          const arr = g.line.geometry.attributes.position.array;
+          arr[0] = g.base.x;
+          arr[1] = g.base.y;
+          arr[2] = g.base.z;
+          arr[3] = g.base.x + g.vec.x * state.explode;
+          arr[4] = g.base.y + g.vec.y * state.explode;
+          arr[5] = g.base.z + g.vec.z * state.explode;
+          g.line.geometry.attributes.position.needsUpdate = true;
+          g.line.computeLineDistances();
+          g.line.material.opacity = Math.min(0.65, state.explode * 0.85);
+        } else {
+          g.line.material.opacity = 0.0;
+        }
+      });
+
+      // Concentric Rotation of Condenser Fan & Twin Evaporator Fans around X-axis
+      const fanOmega = state.fanSpeedFactor * 18.0;
+      if (condenserFanGroup) {
+        condenserFanGroup.rotation.x += fanOmega * dt;
+      }
+      if (evapFanGroup1 && evapFanGroup2) {
+        evapFanGroup1.rotation.x += fanOmega * 1.25 * dt;
+        evapFanGroup2.rotation.x += fanOmega * 1.25 * dt;
+      }
+
+      // Animate Bottom-Air Delivery T-Bar Floor Streamline Arrows along the 5.20 m Container
+      airflowArrows.forEach((item) => {
+        item.baseT = (item.baseT + dt * 0.35 * state.fanSpeedFactor) % 1.0;
+        if (item.isFloor) {
+          item.mesh.position.x = -2.10 + item.baseT * 4.40;
+        } else {
+          item.mesh.position.x = 2.30 - item.baseT * 4.40;
+        }
+        if (item.mesh.userData.origMaterial) {
+          item.mesh.userData.origMaterial.opacity = state.fanSpeedFactor * 0.78;
+        }
+      });
+
+      // Camera Tweening
+      if (isCameraTweening) {
+        camera.position.lerp(tweenPos, 0.10);
+        controls.target.lerp(tweenTarget, 0.10);
+        if (camera.position.distanceTo(tweenPos) < 0.03) {
+          isCameraTweening = false;
+        }
+      }
+      controls.update();
+
+      updateDividedCallouts();
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

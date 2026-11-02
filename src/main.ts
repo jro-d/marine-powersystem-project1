@@ -1450,15 +1450,8 @@ interface AssemblyPageInfo {
 
 
 function getAssemblyPage(selectedId: string, model: ModelType | undefined): AssemblyPageInfo | null {
-  if (['gb1', 'gb2', 'gb3', 'gb4', 'tie', 'shoreBreaker', 'propFeed', 'bowFeed', 'txAFeed', 'txBFeed', 'reeferAFeed', 'reeferBFeed', 'busA', 'busB', 'lvBusA', 'lvBusB', 'consumerA', 'consumerB', 'eBus', 'esb', 'lvTie', 'txAOut', 'txBOut', 'cooling1Feed', 'fire1Feed', 'airCompFeed', 'craneFeed', 'conAAcb', 'conBAcb', 'fire2Feed', 'cooling2Feed', 'ventFanFeed', 'ballastFeed', 'bilgeFeed', 'consumerTie', 'lightAFeed', 'galleySmallFeed', 'navFeed', 'esbTieFeed', 'egBreaker', 'eSteerFeed', 'eFireFeed', 'eLightFeed', 'eRadioFeed', 'navEmFeed'].includes(selectedId) || model === 'breaker' || model === 'hv-board' || model === 'lv-board') {
-    return {
-      url: resolveTeardownUrl('vcb.html'),
-      title: '6.6 kV MV Switchboard Cubicle & Withdrawable VCB',
-      subtitle: 'IEC 62271-200 Form 4b · 1250 A / 25 kA · Vacuum Interrupter & Auto Safety Shutters',
-      tag: 'IEC 62271-200 MARINE SWITCHGEAR'
-    };
-  }
-  if (['dg1', 'dg2', 'dg3', 'dg4', 'eg', 'generator'].includes(selectedId) || model === 'generator') {
+  // 1. Main Diesel Generators (DG 1-4)
+  if (['dg1', 'dg2', 'dg3', 'dg4'].includes(selectedId) || (model === 'generator' && selectedId !== 'eg')) {
     return {
       url: resolveTeardownUrl('dg.html'),
       title: 'Marine Diesel Generating Set (DG 1-4) — 2,500 kVA / 6.6 kV',
@@ -1466,135 +1459,224 @@ function getAssemblyPage(selectedId: string, model: ModelType | undefined): Asse
       tag: 'IEC 60092 & SOLAS DIESEL GENERATOR'
     };
   }
-  if (model === 'thruster' || selectedId === 'bow') {
+
+  // 2. Emergency Diesel Generator (EDG)
+  if (['eg', 'egBreaker'].includes(selectedId)) {
     return {
-      url: resolveAssemblyUrl('universal_viewer.html?eq=bowThruster'),
-      title: 'HI-SEA Marine Bow Thruster — 3D Explodable CAD Assembly',
-      subtitle: 'Right-Angle Spiral Bevel Drive · 4-Blade Kaplan Bronze Propeller · Bridge Joystick · Hydrodynamic Flow · Bill of Materials',
-      tag: 'HI-SEA CAD ASSEMBLY & SPECS'
+      url: resolveTeardownUrl('edg.html'),
+      title: 'SOLAS Emergency Diesel Generator (EDG) — 600 kW / 440 V',
+      subtitle: '4-Stroke High-Speed V12 Diesel · Radiator Cooling · Dual Electric/Hydraulic Starting · 10s Auto-Start',
+      tag: 'SOLAS CH. II-1 EMERGENCY GENERATOR'
     };
   }
-  if (selectedId === 'prop' || model === 'propeller') {
-    return {
-      url: resolveAssemblyUrl('universal_viewer.html?eq=propeller'),
-      title: 'Marine Propeller & Stern Tube — 3D Explodable Assembly',
-      subtitle: 'Controllable Pitch / Fixed Pitch Propeller · Stern Tube Bearings · Lip Seals · Intermediate Coupling · Exploded View & BOM',
-      tag: 'PROPULSION CAD ASSEMBLY & SPECS'
-    };
-  }
-  if (['txA', 'txB', 'txReeferA', 'txReeferB', 'txConA', 'txConB'].includes(selectedId) || model === 'transformer') {
-    return {
-      url: resolveAssemblyUrl('universal_viewer.html?eq=transformer'),
-      title: 'Marine Distribution Transformer — 3D Explodable CAD Assembly',
-      subtitle: '3-Phase Laminated Core · Concentric Primary & Secondary Windings · Class H Nomex Insulation · Porcelain Bushings · Forced Air Cooling',
-      tag: 'TRANSFORMER CAD ASSEMBLY & SPECS'
-    };
-  }
-  if (selectedId === 'drive' || model === 'drive') {
-    return {
-      url: resolveAssemblyUrl('universal_viewer.html?eq=propulsionDrive'),
-      title: 'Marine Propulsion Drive / Converter — 3D Explodable CAD Assembly',
-      subtitle: 'Medium-Voltage Frequency Converter · Multi-Pulse Input Stage · Water-Cooled IGBT Inverter Stacks · DC Link Capacitor Bank · Control & Protection Casing',
-      tag: 'PROPULSION DRIVE CAD ASSEMBLY & SPECS'
-    };
-  }
-  if (selectedId === 'motor' || model === 'motor') {
-    return {
-      url: resolveAssemblyUrl('universal_viewer.html?eq=propulsionMotor'),
-      title: 'Marine Electric Propulsion Motor — 3D Explodable CAD Assembly',
-      subtitle: '6.6 kV Squirrel-Cage Induction Motor · Low-Loss Laminated Stator & Rotor · Form-Wound Copper Coils · Heavy-Duty Bearings · Bi-Directional Cooling Fan',
-      tag: 'PROPULSION MOTOR CAD ASSEMBLY & SPECS'
-    };
-  }
-  if (selectedId === 'steering' || selectedId === 'eSteer') {
-    return {
-      url: resolveAssemblyUrl('universal_viewer.html?eq=steeringGear'),
-      title: 'Marine Steering Gear — 3D Explodable CAD Assembly',
-      subtitle: 'Twin-Ram Electro-Hydraulic Steering Gear · Forged Rudder Stock · Double-Acting Crosshead Tiller · Axial Piston Pump · SOLAS Steering Standard',
-      tag: 'STEERING GEAR CAD ASSEMBLY & SPECS'
-    };
-  }
-  if (['reefer', 'reeferA', 'reeferB', 'reeferAFeed', 'reeferBFeed', 'reeferUnitA', 'reeferUnitB'].includes(selectedId) || model === 'reefer') {
-    return {
-      url: resolveAssemblyUrl('universal_viewer.html?eq=reefer'),
-      title: 'Reefer Distribution Panel — 3D Explodable CAD Assembly',
-      subtitle: 'Marine Container Bay Distribution · 440 V / 60 Hz 3-Phase · 4 × 32 A CEE Sockets · Individual MCCB Protection · Solid Copper Hull Grounding',
-      tag: 'REEFER DISTRIBUTION CAD ASSEMBLY & SPECS'
-    };
-  }
-  if (['esb', 'eBus'].includes(selectedId)) {
-    return {
-      url: resolveAssemblyUrl('universal_viewer.html?eq=eBus'),
-      title: '440 V Emergency Switchboard Cubicle & Interlock Panel',
-      subtitle: 'SOLAS Emergency Bus Section · Bus-Tie Interlock ACB · Automatic Bus Transfer (ABT) · Generator Incomer',
-      tag: 'SOLAS EMERGENCY SWITCHBOARD CAD ASSEMBLY & SPECS'
-    };
-  }
-  if (['eRadio', 'battery'].includes(selectedId)) {
-    return {
-      url: resolveAssemblyUrl('universal_viewer.html?eq=battery'),
-      title: '24 V DC Battery Bank & GMDSS/UPS Charger Cabinet',
-      subtitle: 'SOLAS Emergency Radio Battery Bank · Dual Thyristor Float/Boost Rectifier · Acid-Resistant Marine Rack',
-      tag: 'BATTERY & CHARGER CAD ASSEMBLY & SPECS'
-    };
-  }
-  if (selectedId === 'airCompressor') {
-    return {
-      url: resolveAssemblyUrl('universal_viewer.html?eq=airCompressor'),
-      title: 'Main Starting Air Compressor & Air Receiver Skid',
-      subtitle: '30 bar Two-Stage Water-Cooled Starting Air Compressor · 30 kW Induction Motor · Vertical Receiver Bottle',
-      tag: 'COMPRESSOR SKID CAD ASSEMBLY & SPECS'
-    };
-  }
-  if (selectedId === 'ventFan') {
-    return {
-      url: resolveAssemblyUrl('universal_viewer.html?eq=ventFan'),
-      title: 'Engine Room Heavy Axial Ventilation Fan & Starter Box',
-      subtitle: '45 kW Reversible High-Pressure Axial Fan · Aerofoil Impeller · Star-Delta Starter · Fire Damper Flange',
-      tag: 'VENTILATION FAN CAD ASSEMBLY & SPECS'
-    };
-  }
-  if (selectedId === 'ballast') {
-    return {
-      url: resolveAssemblyUrl('universal_viewer.html?eq=ballastPump'),
-      title: 'Ballast Pump & Oily Water Separator (OWS) Skid',
-      subtitle: '110 kW Centrifugal Ballast Pump · IMO MEPC 107(49) 15 ppm Separator · Turbidity Coalescer · Tri-Lobe Bilge Pump',
-      tag: 'BALLAST & OWS CAD ASSEMBLY & SPECS'
-    };
-  }
-  if (['galley440', 'galley'].includes(selectedId)) {
-    return {
-      url: resolveAssemblyUrl('universal_viewer.html?eq=galley440'),
-      title: '440 V Galley Primary Board & Emergency Shunt Trip Box',
-      subtitle: 'SOLAS Ch. II-2 Galley Power Feeder · Dual Heavy Cooking Ranges · Remote Shunt Trip Pushbutton Box',
-      tag: 'GALLEY 440 V CAD ASSEMBLY & SPECS'
-    };
-  }
+
+  // 3. 6.6 kV High-Voltage Shore Connection (HVSC / Cold Ironing)
   if (selectedId === 'shore') {
     return {
-      url: resolveAssemblyUrl('universal_viewer.html?eq=shore'),
+      url: resolveTeardownUrl('shore_power.html'),
       title: '6.6 kV High-Voltage Shore Connection (HVSC) Box & Cable Reel',
       subtitle: 'IEC/ISO/IEEE 80005-1 Cold Ironing Interface · Motorized Reel · Safety Interlock Earthing Switch · Pilot Wire Pin',
       tag: 'SHORE POWER HVSC CAD ASSEMBLY & SPECS'
     };
   }
-  if (selectedId === 'nav') {
+
+  // 4. 6.6 kV Medium-Voltage Switchboard Lineup & Withdrawable VCBs
+  if (
+    ['gb1', 'gb2', 'gb3', 'gb4', 'tie', 'shoreBreaker', 'propFeed', 'bowFeed', 'txAFeed', 'txBFeed', 'reeferAFeed', 'reeferBFeed', 'busA', 'busB'].includes(selectedId) ||
+    model === 'hv-board' ||
+    (model === 'breaker' && !['lvTie', 'txAOut', 'txBOut', 'conAAcb', 'conBAcb', 'consumerTie', 'egBreaker'].includes(selectedId))
+  ) {
     return {
-      url: resolveAssemblyUrl('universal_viewer.html?eq=navBridge'),
-      title: 'Navigation Bridge COLREG Console & S-Band Radar Suite',
-      subtitle: 'SOLAS Bridge NavCom & Wheelhouse Distribution Console · 24 RPM Slotted Waveguide Scanner · Dual Feed',
-      tag: 'BRIDGE NAVCOM CAD ASSEMBLY & SPECS'
+      url: resolveTeardownUrl('vcb.html'),
+      title: '3-Cubicle 6.6 kV MV Switchboard Lineup & Withdrawable VCB',
+      subtitle: 'IEC 62271-200 Form 4b · 1250 A / 31.5 kA · Vacuum Interrupter, Auto Shutters & Racking Truck',
+      tag: 'IEC 62271-200 6.6 kV SWITCHGEAR'
     };
   }
-  if (['cooling', 'cooling1', 'cooling2', 'fire', 'fire1', 'fire2', 'bilge', 'eFire'].includes(selectedId) || model === 'pump') {
-    const pumpVariant = (['fire', 'fire1', 'fire2', 'eFire'].includes(selectedId)) ? 'fire' : selectedId === 'bilge' ? 'bilge' : 'cooling';
+
+  // 5. 440 V / 220 V Main Low-Voltage Switchboard & Withdrawable ACB
+  if (
+    ['lvBusA', 'lvBusB', 'consumerA', 'consumerB', 'lvTie', 'txAOut', 'txBOut', 'conAAcb', 'conBAcb', 'consumerTie', 'lightsA', 'lightAFeed'].includes(selectedId) ||
+    model === 'lv-board'
+  ) {
     return {
-      url: resolveAssemblyUrl(`universal_viewer.html?eq=${pumpVariant}Pump`),
-      title: 'Marine Centrifugal Pump Set — 3D Explodable CAD Assembly',
-      subtitle: 'Machinery Space 440 V Pump Set · Volute Casing · Impeller · Mechanical Shaft Seal · Rigid Foundation Skid',
-      tag: 'PUMP CAD ASSEMBLY & SPECS'
+      url: resolveTeardownUrl('lv_acb.html'),
+      title: '440 V / 220 V Marine Main LV Switchboard & Withdrawable ACB',
+      subtitle: 'IEC 61439-2 Form 4b · 3200 A / 65 kA · Drawout Air Circuit Breaker, De-Ion Arc Chutes & ETU',
+      tag: 'IEC 61439-2 440 V MAIN SWITCHBOARD'
     };
   }
+
+  // 6. 440 V SOLAS Emergency Switchboard (ESB) & Interlocks
+  if (['esb', 'eBus', 'esbTieFeed', 'eLights', 'eLightFeed'].includes(selectedId)) {
+    return {
+      url: resolveTeardownUrl('esb.html'),
+      title: '440 V / 220 V SOLAS Emergency Switchboard (ESB) & Interlocks',
+      subtitle: 'SOLAS Ch. II-1 Essential Switchboard · Walking-Beam Interlocked Normal/EDG ACBs · ABT Transfer',
+      tag: 'SOLAS EMERGENCY SWITCHBOARD'
+    };
+  }
+
+  // 7. Marine Distribution & Reefer Transformers (6.6 kV / 440 V / 220 V)
+  if (['txA', 'txB', 'txReeferA', 'txReeferB', 'txConA', 'txConB', 'txReeferAOut', 'txReeferBOut', 'txConAOut', 'txConBOut'].includes(selectedId) || model === 'transformer') {
+    return {
+      url: resolveTeardownUrl('tx.html'),
+      title: 'Marine Dry-Type Cast Resin Distribution Transformer (6.6 kV / 440 V)',
+      subtitle: '2.5 MVA / 1.5 MVA · Class H Nomex Cast-Resin Windings · Step-Lap Core · Pt100 Sensors · IP23 Forced Air',
+      tag: 'MARINE CAST RESIN TRANSFORMER'
+    };
+  }
+
+  // 8. Propulsion VFD Converter
+  if (selectedId === 'drive' || selectedId === 'driveMotor' || model === 'drive') {
+    return {
+      url: resolveTeardownUrl('propulsion_vfd.html'),
+      title: 'Marine Propulsion VFD Frequency Converter (6.6 kV / 6,000 kW)',
+      subtitle: 'Medium-Voltage PWM Converter · Water-Cooled IGBT Inverter Stacks · DC-Link Capacitors · AFE Rectifier',
+      tag: 'PROPULSION VFD DIGITAL TWIN'
+    };
+  }
+
+  // 9. Electric Propulsion Motor
+  if (selectedId === 'motor' || model === 'motor') {
+    return {
+      url: resolveTeardownUrl('prop_motor.html'),
+      title: 'Marine Electric Propulsion Motor (5.6 kV / 6,000 kW TEWAC)',
+      subtitle: '6.6 kV Form-Wound Stator · Laminated Squirrel-Cage Rotor · TEWAC Heat Exchanger · Sleeve Bearings',
+      tag: 'PROPULSION MOTOR DIGITAL TWIN'
+    };
+  }
+
+  // 10. Propeller, Tailshaft & Stern Tube
+  if (selectedId === 'prop' || selectedId === 'shaft' || model === 'propeller') {
+    return {
+      url: resolveTeardownUrl('prop_shaft.html'),
+      title: 'Marine Propulsion Shaftline & Fixed-Pitch NAB Propeller',
+      subtitle: 'Kaplan 4-Blade Nickel-Aluminum-Bronze Propeller · Forged Tailshaft · Stern Tube Bearings & Lip Seals',
+      tag: 'SHAFTLINE & PROPELLER DIGITAL TWIN'
+    };
+  }
+
+  // 11. Bow Tunnel Thruster
+  if (selectedId === 'bow' || model === 'thruster') {
+    return {
+      url: resolveTeardownUrl('bow_thruster.html'),
+      title: 'Marine 6.6 kV / 1,200 kW Bow Tunnel Thruster',
+      subtitle: 'Right-Angle Spiral Bevel Gearbox · 4-Blade Kaplan Bronze Propeller · Shaft Lip Seals · Pod Housing',
+      tag: 'BOW THRUSTER DIGITAL TWIN'
+    };
+  }
+
+  // 12. Reefer Distribution Switchboard
+  if (['reefer', 'reeferA', 'reeferB'].includes(selectedId) || model === 'reefer') {
+    return {
+      url: resolveTeardownUrl('reefer_board.html'),
+      title: '440 V Cargo Reefer Distribution Switchboard & Socket Rack',
+      subtitle: 'Marine Container Bay Board · 440 V / 32 A CEE Sockets · Earth Leakage Relays · Individual MCCBs',
+      tag: 'REEFER SWITCHBOARD DIGITAL TWIN'
+    };
+  }
+
+  // 13. 40-Foot High-Cube Reefer Container
+  if (['reeferUnitA', 'reeferUnitB', 'reeferPlugA', 'reeferPlugB'].includes(selectedId)) {
+    return {
+      url: resolveTeardownUrl('reefer_container.html'),
+      title: '40-Foot High-Cube Marine Refrigerated Container (ISO Reefer)',
+      subtitle: 'Integral Nose Machinery · Semi-Hermetic Compressor · Evaporator Blowers · T-Bar Floor Grating · -25°C',
+      tag: 'ISO REEFER CONTAINER DIGITAL TWIN'
+    };
+  }
+
+  // 14. Starting Air Compressor Skid
+  if (['airCompressor', 'airCompFeed'].includes(selectedId)) {
+    return {
+      url: resolveTeardownUrl('air_compressor.html'),
+      title: '440 V / 30-Bar Marine Starting Air Compressor & Receiver Skid',
+      subtitle: 'Two-Stage Water-Cooled Reciprocating Compressor · Finned Copper Intercooler · 30-Bar Receiver Bottle',
+      tag: 'STARTING AIR COMPRESSOR DIGITAL TWIN'
+    };
+  }
+
+  // 15. Electro-Hydraulic Deck Cargo Crane
+  if (['crane', 'craneFeed'].includes(selectedId)) {
+    return {
+      url: resolveTeardownUrl('deck_crane.html'),
+      title: '40-Ton SWL Marine Electro-Hydraulic Pedestal Deck Crane',
+      subtitle: 'Internal 440 V HPU · 3-Row Roller Slewing Ring · Luffing Cylinders · Hoist Winch & Operator Cabin',
+      tag: 'DECK CRANE DIGITAL TWIN'
+    };
+  }
+
+  // 16. Engine Room Heavy Axial Ventilation Fan & Fire Damper
+  if (['ventFan', 'ventFanFeed'].includes(selectedId)) {
+    return {
+      url: resolveTeardownUrl('vent_fan.html'),
+      title: '440 V / 45 kW ER Axial Ventilation Fan & SOLAS Fire Damper',
+      subtitle: '8-Blade Aerofoil Impeller · In-Stream IP56 Flange Motor · Quick-Closing Fail-Safe Fire Damper',
+      tag: 'VENTILATION FAN DIGITAL TWIN'
+    };
+  }
+
+  // 17. Ballast & Bilge / 15 ppm OWS Skid
+  if (['ballast', 'bilge', 'ballastFeed', 'bilgeFeed'].includes(selectedId)) {
+    return {
+      url: resolveTeardownUrl('ballast_ows_pump.html'),
+      title: '440 V Marine Vertical Ballast & Bilge Pump / 15 ppm OWS Skid',
+      subtitle: 'Vertical Centrifugal Casing · IMO MEPC.107(49) Coalescer Vessel · 15 ppm Bilge Alarm & 3-Way Valve',
+      tag: 'BALLAST & OWS PUMP DIGITAL TWIN'
+    };
+  }
+
+  // 18. SW Cooling & Fire Centrifugal Pumps
+  if (['cooling', 'cooling1', 'cooling2', 'fire', 'fire1', 'fire2', 'eFire', 'cooling1Feed', 'cooling2Feed', 'fire1Feed', 'fire2Feed', 'eFireFeed'].includes(selectedId) || model === 'pump') {
+    return {
+      url: resolveTeardownUrl('centrifugal_pump.html'),
+      title: '440 V / 75 kW Marine Centrifugal Pump & Motor Skid',
+      subtitle: 'Sea Water Cooling & Fire Main Service · Cast Bronze Volute Casing · Mechanical Seal · TEFC Motor',
+      tag: 'CENTRIFUGAL PUMP DIGITAL TWIN'
+    };
+  }
+
+  // 19. 440 V / 220 V Marine Galley & SOLAS Shunt Trip
+  if (['galley440', 'galleySmall', 'galley440Feed', 'galleySmallFeed', 'galley'].includes(selectedId)) {
+    return {
+      url: resolveTeardownUrl('galley.html'),
+      title: '440 V / 220 V Marine Galley Primary Switchboard & Cooking Range',
+      subtitle: 'Commercial Stainless Cooking Island · Deep Fryers · Exhaust Hood · SOLAS II-2 Outdoor Shunt Trip',
+      tag: 'GALLEY & SHUNT TRIP DIGITAL TWIN'
+    };
+  }
+
+  // 20. Navigation Bridge Console & S-Band Radar Suite
+  if (['nav', 'navFeed', 'navEmFeed'].includes(selectedId)) {
+    return {
+      url: resolveTeardownUrl('nav_bridge.html'),
+      title: 'SOLAS Navigation Bridge Console & S-Band Radar Suite',
+      subtitle: 'Dual ARPA Radar / ECDIS Displays · Autopilot Helm · COLREG Light Matrix · Slotted-Waveguide Scanner',
+      tag: 'BRIDGE NAVCOM DIGITAL TWIN'
+    };
+  }
+
+  // 21. Twin-Ram Electro-Hydraulic Steering Gear
+  if (['steering', 'eSteer', 'eSteerFeed'].includes(selectedId)) {
+    return {
+      url: resolveTeardownUrl('steering_gear.html'),
+      title: 'SOLAS Twin-Ram Electro-Hydraulic Steering Gear Unit',
+      subtitle: 'Rapson-Slide Forked Tiller · Dual 440 V HPUs (Main & ESB) · Chrome Rams · Carrier Thrust Bearing',
+      tag: 'STEERING GEAR DIGITAL TWIN'
+    };
+  }
+
+  // 22. 24 V DC Battery Bank & GMDSS / UPS Charger
+  if (['eRadio', 'eRadioFeed', 'battery'].includes(selectedId)) {
+    return {
+      url: resolveTeardownUrl('battery_24v.html'),
+      title: 'SOLAS 24 V DC (600 Ah) VRLA Battery Bank & Charger UPS',
+      subtitle: '12 × 2 V AGM Cells · Dual SCR Thyristor Float/Boost Rectifier · Acid-Resistant Rack · Center-Zero Ammeter',
+      tag: 'BATTERY & CHARGER DIGITAL TWIN'
+    };
+  }
+
   return null;
 }
 
@@ -1858,19 +1940,9 @@ function renderInspector(){
   lastInspectorSelected = selected;
   const e=byId[selected],c=edgeById[selected];
   const model=modelForSelection();
-  const isDgTeardown = ['dg1', 'dg2', 'dg3', 'dg4', 'eg', 'generator'].includes(selected) || model === 'generator';
-  const isVcbTeardown = !isDgTeardown && (
-    ['gb1', 'gb2', 'gb3', 'gb4', 'tie', 'shoreBreaker', 'propFeed', 'bowFeed', 'txAFeed', 'txBFeed', 'reeferAFeed', 'reeferBFeed', 'busA', 'busB', 'lvBusA', 'lvBusB', 'consumerA', 'consumerB', 'eBus', 'esb', 'lvTie', 'txAOut', 'txBOut', 'cooling1Feed', 'fire1Feed', 'airCompFeed', 'craneFeed', 'conAAcb', 'conBAcb', 'fire2Feed', 'cooling2Feed', 'ventFanFeed', 'ballastFeed', 'bilgeFeed', 'consumerTie', 'lightAFeed', 'galleySmallFeed', 'navFeed', 'esbTieFeed', 'egBreaker', 'eSteerFeed', 'eFireFeed', 'eLightFeed', 'eRadioFeed', 'navEmFeed'].includes(selected) ||
-    model === 'breaker' ||
-    model === 'hv-board' ||
-    model === 'lv-board' ||
-    e?.kind === 'bus' ||
-    e?.kind === 'emergency-bus' ||
-    Boolean(c?.breaker)
-  );
-  const isTeardownEligible = isDgTeardown || isVcbTeardown;
-  const activeTeardownUrl = isVcbTeardown ? resolveTeardownUrl('vcb.html') : resolveTeardownUrl('dg.html');
   const assemblyInfo=getAssemblyPage(selected, model);
+  const isTeardownEligible = Boolean(assemblyInfo);
+  const activeTeardownUrl = assemblyInfo?.url || resolveTeardownUrl('vcb.html');
   const title=e?.name||c?.name||'Select equipment';
   const sub=e?.zone||'Switchgear / feeder';
   const status=e?statusText(e.id):c?connectionState(c,state,live)==='open'?'OPEN / DISCONNECTED':connectionState(c,state,live)==='live'?'ENERGIZED':'DE-ENERGIZED':'';
@@ -2180,7 +2252,11 @@ function renderInspector(){
   });
 
   pane.querySelector<HTMLButtonElement>('#openLiveTeardown')?.addEventListener('click', () => {
-    window.location.href = activeTeardownUrl;
+    if (assemblyInfo) {
+      openAssemblyModal(assemblyInfo);
+    } else if (activeTeardownUrl) {
+      window.open(activeTeardownUrl, '_blank');
+    }
   });
 
   wireAssemblyControls(pane, 'propeller', propellerAssembly);

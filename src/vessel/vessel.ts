@@ -580,9 +580,20 @@ export function createVesselEquipment(e:Equipment):THREE.Group {
   }
   const model=e.model?createModel(e.model).group:loadModel(e);
   model.rotation.y=placement.rotation||0;model.updateMatrixWorld(true);
-  let bounds=new THREE.Box3().setFromObject(model);const raw=bounds.getSize(new THREE.Vector3());
+  const isSwitchboard = e.model === 'hv-board' || e.model === 'lv-board';
+  const measureBounds = (obj: THREE.Object3D): THREE.Box3 => {
+    if (!isSwitchboard) return new THREE.Box3().setFromObject(obj);
+    const b = new THREE.Box3();
+    obj.traverse(o => {
+      if (o instanceof THREE.Mesh && o.userData.partId !== 'doors') {
+        b.expandByObject(o);
+      }
+    });
+    return b.isEmpty() ? new THREE.Box3().setFromObject(obj) : b;
+  };
+  let bounds=measureBounds(model);const raw=bounds.getSize(new THREE.Vector3());
   const scale=Math.min(size[0]/raw.x,size[1]/raw.y,size[2]/raw.z);
-  model.scale.setScalar(scale);model.updateMatrixWorld(true);bounds=new THREE.Box3().setFromObject(model);
+  model.scale.setScalar(scale);model.updateMatrixWorld(true);bounds=measureBounds(model);
   const center=bounds.getCenter(new THREE.Vector3());model.position.set(-center.x,-bounds.min.y,-center.z);
   root.add(model);root.userData.height=bounds.max.y-bounds.min.y;
   if(placement.space!=='external'&&placement.space!=='cargo'&&e.id!=='bow'&&e.kind!=='thruster'){

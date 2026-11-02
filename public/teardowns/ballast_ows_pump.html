@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>440 V Marine Vertical Ballast/Bilge Pump &amp; 15 ppm Oily Water Separator (OWS) Skid — 3D CAD Digital Twin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #f2f4f7;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #0f172a;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    #canvas-container {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+    }
+    .hud-glass {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(203, 213, 225, 0.92);
+      box-shadow: 0 10px 30px -8px rgba(15, 23, 42, 0.08), 0 4px 10px -2px rgba(15, 23, 42, 0.04);
+    }
+    .toolbar-btn {
+      transition: all 0.16s ease;
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+    .toolbar-btn:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+      color: #0f172a;
+    }
+    .toolbar-btn.active {
+      background: #fff7ed;
+      border-color: #ea580c;
+      color: #9a3412;
+      font-weight: 600;
+    }
+    .part-chip {
+      transition: all 0.15s ease;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: #475569;
+    }
+    .part-chip:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      color: #0f172a;
+    }
+    .part-chip.active {
+      background: #ea580c;
+      border-color: #c2410c;
+      color: #ffffff;
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #ea580c;
+      border: 2px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.3);
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+    /* Divided Left & Right Callout Badges */
+    .callout-badge {
+      position: absolute;
+      width: 180px;
+      pointer-events: auto;
+      transform: translateY(-50%);
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid rgba(203, 213, 225, 0.95);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+      border-radius: 10px;
+      padding: 6px 10px;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .callout-badge:hover {
+      border-color: #94a3b8;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
+    }
+    .callout-badge.selected {
+      background: #fff7ed;
+      border-color: #ea580c;
+      box-shadow: 0 6px 18px rgba(234, 88, 12, 0.18);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 3D WebGL Viewport -->
+  <div id="canvas-container"></div>
+
+  <!-- Divided Left/Right Callout Badges & SVG Leader Lines Overlay -->
+  <div id="callouts-overlay" class="fixed inset-0 pointer-events-none z-10 overflow-hidden">
+    <svg id="leader-svg" class="w-full h-full block"></svg>
+    <div id="badges-layer" class="absolute inset-0 pointer-events-none"></div>
+  </div>
+
+  <!-- Top-Left Header & Sub-Assembly Isolation Bar -->
+  <header class="fixed top-4 left-4 z-20 max-w-xl pointer-events-auto flex flex-col gap-2">
+    <div class="hud-glass rounded-2xl px-4 py-3">
+      <div class="flex items-center gap-2.5">
+        <span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 mono text-[11px] font-bold">MARPOL ANX I</span>
+        <h1 class="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+          440 V Vertical Ballast/Bilge Pump &amp; 15 ppm OWS Skid
+        </h1>
+      </div>
+      <p class="text-[11px] text-slate-500 mt-0.5 mono">
+        IMO MEPC.107(49) · 440 V 3P 60 Hz · 5.0 m³/h Coalescer · Laser OCM &amp; 3-Way Valve
+      </p>
+
+      <!-- Sub-Assembly Quick Filter Chips -->
+      <div class="flex flex-wrap items-center gap-1.5 mt-2.5 pt-2.5 border-t border-slate-200/80" id="part-chips-bar">
+        <button class="part-chip active px-2.5 py-1 rounded-lg text-[11px] font-semibold" data-part="all">Show All</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="pump_casing">PC · Pump Casing</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="pump_impeller">PI · Bronze Impeller</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="vertical_motor">VM · 440V Motor</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="ows_vessel">OW · OWS Vessel</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="coalescer_filter">CF · Coalescer Pack</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="ocm_monitor">OC · 15ppm OCM</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="plc_panel">CP · PLC Console</button>
+      </div>
+    </div>
+
+    <!-- Active Sub-Assembly Inspector Card -->
+    <div id="part-info-card" class="hud-glass rounded-xl px-3.5 py-2.5 text-xs max-w-md">
+      <div class="flex items-center justify-between">
+        <span id="info-badge" class="mono text-[10px] font-bold uppercase text-emerald-700">SKID OVERVIEW · 7 SUB-ASSEMBLIES</span>
+        <span id="info-spec" class="mono text-[10px] text-slate-400">2100 × 1250 × 1850 mm</span>
+      </div>
+      <div id="info-title" class="font-semibold text-slate-900 mt-0.5">Integrated Bilge/Ballast Pump &amp; 15 ppm OWS Coalescer</div>
+      <p id="info-desc" class="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+        Seawater-resistant cast-bronze vertical centrifugal pump driven by a 440 V TEFC motor feeding a two-stage oleophilic coalescer vessel with IMO MEPC.107(49) 15 ppm laser Oil Content Monitor and automatic 3-way recirculation valve.
+      </p>
+    </div>
+  </header>
+
+  <!-- Top-Right Pill Toolbar -->
+  <nav class="fixed top-4 right-4 z-20 pointer-events-auto flex flex-wrap items-center gap-1.5">
+    <button id="btn-reset-view" class="toolbar-btn px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm">
+      Reset View
+    </button>
+    <button id="btn-auto-rotate" class="toolbar-btn px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm">
+      Auto-Rotate
+    </button>
+    <button id="btn-toggle-labels" class="toolbar-btn active px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm">
+      Toggle Labels
+    </button>
+    <button id="btn-toggle-xray" class="toolbar-btn active px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm">
+      X-Ray / Solid Vessel
+    </button>
+  </nav>
+
+  <!-- Bottom Dock Control Bar (Explode Slider, Pump Drive Speed & 15 ppm OCM Alarm Simulation) -->
+  <footer class="fixed bottom-4 left-1/2 -translate-x-1/2 z-20 w-[95vw] max-w-4xl hud-glass rounded-2xl px-5 py-3.5 pointer-events-auto">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+
+      <!-- 1. Explode Assembly Slider (0% to 100%) -->
+      <div class="md:col-span-5 flex flex-col gap-1">
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-semibold text-slate-700">Explode Assembly</span>
+          <span id="lbl-explode-val" class="mono text-[11px] font-bold text-orange-700">0% · ASSEMBLED</span>
+        </div>
+        <input id="slider-explode" type="range" min="0" max="100" value="0" step="1" />
+        <div class="flex justify-between text-[9px] mono text-slate-400">
+          <button id="btn-exp-0" class="hover:text-slate-800">0% Assembled</button>
+          <button id="btn-exp-50" class="hover:text-slate-800">50% Inspect</button>
+          <button id="btn-exp-100" class="hover:text-slate-800">100% Teardown</button>
+        </div>
+      </div>
+
+      <!-- 2. Pump Speed / Flow Rate Slider -->
+      <div class="md:col-span-3 flex flex-col gap-1">
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-semibold text-slate-700">440 V Pump RPM</span>
+          <span id="lbl-rpm-val" class="mono text-[11px] font-bold text-slate-800">1,750 RPM</span>
+        </div>
+        <input id="slider-rpm" type="range" min="0" max="1750" value="1750" step="50" />
+        <div class="flex justify-between text-[9px] mono text-slate-400">
+          <button id="btn-rpm-0" class="hover:text-slate-800">0 Stop</button>
+          <button id="btn-rpm-900" class="hover:text-slate-800">900 Slow</button>
+          <button id="btn-rpm-1750" class="hover:text-slate-800">1,750 Rated</button>
+        </div>
+      </div>
+
+      <!-- 3. IMO 15 ppm Bilge Alarm & 3-Way Valve Mode Toggle -->
+      <div class="md:col-span-4 flex flex-col gap-1.5">
+        <button id="btn-ows-mode" class="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold tracking-wide shadow transition flex items-center justify-center gap-1.5">
+          <span id="ows-mode-dot" class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+          <span id="ows-mode-text">RUN NORMAL (02.4 PPM &lt; 15 PPM)</span>
+        </button>
+        <div class="flex items-center justify-between px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200/90 text-[10px] mono">
+          <span class="text-slate-500">3-WAY VALVE:</span>
+          <span id="valve-status-badge" class="font-bold text-emerald-700">OVERBOARD DISCHARGE OPEN</span>
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- Three.js ES Module Application -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+    /* =====================================================================
+       1. SCENE, RENDERER, CAMERA & SMOOTH CLAMPED WHEEL ZOOM (MANDATORY)
+       ===================================================================== */
+    const container = document.getElementById('canvas-container');
+    const leaderSvg = document.getElementById('leader-svg');
+    const badgesLayer = document.getElementById('badges-layer');
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf2f4f7);
+
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environmentIntensity = 0.78;
+
+    const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
+    const DEFAULT_CAM_POS = new THREE.Vector3(-3.0, 2.2, 3.8);
+    const DEFAULT_CAM_TARGET = new THREE.Vector3(0, 0.95, 0);
+    camera.position.copy(DEFAULT_CAM_POS);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.copy(DEFAULT_CAM_TARGET);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.enablePan = true;
+    controls.enableZoom = false; // Mandatory custom non-jumping wheel handler below
+    controls.minDistance = 1.8;
+    controls.maxDistance = 11.0;
+    controls.maxPolarAngle = Math.PI * 0.495;
+    controls.update();
+
+    let isCameraTweening = false;
+    const tweenPos = DEFAULT_CAM_POS.clone();
+    const tweenTarget = DEFAULT_CAM_TARGET.clone();
+
+    controls.addEventListener('start', () => {
+      isCameraTweening = false;
+    });
+
+    // Smooth Non-Jumping Wheel Zoom (4.2% per notch, clamped between 1.8m and 11.0m)
+    renderer.domElement.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      isCameraTweening = false;
+      const delta = THREE.MathUtils.clamp(e.deltaY, -100, 100);
+      const zoomFactor = 1 + (delta > 0 ? 0.042 : -0.042) * (Math.abs(delta) / 100);
+      const offset = camera.position.clone().sub(controls.target);
+      const newDist = THREE.MathUtils.clamp(offset.length() * zoomFactor, controls.minDistance, controls.maxDistance);
+      offset.setLength(newDist);
+      camera.position.copy(controls.target).add(offset);
+    }, { passive: false });
+
+    // Studio Lighting & Drafting Plinth
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xdbe2ea, 0.90);
+    scene.add(hemiLight);
+
+    const keyLight = new THREE.DirectionalLight(0xfffdf9, 1.35);
+    keyLight.position.set(-5.0, 9.0, 6.5);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.width = 2048;
+    keyLight.shadow.mapSize.height = 2048;
+    keyLight.shadow.bias = -0.0003;
+    keyLight.shadow.camera.near = 0.5;
+    keyLight.shadow.camera.far = 25;
+    keyLight.shadow.camera.left = -4.0;
+    keyLight.shadow.camera.right = 4.0;
+    keyLight.shadow.camera.top = 4.0;
+    keyLight.shadow.camera.bottom = -4.0;
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0xe2e8f0, 0.72);
+    fillLight.position.set(6.0, 5.0, -5.0);
+    scene.add(fillLight);
+
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.45);
+    rimLight.position.set(0.0, 3.5, 7.0);
+    scene.add(rimLight);
+
+    const gridHelper = new THREE.GridHelper(14, 28, 0xdde2e8, 0xe8ecf0);
+    gridHelper.position.y = 0.001;
+    scene.add(gridHelper);
+
+    const shadowPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(22, 22),
+      new THREE.ShadowMaterial({ opacity: 0.16 })
+    );
+    shadowPlane.rotation.x = -Math.PI / 2;
+    shadowPlane.position.y = 0.002;
+    shadowPlane.receiveShadow = true;
+    scene.add(shadowPlane);
+
+    /* =====================================================================
+       2. PHYSICALLY BASED MATERIAL PALETTE (`MeshStandardMaterial`)
+       ===================================================================== */
+    const matMarineGreen = new THREE.MeshStandardMaterial({
+      color: 0x2d6a4f,
+      roughness: 0.38,
+      metalness: 0.30,
+      side: THREE.DoubleSide
+    });
+    const matCastBronze = new THREE.MeshStandardMaterial({
+      color: 0xc88a32,
+      roughness: 0.26,
+      metalness: 0.85,
+      side: THREE.DoubleSide
+    });
+    const matDarkSlate = new THREE.MeshStandardMaterial({
+      color: 0x2c3a47,
+      roughness: 0.45,
+      metalness: 0.50,
+      side: THREE.DoubleSide
+    });
+    const matCoalescerGold = new THREE.MeshStandardMaterial({
+      color: 0xd4af37,
+      roughness: 0.25,
+      metalness: 0.82,
+      side: THREE.DoubleSide
+    });
+    const matStainlessSteel = new THREE.MeshStandardMaterial({
+      color: 0xd0d7de,
+      roughness: 0.25,
+      metalness: 0.82,
+      side: THREE.DoubleSide
+    });
+    const matPebbleGrey = new THREE.MeshStandardMaterial({
+      color: 0x9aa3ad,
+      roughness: 0.40,
+      metalness: 0.35,
+      side: THREE.DoubleSide
+    });
+    const matCopperPipe = new THREE.MeshStandardMaterial({
+      color: 0xc86d3b,
+      roughness: 0.28,
+      metalness: 0.82
+    });
+    const matSightGlass = new THREE.MeshPhysicalMaterial({
+      color: 0xd8ecff,
+      roughness: 0.10,
+      metalness: 0.05,
+      transparent: true,
+      opacity: 0.32,
+      transmission: 0.78,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+
+    // Dynamic Canvas Texture for IMO 15 ppm OCM Laser Monitor Screen
+    const ocmCanvas = document.createElement('canvas');
+    ocmCanvas.width = 320;
+    ocmCanvas.height = 180;
+    const ocmCtx = ocmCanvas.getContext('2d');
+    const ocmScreenTex = new THREE.CanvasTexture(ocmCanvas);
+    ocmScreenTex.colorSpace = THREE.SRGBColorSpace;
+
+    function drawOcmScreenTexture(isAlarm) {
+      ocmCtx.fillStyle = '#0f172a';
+      ocmCtx.fillRect(0, 0, 320, 180);
+      ocmCtx.strokeStyle = isAlarm ? '#ef4444' : '#10b981';
+      ocmCtx.lineWidth = 6;
+      ocmCtx.strokeRect(4, 4, 312, 172);
+
+      ocmCtx.fillStyle = '#94a3b8';
+      ocmCtx.font = 'bold 13px JetBrains Mono, monospace';
+      ocmCtx.fillText('IMO MEPC.107(49) · LASER OCM-15', 18, 28);
+
+      ocmCtx.fillStyle = isAlarm ? '#f87171' : '#34d399';
+      ocmCtx.font = 'bold 38px JetBrains Mono, monospace';
+      ocmCtx.fillText(isAlarm ? '24.8 PPM' : '02.4 PPM', 18, 78);
+
+      ocmCtx.fillStyle = isAlarm ? '#dc2626' : '#059669';
+      ocmCtx.fillRect(18, 96, 284, 34);
+      ocmCtx.fillStyle = '#ffffff';
+      ocmCtx.font = 'bold 15px Inter, sans-serif';
+      ocmCtx.textAlign = 'center';
+      ocmCtx.fillText(isAlarm ? 'ALARM >15 PPM · RECIRCULATE' : 'OVERBOARD PERMITTED (<15)', 160, 118);
+      ocmCtx.textAlign = 'left';
+
+      ocmCtx.fillStyle = '#cbd5e1';
+      ocmCtx.font = '12px JetBrains Mono, monospace';
+      ocmCtx.fillText(isAlarm ? '3-WAY VALVE: BILGE TANK' : '3-WAY VALVE: OVERBOARD', 18, 154);
+
+      ocmScreenTex.needsUpdate = true;
+    }
+    drawOcmScreenTexture(false);
+
+    // Dynamic Canvas Texture for PLC HMI Mimic Screen
+    const plcCanvas = document.createElement('canvas');
+    plcCanvas.width = 360;
+    plcCanvas.height = 240;
+    const plcCtx = plcCanvas.getContext('2d');
+    const plcScreenTex = new THREE.CanvasTexture(plcCanvas);
+    plcScreenTex.colorSpace = THREE.SRGBColorSpace;
+
+    function drawPlcMimicTexture(isAlarm, rpm) {
+      plcCtx.fillStyle = '#091926';
+      plcCtx.fillRect(0, 0, 360, 240);
+      plcCtx.strokeStyle = '#38bdf8';
+      plcCtx.lineWidth = 4;
+      plcCtx.strokeRect(4, 4, 352, 232);
+
+      plcCtx.fillStyle = '#38bdf8';
+      plcCtx.font = 'bold 15px JetBrains Mono, monospace';
+      plcCtx.fillText('PLC BILGE & OWS AUTOMATION HMI', 18, 28);
+
+      // Schematic mimic flow lines
+      plcCtx.strokeStyle = rpm > 0 ? '#10b981' : '#64748b';
+      plcCtx.lineWidth = 4;
+      plcCtx.beginPath();
+      plcCtx.moveTo(30, 110);
+      plcCtx.lineTo(180, 110);
+      plcCtx.stroke();
+
+      // 3-Way valve branch
+      plcCtx.strokeStyle = isAlarm ? '#f59e0b' : '#10b981';
+      plcCtx.beginPath();
+      plcCtx.moveTo(180, 110);
+      plcCtx.lineTo(320, isAlarm ? 155 : 75);
+      plcCtx.stroke();
+
+      plcCtx.fillStyle = '#e2e8f0';
+      plcCtx.font = 'bold 13px JetBrains Mono, monospace';
+      plcCtx.fillText(`PUMP: ${rpm} RPM  |  FLOW: ${(rpm / 1750 * 5.0).toFixed(1)} m³/h`, 18, 62);
+      plcCtx.fillStyle = isAlarm ? '#f87171' : '#34d399';
+      plcCtx.fillText(`EFFLUENT: ${isAlarm ? '24.8 PPM (RECIRC)' : '02.4 PPM (OVERBOARD)'}`, 18, 192);
+      plcCtx.fillStyle = '#94a3b8';
+      plcCtx.font = '11px JetBrains Mono, monospace';
+      plcCtx.fillText('STAGE 1: GRAVITY   STAGE 2: OLEOPHILIC PACK', 18, 216);
+
+      plcScreenTex.needsUpdate = true;
+    }
+    drawPlcMimicTexture(false, 1750);
+
+    function makeGaugeTexture(title, unit) {
+      const c = document.createElement('canvas');
+      c.width = 128; c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, 128, 128);
+      ctx.strokeStyle = '#2c3a47';
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.arc(64, 64, 58, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 16px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(title, 64, 48);
+      ctx.fillStyle = '#64748b';
+      ctx.font = 'bold 12px Inter, sans-serif';
+      ctx.fillText(unit, 64, 88);
+
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(64, 64);
+      ctx.lineTo(94, 38);
+      ctx.stroke();
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+    const gaugePressTex = makeGaugeTexture('2.4', 'BAR');
+    const gaugeVacTex = makeGaugeTexture('-0.3', 'VAC');
+
+    /* =====================================================================
+       3. SEVEN COHESIVE FUNCTIONAL SUB-ASSEMBLIES (`parts` REGISTRY)
+       ===================================================================== */
+    const PUMP_X = -0.65;
+    const PUMP_Y = 0.48;
+    const OWS_X = 0.45;
+    const OWS_Y = 0.85;
+
+    const parts = {
+      pump_casing: {
+        code: 'PC',
+        name: 'Cast-Bronze Vertical Pump Casing',
+        spec: 'CuSn10 Bronze · DN150 In/Out · Priming',
+        desc: 'Seawater-resistant cast-bronze vertical centrifugal volute casing mounted on the left side of the marine steel skid with radially opposed DN150 suction/discharge flanges, priming chamber, and pressure/vacuum gauges.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(-0.55, -0.15, 0),
+        anchor: new THREE.Vector3(-0.65, 0.48, 0.24)
+      },
+      pump_impeller: {
+        code: 'PI',
+        name: 'Double-Curvature Bronze Impeller',
+        spec: 'Enclosed Shroud · 316L Shaft · Mech Seal',
+        desc: 'Multi-vane double-curvature enclosed bronze centrifugal impeller keyed to a vertical 316L stainless-steel shaft with balanced silicon-carbide mechanical seal cartridge.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(-0.55, 0.35, 0.55),
+        anchor: new THREE.Vector3(-0.65, 0.54, 0.14)
+      },
+      vertical_motor: {
+        code: 'VM',
+        name: '440 V Vertical Flange Drive Motor',
+        spec: '18.5 kW · 440 V 3P 60 Hz · 1,750 RPM',
+        desc: 'Vertical TEFC squirrel-cage marine induction motor bolted atop the pump lantern bracket with radial cast cooling ribs, top drip-proof rain canopy, lifting eyes, and 440 V terminal box.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(-0.55, 0.85, 0),
+        anchor: new THREE.Vector3(-0.65, 1.32, 0.18)
+      },
+      ows_vessel: {
+        code: 'OW',
+        name: 'Two-Stage Bilge OWS Pressure Vessel',
+        spec: 'Ø840mm Welded Steel · 16-Bolt Flange',
+        desc: 'Vertical cylindrical welded steel coalescer vessel (R = 0.42 m, H = 1.45 m) with dished top head, 16-bolt main inspection flange, oil-collecting dome, capacitance interface probe, and heating coil boss.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(0.45, -0.10, -0.25),
+        anchor: new THREE.Vector3(0.45, 1.35, -0.22)
+      },
+      coalescer_filter: {
+        code: 'CF',
+        name: 'Oleophilic Coalescer Matrix Pack',
+        spec: 'Corrugated Plates · <15 ppm Separation',
+        desc: 'Internal upper and lower perforated stainless distribution baffle plates and multi-stage corrugated oleophilic coalescer filter cartridges that aggregate microscopic oil droplets (< 15 ppm).',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(0.45, 0.85, 0.35),
+        anchor: new THREE.Vector3(0.45, 0.88, 0.18)
+      },
+      ocm_monitor: {
+        code: 'OC',
+        name: '15 ppm Bilge Alarm OCM & 3-Way Valve',
+        spec: 'IMO MEPC.107(49) · Laser Scattering',
+        desc: 'Optical laser-scattering 15 ppm Oil Content Monitor with live ppm readout, sample sight glass, and automatic pneumatic 3-way overboard/recirculation diversion valve.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(0.85, 0.25, 0.55),
+        anchor: new THREE.Vector3(0.82, 0.95, 0.38)
+      },
+      plc_panel: {
+        code: 'CP',
+        name: 'Automated PLC Skid Control Console',
+        spec: 'IP55 Cabinet · HMI Mimic & Alarm Lamps',
+        desc: 'Central pedestal-mounted IP55 control console featuring an automated PLC mimic screen, PUMP RUN / 15 PPM ALARM / RECIRCULATE pilot lamps, rotary isolator, and E-Stop mushroom button.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(0, 0.55, 0.65),
+        anchor: new THREE.Vector3(-0.08, 1.15, 0.35)
+      }
+    };
+
+    for (const key in parts) {
+      scene.add(parts[key].group);
+    }
+
+    // Stationary Common Marine Steel Skid Base (Anchored at Y = 0 to 0.14 m so the skid frame stays grounded on the floor)
+    const commonSkidGroup = new THREE.Group();
+    scene.add(commonSkidGroup);
+
+    function buildCommonSkidBase() {
+      // Longitudinal I-Beam Skid Runners (Width 2.15 m, Depth 1.22 m)
+      [-0.54, 0.54].forEach((zBeam) => {
+        const web = new THREE.Mesh(new THREE.BoxGeometry(2.16, 0.11, 0.03), matDarkSlate);
+        web.position.set(0.05, 0.065, zBeam);
+        web.castShadow = true;
+        web.receiveShadow = true;
+        commonSkidGroup.add(web);
+
+        [0.015, 0.12].forEach((yFlg) => {
+          const flange = new THREE.Mesh(new THREE.BoxGeometry(2.18, 0.018, 0.14), matDarkSlate);
+          flange.position.set(0.05, yFlg, zBeam);
+          flange.castShadow = true;
+          flange.receiveShadow = true;
+          commonSkidGroup.add(flange);
+        });
+      });
+
+      // 4 Transverse Skid Cross-Channels & Drip-Pan Deck Plate (`0x2d6a4f` Marine Green)
+      [-0.92, -0.28, 0.36, 1.02].forEach((xCross) => {
+        const cross = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.10, 1.12), matDarkSlate);
+        cross.position.set(xCross, 0.065, 0);
+        commonSkidGroup.add(cross);
+      });
+
+      const skidDeck = new THREE.Mesh(new THREE.BoxGeometry(2.12, 0.022, 1.08), matMarineGreen);
+      skidDeck.position.set(0.05, 0.13, 0);
+      skidDeck.receiveShadow = true;
+      commonSkidGroup.add(skidDeck);
+
+      // 6 Anti-Vibration Foundation Chocks & Hold-Down Bolts
+      [-0.92, 0.05, 1.02].forEach((xc) => {
+        [-0.54, 0.54].forEach((zc) => {
+          const pad = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.02, 0.16), matPebbleGrey);
+          pad.position.set(xc, 0.01, zc);
+          commonSkidGroup.add(pad);
+
+          const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.05, 6), matCoalescerGold);
+          bolt.position.set(xc, 0.035, zc);
+          commonSkidGroup.add(bolt);
+        });
+      });
+    }
+    buildCommonSkidBase();
+
+    // Kinematic & X-Ray References
+    let impellerSpinGroup = null;
+    let motorCoolingFanGroup = null;
+    let diversionValveRotor = null;
+    let lampPumpRunMesh = null;
+    let lampAlarm15PpmMesh = null;
+    let lampRecircMesh = null;
+    let owsOuterShellMesh = null;
+    let pumpCutawayCoverMesh = null;
+    const sampleFlowBeads = [];
+
+    /* =====================================================================
+       3.1 BUILD `pump_casing` — CAST-BRONZE VERTICAL CENTRIFUGAL PUMP CASING
+       ===================================================================== */
+    function buildPumpCasing() {
+      const grp = parts.pump_casing.group;
+
+      // Pedestal Stool Mounting Foot on Skid (`Y = 0.16 m` to `0.32 m`, safe for `-0.15 m` Y-explode!)
+      const footFlange = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.28, 0.035, 28), matDarkSlate);
+      footFlange.position.set(PUMP_X, 0.175, 0);
+      footFlange.castShadow = true;
+      grp.add(footFlange);
+
+      // 3 Cast Pedestal Legs supporting the Bronze Volute Casing
+      for (let i = 0; i < 3; i++) {
+        const ang = (i / 3) * Math.PI * 2 + Math.PI / 6;
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.18, 0.08), matDarkSlate);
+        leg.position.set(PUMP_X + Math.cos(ang) * 0.18, 0.26, Math.sin(ang) * 0.18);
+        leg.rotation.y = -ang;
+        leg.castShadow = true;
+        grp.add(leg);
+      }
+
+      // Main Cast-Bronze Vertical Volute Casing (`0xc88a32`, Rear/Side 260° solid + Front 100° X-Ray Cutaway Window)
+      const voluteRear = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.24, 0.22, 0.28, 36, 1, false, Math.PI * 0.28, Math.PI * 1.44),
+        matCastBronze
+      );
+      voluteRear.position.set(PUMP_X, PUMP_Y, 0);
+      voluteRear.castShadow = true;
+      grp.add(voluteRear);
+
+      // Front Removable Volute Inspection Cover (Toggles translucent in X-Ray mode to show spinning impeller)
+      pumpCutawayCoverMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.242, 0.222, 0.28, 24, 1, false, -Math.PI * 0.28, Math.PI * 0.56),
+        matCastBronze
+      );
+      pumpCutawayCoverMesh.position.set(PUMP_X, PUMP_Y, 0);
+      pumpCutawayCoverMesh.castShadow = true;
+      grp.add(pumpCutawayCoverMesh);
+
+      // Spiral Volute Belly Ring & Top/Bottom Bolted Casing Flanges
+      const voluteTorus = new THREE.Mesh(
+        new THREE.TorusGeometry(0.21, 0.068, 16, 36, Math.PI * 1.55),
+        matCastBronze
+      );
+      voluteTorus.rotation.x = Math.PI / 2;
+      voluteTorus.rotation.z = Math.PI * 0.22;
+      voluteTorus.position.set(PUMP_X, PUMP_Y, 0);
+      grp.add(voluteTorus);
+
+      [-0.14, 0.14].forEach((dy) => {
+        const casingFlange = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.026, 32), matCastBronze);
+        casingFlange.position.set(PUMP_X, PUMP_Y + dy, 0);
+        grp.add(casingFlange);
+
+        // 12 Stainless Hex Studs around Casing Flange
+        for (let b = 0; b < 12; b++) {
+          const ba = (b / 12) * Math.PI * 2;
+          const stud = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.038, 6), matStainlessSteel);
+          stud.position.set(PUMP_X + Math.cos(ba) * 0.245, PUMP_Y + dy, Math.sin(ba) * 0.245);
+          grp.add(stud);
+        }
+      });
+
+      // Radially Opposed DN150 Suction (-X) and Discharge (+X) Flanged Branches
+      [-1, 1].forEach((dir) => {
+        const branchNozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.095, 0.22, 24), matCastBronze);
+        branchNozzle.rotation.z = Math.PI / 2;
+        branchNozzle.position.set(PUMP_X + dir * 0.28, PUMP_Y, 0);
+        branchNozzle.castShadow = true;
+        grp.add(branchNozzle);
+
+        const dn150Flange = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.028, 24), matCastBronze);
+        dn150Flange.rotation.z = Math.PI / 2;
+        dn150Flange.position.set(PUMP_X + dir * 0.39, PUMP_Y, 0);
+        grp.add(dn150Flange);
+
+        for (let b = 0; b < 8; b++) {
+          const ba = (b / 8) * Math.PI * 2;
+          const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.038, 6), matStainlessSteel);
+          bolt.rotation.z = Math.PI / 2;
+          bolt.position.set(PUMP_X + dir * 0.39, PUMP_Y + Math.cos(ba) * 0.11, Math.sin(ba) * 0.11);
+          grp.add(bolt);
+        }
+      });
+
+      // Side Self-Priming Vacuum Separation Chamber (`X = -0.84 m, Z = -0.22 m`)
+      const primingDrum = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.10, 0.42, 24), matCastBronze);
+      primingDrum.position.set(PUMP_X - 0.19, PUMP_Y + 0.24, -0.22);
+      primingDrum.castShadow = true;
+      grp.add(primingDrum);
+
+      const primingCap = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.115, 0.024, 24), matCastBronze);
+      primingCap.position.set(PUMP_X - 0.19, PUMP_Y + 0.45, -0.22);
+      grp.add(primingCap);
+
+      // Upper Cast Lantern Bracket / Distance Piece supporting the 440 V Vertical Motor (`Y = 0.62 m` to `0.92 m`)
+      [-0.14, 0.14].forEach((lx) => {
+        const rib = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.30, 0.16), matDarkSlate);
+        rib.position.set(PUMP_X + lx, 0.77, 0);
+        rib.castShadow = true;
+        grp.add(rib);
+      });
+
+      const motorMountRing = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.032, 32), matDarkSlate);
+      motorMountRing.position.set(PUMP_X, 0.92, 0);
+      grp.add(motorMountRing);
+
+      // Compound Suction Vacuum & Discharge Pressure Gauges on Brass Syphon Tubes
+      [
+        { x: PUMP_X - 0.32, tex: gaugeVacTex },
+        { x: PUMP_X + 0.32, tex: gaugePressTex }
+      ].forEach((gSpec) => {
+        const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.12, 12), matCoalescerGold);
+        stem.position.set(gSpec.x, PUMP_Y + 0.16, 0.06);
+        grp.add(stem);
+
+        const caseBezel = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.048, 0.024, 24), matStainlessSteel);
+        caseBezel.rotation.x = Math.PI / 2;
+        caseBezel.position.set(gSpec.x, PUMP_Y + 0.24, 0.06);
+        grp.add(caseBezel);
+
+        const dialFace = new THREE.Mesh(
+          new THREE.CircleGeometry(0.042, 24),
+          new THREE.MeshBasicMaterial({ map: gSpec.tex })
+        );
+        dialFace.position.set(gSpec.x, PUMP_Y + 0.24, 0.073);
+        grp.add(dialFace);
+      });
+    }
+
+    /* =====================================================================
+       3.2 BUILD `pump_impeller` — DOUBLE-CURVATURE BRONZE IMPELLER & SHAFT
+       ===================================================================== */
+    function buildPumpImpeller() {
+      const grp = parts.pump_impeller.group;
+
+      // Concentric Rotating Impeller & Vertical Shaft Group aligned strictly on X = PUMP_X, Z = 0
+      impellerSpinGroup = new THREE.Group();
+      impellerSpinGroup.position.set(PUMP_X, PUMP_Y, 0);
+      grp.add(impellerSpinGroup);
+
+      // Bottom Impeller Shroud Disc & Top Suction Eye Ring (`0xc88a32` Cast Bronze)
+      const bottomShroud = new THREE.Mesh(new THREE.CylinderGeometry(0.175, 0.175, 0.014, 32), matCastBronze);
+      bottomShroud.position.y = -0.055;
+      impellerSpinGroup.add(bottomShroud);
+
+      const topEyeShroud = new THREE.Mesh(new THREE.TorusGeometry(0.125, 0.018, 12, 32), matCastBronze);
+      topEyeShroud.rotation.x = Math.PI / 2;
+      topEyeShroud.position.y = 0.055;
+      impellerSpinGroup.add(topEyeShroud);
+
+      // Central Impeller Boss & Brass Nose Locknut
+      const impellerHub = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.058, 0.12, 24), matCastBronze);
+      impellerSpinGroup.add(impellerHub);
+
+      const noseCapNut = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.032, 0.035, 6), matCoalescerGold);
+      noseCapNut.position.y = -0.075;
+      impellerSpinGroup.add(noseCapNut);
+
+      // 7 Curved Logarithmic Hydrofoil Impeller Vanes between the Shrouds
+      for (let v = 0; v < 7; v++) {
+        const baseAngle = (v / 7) * Math.PI * 2;
+        const vaneCurve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(Math.cos(baseAngle) * 0.055, 0, Math.sin(baseAngle) * 0.055),
+          new THREE.Vector3(Math.cos(baseAngle + 0.42) * 0.115, 0, Math.sin(baseAngle + 0.42) * 0.115),
+          new THREE.Vector3(Math.cos(baseAngle + 0.88) * 0.170, 0, Math.sin(baseAngle + 0.88) * 0.170)
+        ]);
+        const vaneGeo = new THREE.TubeGeometry(vaneCurve, 12, 0.008, 6, false);
+        vaneGeo.scale(1, 5.8, 1);
+        const vaneMesh = new THREE.Mesh(vaneGeo, matCastBronze);
+        impellerSpinGroup.add(vaneMesh);
+      }
+
+      // Vertical 316L Stainless-Steel Drive Shaft (`0xd0d7de`) with Keyway & Spacer Coupling
+      const vertShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.44, 24), matStainlessSteel);
+      vertShaft.position.y = 0.22;
+      impellerSpinGroup.add(vertShaft);
+
+      // Mechanical Cartridge Seal Gland & Silicon-Carbide Collar (`Y = +0.16 m` local)
+      const sealGland = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.068, 0.042, 24), matCoalescerGold);
+      sealGland.position.y = 0.155;
+      impellerSpinGroup.add(sealGland);
+
+      // Split Muff / Pin-Bush Spacer Coupling Hub (`Y = +0.34 m` local, 4 bolts)
+      const couplingHub = new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.062, 0.085, 24), matStainlessSteel);
+      couplingHub.position.y = 0.32;
+      impellerSpinGroup.add(couplingHub);
+
+      for (let c = 0; c < 6; c++) {
+        const ca = (c / 6) * Math.PI * 2;
+        const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.095, 8), matCoalescerGold);
+        pin.position.set(Math.cos(ca) * 0.044, 0.32, Math.sin(ca) * 0.044);
+        impellerSpinGroup.add(pin);
+      }
+    }
+
+    /* =====================================================================
+       3.3 BUILD `vertical_motor` — 440 V VERTICAL FLANGE-MOUNTED DRIVE MOTOR
+       ===================================================================== */
+    function buildVerticalMotor() {
+      const grp = parts.vertical_motor.group;
+      const motorY = 1.25;
+
+      // Bottom IEC B5 Mounting Flange Ring (`Y = 0.94 m`)
+      const mountFlange = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.032, 32), matDarkSlate);
+      mountFlange.position.set(PUMP_X, 0.95, 0);
+      mountFlange.castShadow = true;
+      grp.add(mountFlange);
+
+      // Main Vertical TEFC Stator Frame Cylinder (`0x2c3a47`, Y = 0.96 m to 1.54 m)
+      const statorFrame = new THREE.Mesh(new THREE.CylinderGeometry(0.195, 0.195, 0.56, 32), matDarkSlate);
+      statorFrame.position.set(PUMP_X, motorY, 0);
+      statorFrame.castShadow = true;
+      grp.add(statorFrame);
+
+      // 24 Radial Cast Cooling Fins around the Vertical Motor Frame
+      for (let f = 0; f < 24; f++) {
+        const fa = (f / 24) * Math.PI * 2;
+        const fin = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.52, 0.038), matDarkSlate);
+        fin.position.set(PUMP_X + Math.sin(fa) * 0.205, motorY, Math.cos(fa) * 0.205);
+        fin.rotation.y = fa;
+        grp.add(fin);
+      }
+
+      // Top Fan Cowl & Marine Drip-Proof Rain Canopy Hat (`Y = 1.54 m` to `1.68 m`)
+      const fanCowl = new THREE.Mesh(new THREE.CylinderGeometry(0.175, 0.195, 0.10, 32), matDarkSlate);
+      fanCowl.position.set(PUMP_X, 1.56, 0);
+      grp.add(fanCowl);
+
+      const dripCanopy = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.23, 0.055, 32), matMarineGreen);
+      dripCanopy.position.set(PUMP_X, 1.65, 0);
+      dripCanopy.castShadow = true;
+      grp.add(dripCanopy);
+
+      // Concentric Top Cooling Fan Impeller inside Cowl
+      motorCoolingFanGroup = new THREE.Group();
+      motorCoolingFanGroup.position.set(PUMP_X, 1.60, 0);
+      grp.add(motorCoolingFanGroup);
+
+      for (let b = 0; b < 8; b++) {
+        const ba = (b / 8) * Math.PI * 2;
+        const blade = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.016, 0.005), matCoalescerGold);
+        blade.position.set(Math.cos(ba) * 0.06, 0, Math.sin(ba) * 0.06);
+        blade.rotation.y = -ba;
+        motorCoolingFanGroup.add(blade);
+      }
+
+      // Twin Forged Lifting Eye Bolts on Motor Top End-Shield
+      [-0.17, 0.17].forEach((lx) => {
+        const eye = new THREE.Mesh(new THREE.TorusGeometry(0.024, 0.006, 10, 20), matStainlessSteel);
+        eye.position.set(PUMP_X + lx, 1.58, 0);
+        grp.add(eye);
+      });
+
+      // Side-Mounted Moisture-Sealed 440 V Terminal Box with Brass Compression Cable Glands
+      const termBox = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.18, 0.15), matDarkSlate);
+      termBox.position.set(PUMP_X - 0.23, motorY + 0.04, 0.06);
+      termBox.castShadow = true;
+      grp.add(termBox);
+
+      const voltagePlaque = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.06, 0.10), matCoalescerGold);
+      voltagePlaque.position.set(PUMP_X - 0.302, motorY + 0.05, 0.06);
+      grp.add(voltagePlaque);
+
+      [-0.035, 0.035].forEach((zg) => {
+        const gland = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.016, 0.045, 6), matCoalescerGold);
+        gland.position.set(PUMP_X - 0.23, motorY - 0.07, 0.06 + zg);
+        grp.add(gland);
+      });
+    }
+
+    /* =====================================================================
+       3.4 BUILD `ows_vessel` — TWO-STAGE BILGE OWS COALESCER PRESSURE VESSEL
+       ===================================================================== */
+    function buildOwsVessel() {
+      const grp = parts.ows_vessel.group;
+      const vesselR = 0.42;
+
+      // 3 Heavy Welded Support Legs on Skid (`Y = 0.15 m` to `0.36 m` — safe for `-0.10 m` Y-explode!)
+      for (let i = 0; i < 3; i++) {
+        const ang = (i / 3) * Math.PI * 2 + Math.PI / 4;
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.22, 0.10), matDarkSlate);
+        leg.position.set(OWS_X + Math.cos(ang) * 0.36, 0.25, Math.sin(ang) * 0.36);
+        leg.rotation.y = -ang;
+        leg.castShadow = true;
+        grp.add(leg);
+      }
+
+      // Bottom Elliptical Dish Head (`Y = 0.36 m`)
+      const bottomDish = new THREE.Mesh(
+        new THREE.SphereGeometry(vesselR, 36, 16, 0, Math.PI * 2, Math.PI * 0.5, Math.PI * 0.5),
+        matMarineGreen
+      );
+      bottomDish.scale.set(1, 0.38, 1);
+      bottomDish.position.set(OWS_X, 0.36, 0);
+      bottomDish.castShadow = true;
+      grp.add(bottomDish);
+
+      // Main Cylindrical Welded Steel Pressure Vessel Shell (`R = 0.42 m, H = 0.96 m` from Y = 0.36 to 1.32 m)
+      // Rear 250° solid arc + Front 110° X-Ray toggleable window so internal coalescer pack is visible!
+      const rearVesselShell = new THREE.Mesh(
+        new THREE.CylinderGeometry(vesselR, vesselR, 0.96, 40, 1, true, Math.PI * 0.30, Math.PI * 1.40),
+        matMarineGreen
+      );
+      rearVesselShell.position.set(OWS_X, 0.84, 0);
+      rearVesselShell.castShadow = true;
+      grp.add(rearVesselShell);
+
+      owsOuterShellMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(vesselR + 0.002, vesselR + 0.002, 0.96, 28, 1, true, -Math.PI * 0.30, Math.PI * 0.60),
+        matSightGlass
+      );
+      owsOuterShellMesh.position.set(OWS_X, 0.84, 0);
+      grp.add(owsOuterShellMesh);
+
+      // 16-Bolt Main Upper Inspection & Coalescer Access Flange (`Y = 1.32 m`)
+      const mainFlange = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.045, 40), matMarineGreen);
+      mainFlange.position.set(OWS_X, 1.32, 0);
+      mainFlange.castShadow = true;
+      grp.add(mainFlange);
+
+      for (let b = 0; b < 16; b++) {
+        const ba = (b / 16) * Math.PI * 2;
+        const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.065, 6), matStainlessSteel);
+        bolt.position.set(OWS_X + Math.cos(ba) * 0.435, 1.32, Math.sin(ba) * 0.435);
+        grp.add(bolt);
+      }
+
+      // Dished Top Head & Upper Oil-Collecting Dome (`Y = 1.34 m` to `1.68 m`)
+      const topDish = new THREE.Mesh(
+        new THREE.SphereGeometry(vesselR, 36, 16, 0, Math.PI * 2, 0, Math.PI * 0.5),
+        matMarineGreen
+      );
+      topDish.scale.set(1, 0.42, 1);
+      topDish.position.set(OWS_X, 1.34, 0);
+      topDish.castShadow = true;
+      grp.add(topDish);
+
+      const oilDome = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, 0.22, 28), matMarineGreen);
+      oilDome.position.set(OWS_X, 1.56, 0);
+      oilDome.castShadow = true;
+      grp.add(oilDome);
+
+      const domeCap = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.025, 28), matDarkSlate);
+      domeCap.position.set(OWS_X, 1.67, 0);
+      grp.add(domeCap);
+
+      // Top Ultrasonic / Capacitance Oil-Water Interface Sensor Probe & Waste Oil Solenoid Drain Valve
+      const probeHead = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.12, 20), matCoalescerGold);
+      probeHead.position.set(OWS_X, 1.74, 0);
+      grp.add(probeHead);
+
+      const oilDrainPipe = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(OWS_X + 0.16, 1.58, 0),
+        new THREE.Vector3(OWS_X + 0.34, 1.58, -0.18),
+        new THREE.Vector3(OWS_X + 0.34, 0.45, -0.38)
+      ]);
+      const oilDrainMesh = new THREE.Mesh(new THREE.TubeGeometry(oilDrainPipe, 20, 0.018, 12, false), matCopperPipe);
+      grp.add(oilDrainMesh);
+
+      // Lower Steam / Electric Immersion Heating Coil Boss (`X = +0.45 m, Y = 0.46 m, Z = -0.42 m`)
+      const heaterBoss = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.16, 20), matCoalescerGold);
+      heaterBoss.rotation.x = Math.PI / 2;
+      heaterBoss.position.set(OWS_X, 0.46, -0.44);
+      grp.add(heaterBoss);
+
+      // Interconnecting Flanged Feed Pipe from Vertical Pump Discharge (`X = -0.26 m`) to OWS Vessel Inlet (`X = +0.03 m`)
+      const feedPipeCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(PUMP_X + 0.39, PUMP_Y, 0),
+        new THREE.Vector3(-0.18, PUMP_Y, 0),
+        new THREE.Vector3(-0.08, 0.78, -0.18),
+        new THREE.Vector3(OWS_X - 0.38, 0.92, -0.18)
+      ]);
+      const feedPipe = new THREE.Mesh(new THREE.TubeGeometry(feedPipeCurve, 24, 0.048, 16, false), matMarineGreen);
+      feedPipe.castShadow = true;
+      grp.add(feedPipe);
+    }
+
+    /* =====================================================================
+       3.5 BUILD `coalescer_filter` — OLEOPHILIC COALESCER MATRIX PACK & BAFFLES
+       ===================================================================== */
+    function buildCoalescerFilter() {
+      const grp = parts.coalescer_filter.group;
+
+      // Central Perforated Stainless Collector Standpipe (`0xd0d7de`)
+      const standpipe = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.86, 24), matStainlessSteel);
+      standpipe.position.set(OWS_X, 0.84, 0);
+      grp.add(standpipe);
+
+      // Upper & Lower Perforated Stainless Distribution Baffle Plates (`R = 0.37 m`)
+      [0.46, 0.84, 1.22].forEach((by) => {
+        const baffleDisc = new THREE.Mesh(new THREE.CylinderGeometry(0.37, 0.37, 0.018, 36), matStainlessSteel);
+        baffleDisc.position.set(OWS_X, by, 0);
+        grp.add(baffleDisc);
+
+        // Concentric Perforation Ring Grooves on Baffle Plate
+        [0.14, 0.24, 0.32].forEach((rRing) => {
+          const ring = new THREE.Mesh(new THREE.TorusGeometry(rRing, 0.004, 8, 32), matDarkSlate);
+          ring.rotation.x = Math.PI / 2;
+          ring.position.set(OWS_X, by + 0.01, 0);
+          grp.add(ring);
+        });
+      });
+
+      // Stage 1 (Upper): Inclined Parallel Corrugated Coalescing Plate Pack (`0xd4af37` Brass/Gold)
+      for (let p = 0; p < 7; p++) {
+        const py = 0.92 + p * 0.038;
+        const conePlate = new THREE.Mesh(
+          new THREE.ConeGeometry(0.35, 0.06, 32, 1, true),
+          matCoalescerGold
+        );
+        conePlate.position.set(OWS_X, py, 0);
+        grp.add(conePlate);
+      }
+
+      // Stage 2 (Lower): 6 Cylindrical Fine-Mesh Oleophilic Coalescer Filter Cartridges (`0xd4af37`)
+      for (let c = 0; c < 6; c++) {
+        const ca = (c / 6) * Math.PI * 2;
+        const cx = OWS_X + Math.cos(ca) * 0.22;
+        const cz = Math.sin(ca) * 0.22;
+
+        const cartridge = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.068, 0.32, 24), matCoalescerGold);
+        cartridge.position.set(cx, 0.65, cz);
+        cartridge.castShadow = true;
+        grp.add(cartridge);
+
+        // Pleated Wire-Mesh Rib Bands around each Coalescer Cartridge
+        for (let r = -0.12; r <= 0.12; r += 0.048) {
+          const rib = new THREE.Mesh(new THREE.TorusGeometry(0.070, 0.004, 8, 24), matStainlessSteel);
+          rib.rotation.x = Math.PI / 2;
+          rib.position.set(cx, 0.65 + r, cz);
+          grp.add(rib);
+        }
+      }
+
+      // Top Lifting Bail Handle on Coalescer Cage for Maintenance Extraction
+      const bailCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(OWS_X - 0.18, 1.23, 0),
+        new THREE.Vector3(OWS_X - 0.14, 1.36, 0),
+        new THREE.Vector3(OWS_X + 0.14, 1.36, 0),
+        new THREE.Vector3(OWS_X + 0.18, 1.23, 0)
+      ]);
+      const liftBail = new THREE.Mesh(new THREE.TubeGeometry(bailCurve, 20, 0.010, 10, false), matStainlessSteel);
+      grp.add(liftBail);
+    }
+
+    /* =====================================================================
+       3.6 BUILD `ocm_monitor` — IMO 15 PPM BILGE ALARM OCM & 3-WAY VALVE
+       ===================================================================== */
+    function buildOcmMonitor() {
+      const grp = parts.ocm_monitor.group;
+      const ocmX = 0.82, ocmY = 0.95, ocmZ = 0.38;
+
+      // Support Stanchion Frame mounted to Skid
+      const stanchion = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.82, 16), matDarkSlate);
+      stanchion.position.set(ocmX, 0.56, ocmZ - 0.06);
+      stanchion.castShadow = true;
+      grp.add(stanchion);
+
+      // Optical Laser-Scattering 15 ppm Bilge Alarm Enclosure (`IMO MEPC.107(49)`)
+      const ocmBox = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.22, 0.12), matPebbleGrey);
+      ocmBox.position.set(ocmX, ocmY + 0.12, ocmZ);
+      ocmBox.castShadow = true;
+      grp.add(ocmBox);
+
+      const ocmScreen = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.24, 0.135),
+        new THREE.MeshBasicMaterial({ map: ocmScreenTex })
+      );
+      ocmScreen.position.set(ocmX, ocmY + 0.13, ocmZ + 0.062);
+      grp.add(ocmScreen);
+
+      // Optical Laser Sample Measuring Cell & Transparent Sight-Flow Tube below OCM Box
+      const laserCell = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.16, 20), matCoalescerGold);
+      laserCell.position.set(ocmX - 0.06, ocmY - 0.08, ocmZ + 0.02);
+      grp.add(laserCell);
+
+      const sightTube = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.18, 16), matSightGlass);
+      sightTube.position.set(ocmX + 0.06, ocmY - 0.08, ocmZ + 0.02);
+      grp.add(sightTube);
+
+      // Animated Sample Water/Oil Droplet Beads rising through Sight Tube
+      for (let b = 0; b < 4; b++) {
+        const bead = new THREE.Mesh(
+          new THREE.SphereGeometry(0.009, 10, 10),
+          new THREE.MeshBasicMaterial({ color: 0x10b981 })
+        );
+        bead.position.set(ocmX + 0.06, ocmY - 0.15 + b * 0.04, ocmZ + 0.02);
+        grp.add(bead);
+        sampleFlowBeads.push({ mesh: bead, offset: b / 4 });
+      }
+
+      // Pneumatic / Solenoid 3-Way Automatic Recirculation / Overboard Diversion Valve (`X = +0.82 m, Y = 0.58 m, Z = +0.26 m`)
+      const valveX = 0.82, valveY = 0.58, valveZ = 0.22;
+
+      // Cast-Bronze 3-Way Tee Valve Body
+      const valveBodyH = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.24, 24), matCastBronze);
+      valveBodyH.rotation.z = Math.PI / 2;
+      valveBodyH.position.set(valveX, valveY, valveZ);
+      valveBodyH.castShadow = true;
+      grp.add(valveBodyH);
+
+      const valveBodyV = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.18, 24), matCastBronze);
+      valveBodyV.position.set(valveX, valveY - 0.06, valveZ);
+      grp.add(valveBodyV);
+
+      // Pneumatic Diaphragm / Solenoid Actuator Dome atop 3-Way Valve
+      const actuatorDome = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.065, 0.11, 24), matMarineGreen);
+      actuatorDome.position.set(valveX, valveY + 0.12, valveZ);
+      actuatorDome.castShadow = true;
+      grp.add(actuatorDome);
+
+      // Rotating 3-Way Valve Position Indicator Disc & Pointer Arrow (`OVERBOARD` vs `BILGE RECIRC`)
+      diversionValveRotor = new THREE.Group();
+      diversionValveRotor.position.set(valveX, valveY, valveZ + 0.06);
+      grp.add(diversionValveRotor);
+
+      const indicatorDisc = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.016, 20), matCoalescerGold);
+      indicatorDisc.rotation.x = Math.PI / 2;
+      diversionValveRotor.add(indicatorDisc);
+
+      const pointerBar = new THREE.Mesh(
+        new THREE.BoxGeometry(0.065, 0.014, 0.012),
+        new THREE.MeshBasicMaterial({ color: 0x10b981 })
+      );
+      pointerBar.position.z = 0.01;
+      diversionValveRotor.add(pointerBar);
+
+      // Treated Effluent Pipe from OWS Vessel (`X = +0.72 m`) into 3-Way Valve + Overboard (+X) & Recirculation (-Y) Branches
+      const effluentInlet = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(OWS_X + 0.35, 0.58, 0.10),
+        new THREE.Vector3(valveX - 0.12, valveY, valveZ)
+      ]);
+      grp.add(new THREE.Mesh(new THREE.TubeGeometry(effluentInlet, 12, 0.032, 12, false), matMarineGreen));
+
+      // Overboard Discharge Flanged Stub (+X)
+      const overboardStub = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.034, 0.18, 20), matMarineGreen);
+      overboardStub.rotation.z = Math.PI / 2;
+      overboardStub.position.set(valveX + 0.18, valveY, valveZ);
+      grp.add(overboardStub);
+
+      const overboardFlange = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.068, 0.020, 20), matCastBronze);
+      overboardFlange.rotation.z = Math.PI / 2;
+      overboardFlange.position.set(valveX + 0.27, valveY, valveZ);
+      grp.add(overboardFlange);
+
+      // Bilge Tank Recirculation Return Pipe (-Y to Skid Base)
+      const recircStub = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.32, 20), matCopperPipe);
+      recircStub.position.set(valveX, valveY - 0.22, valveZ);
+      grp.add(recircStub);
+    }
+
+    /* =====================================================================
+       3.7 BUILD `plc_panel` — AUTOMATED PLC SKID CONTROL CONSOLE
+       ===================================================================== */
+    function buildPlcPanel() {
+      const grp = parts.plc_panel.group;
+      const plcX = -0.08, plcY = 1.15, plcZ = 0.35;
+
+      // Vertical Twin Pedestal Posts mounted to Skid (`Y = 0.16 m` to `0.90 m`)
+      [-0.14, 0.14].forEach((px) => {
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.76, 0.04), matDarkSlate);
+        post.position.set(plcX + px, 0.53, plcZ - 0.06);
+        post.castShadow = true;
+        grp.add(post);
+      });
+
+      // Pebble-Grey IP55 PLC Control Cabinet (`0x9aa3ad`)
+      const cabinet = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.52, 0.20), matPebbleGrey);
+      cabinet.position.set(plcX, plcY, plcZ);
+      cabinet.castShadow = true;
+      grp.add(cabinet);
+
+      // Sloped Top Rain Hood on Control Cabinet
+      const hood = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.025, 0.23), matDarkSlate);
+      hood.position.set(plcX, plcY + 0.27, plcZ + 0.01);
+      hood.rotation.x = 0.08;
+      grp.add(hood);
+
+      // Glowing Cyan HMI Mimic Screen on Front Door
+      const hmiBezel = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.21, 0.016), matDarkSlate);
+      hmiBezel.position.set(plcX, plcY + 0.08, plcZ + 0.102);
+      grp.add(hmiBezel);
+
+      const hmiScreen = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.29, 0.185),
+        new THREE.MeshBasicMaterial({ map: plcScreenTex })
+      );
+      hmiScreen.position.set(plcX, plcY + 0.08, plcZ + 0.112);
+      grp.add(hmiScreen);
+
+      // 3 Pilot Indicator Lamps: PUMP RUN (Green), 15 PPM ALARM (Red), RECIRCULATE (Amber)
+      const lampGeo = new THREE.CylinderGeometry(0.014, 0.014, 0.018, 16);
+      lampGeo.rotateX(Math.PI / 2);
+
+      lampPumpRunMesh = new THREE.Mesh(lampGeo, new THREE.MeshBasicMaterial({ color: 0x10b981 }));
+      lampPumpRunMesh.position.set(plcX - 0.11, plcY - 0.08, plcZ + 0.105);
+      grp.add(lampPumpRunMesh);
+
+      lampAlarm15PpmMesh = new THREE.Mesh(lampGeo, new THREE.MeshBasicMaterial({ color: 0x334155 }));
+      lampAlarm15PpmMesh.position.set(plcX, plcY - 0.08, plcZ + 0.105);
+      grp.add(lampAlarm15PpmMesh);
+
+      lampRecircMesh = new THREE.Mesh(lampGeo, new THREE.MeshBasicMaterial({ color: 0x334155 }));
+      lampRecircMesh.position.set(plcX + 0.11, plcY - 0.08, plcZ + 0.105);
+      grp.add(lampRecircMesh);
+
+      // Main 440 V Rotary Door Isolator Switch & Emergency Stop Mushroom Button
+      const isoBase = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.055, 0.014), matCoalescerGold);
+      isoBase.position.set(plcX - 0.09, plcY - 0.17, plcZ + 0.104);
+      grp.add(isoBase);
+
+      const isoHandle = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.045, 0.024), matDarkSlate);
+      isoHandle.position.set(plcX - 0.09, plcY - 0.17, plcZ + 0.116);
+      grp.add(isoHandle);
+
+      const estopCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.012, 20), matCoalescerGold);
+      estopCollar.rotation.x = Math.PI / 2;
+      estopCollar.position.set(plcX + 0.09, plcY - 0.17, plcZ + 0.104);
+      grp.add(estopCollar);
+
+      const estopBtn = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.018, 0.014, 0.022, 20),
+        new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.3 })
+      );
+      estopBtn.rotation.x = Math.PI / 2;
+      estopBtn.position.set(plcX + 0.09, plcY - 0.17, plcZ + 0.116);
+      grp.add(estopBtn);
+    }
+
+    buildPumpCasing();
+    buildPumpImpeller();
+    buildVerticalMotor();
+    buildOwsVessel();
+    buildCoalescerFilter();
+    buildOcmMonitor();
+    buildPlcPanel();
+
+    /* =====================================================================
+       4. NATIVE-COLOR GHOST ISOLATION (NO COLOR BLEED)
+       ===================================================================== */
+    function prepareNativeGhostMaterials() {
+      for (const key in parts) {
+        const grp = parts[key].group;
+        const origMap = new Map();
+        const ghostMap = new Map();
+
+        grp.traverse((obj) => {
+          if (obj.isMesh && obj.material) {
+            if (!origMap.has(obj.material)) {
+              const origClone = obj.material.clone();
+              const ghostClone = origClone.clone();
+              ghostClone.transparent = true;
+              ghostClone.opacity = 0.14;
+              ghostClone.depthWrite = false;
+              origMap.set(obj.material, origClone);
+              ghostMap.set(obj.material, ghostClone);
+            }
+            obj.userData.origMaterial = origMap.get(obj.material);
+            obj.userData.ghostMaterial = ghostMap.get(obj.material);
+            obj.userData.partKey = key;
+            obj.material = obj.userData.origMaterial;
+          }
+        });
+      }
+    }
+    prepareNativeGhostMaterials();
+
+    /* =====================================================================
+       5. DIVIDED LEFT & RIGHT CALLOUT COLUMNS WITH LONG SVG LEADER LINES
+       ===================================================================== */
+    // Fixed Left (VM, PI, PC) and Right (CP, CF, OW, OC) Column Assignments per Specification
+    const LEFT_COLUMN_KEYS = new Set(['vertical_motor', 'pump_impeller', 'pump_casing']);
+    const calloutNodes = [];
+
+    for (const key in parts) {
+      const p = parts[key];
+      const badgeEl = document.createElement('div');
+      badgeEl.className = 'callout-badge';
+      badgeEl.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 mono text-[10px] font-bold">${p.code}</span>
+          <span class="text-[10px] mono text-slate-400">ISOLATE ↗</span>
+        </div>
+        <div class="text-[11px] font-semibold text-slate-800 mt-1 truncate">${p.name}</div>
+      `;
+      badgeEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectPart(state.selectedPart === key ? 'all' : key);
+      });
+      badgesLayer.appendChild(badgeEl);
+
+      const lineEl = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      lineEl.setAttribute('fill', 'none');
+      lineEl.setAttribute('stroke', '#64748b');
+      lineEl.setAttribute('stroke-width', '1.3');
+      leaderSvg.appendChild(lineEl);
+
+      const dotEl = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dotEl.setAttribute('r', '3.0');
+      dotEl.setAttribute('fill', '#ea580c');
+      leaderSvg.appendChild(dotEl);
+
+      calloutNodes.push({
+        key,
+        part: p,
+        badgeEl,
+        lineEl,
+        dotEl,
+        ax: 0,
+        ay: 0,
+        ly: 0,
+        side: LEFT_COLUMN_KEYS.has(key) ? 'left' : 'right',
+        visible: true
+      });
+    }
+
+    function solveColumnVerticalCollisions(list, minY, maxY, minGap = 48) {
+      if (list.length === 0) return;
+      list.sort((a, b) => a.ly - b.ly);
+      list[0].ly = Math.max(minY, list[0].ly);
+      for (let i = 1; i < list.length; i++) {
+        if (list[i].ly - list[i - 1].ly < minGap) {
+          list[i].ly = list[i - 1].ly + minGap;
+        }
+      }
+      const last = list[list.length - 1];
+      if (last.ly > maxY) {
+        last.ly = maxY;
+        for (let i = list.length - 2; i >= 0; i--) {
+          if (list[i + 1].ly - list[i].ly < minGap) {
+            list[i].ly = Math.max(minY, list[i + 1].ly - minGap);
+          }
+        }
+      }
+    }
+
+    function updateDividedCallouts() {
+      if (!state.labelsVisible) {
+        calloutNodes.forEach((n) => {
+          n.badgeEl.style.display = 'none';
+          n.lineEl.style.display = 'none';
+          n.dotEl.style.display = 'none';
+        });
+        return;
+      }
+
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const LEFT_X = 24;
+      const RIGHT_X = w - 204;
+
+      const leftCol = [];
+      const rightCol = [];
+      const tempV = new THREE.Vector3();
+
+      calloutNodes.forEach((n) => {
+        tempV.copy(n.part.anchor);
+        tempV.addScaledVector(n.part.explodeVec, state.explode);
+        tempV.project(camera);
+
+        if (tempV.z > 1.0) {
+          n.visible = false;
+          n.badgeEl.style.display = 'none';
+          n.lineEl.style.display = 'none';
+          n.dotEl.style.display = 'none';
+          return;
+        }
+
+        n.visible = true;
+        n.ax = (tempV.x * 0.5 + 0.5) * w;
+        n.ay = (-(tempV.y * 0.5) + 0.5) * h;
+        n.ly = THREE.MathUtils.clamp(n.ay, 225, h - 135);
+
+        if (n.side === 'left') leftCol.push(n);
+        else rightCol.push(n);
+      });
+
+      solveColumnVerticalCollisions(leftCol, 225, h - 135, 52);
+      solveColumnVerticalCollisions(rightCol, 225, h - 135, 52);
+
+      calloutNodes.forEach((n) => {
+        if (!n.visible) return;
+        const isSelected = (state.selectedPart === n.key);
+        const colLeft = n.side === 'left' ? LEFT_X : RIGHT_X;
+        const badgeEdgeX = n.side === 'left' ? (LEFT_X + 180) : RIGHT_X;
+        const elbowX = n.side === 'left' ? (badgeEdgeX + 26) : (badgeEdgeX - 26);
+
+        n.badgeEl.style.display = 'block';
+        n.badgeEl.style.left = `${colLeft}px`;
+        n.badgeEl.style.top = `${n.ly}px`;
+        n.badgeEl.classList.toggle('selected', isSelected);
+
+        n.lineEl.style.display = 'block';
+        n.lineEl.setAttribute('points', `${n.ax.toFixed(1)},${n.ay.toFixed(1)} ${elbowX.toFixed(1)},${n.ly.toFixed(1)} ${badgeEdgeX.toFixed(1)},${n.ly.toFixed(1)}`);
+        n.lineEl.setAttribute('stroke', isSelected ? '#ea580c' : '#64748b');
+        n.lineEl.setAttribute('stroke-width', isSelected ? '2.0' : '1.3');
+
+        n.dotEl.style.display = 'block';
+        n.dotEl.setAttribute('cx', n.ax.toFixed(1));
+        n.dotEl.setAttribute('cy', n.ay.toFixed(1));
+        n.dotEl.setAttribute('fill', isSelected ? '#ea580c' : '#475569');
+      });
+    }
+
+    /* =====================================================================
+       6. INTERACTIVE CONTROLS, NATIVE-COLOR GHOSTING & 15 PPM ALARM STATE
+       ===================================================================== */
+    const state = {
+      explode: 0.0,
+      targetExplode: 0.0,
+      pumpRpm: 1750,
+      oilAlarm15Ppm: false,  // false = Normal (<15 ppm Overboard), true = >15 ppm Oil Alarm (Recirculate)
+      selectedPart: 'all',
+      xrayVessel: true,      // Start with X-Ray window active so both impeller and coalescer pack are visible
+      labelsVisible: true,
+      autoRotate: false
+    };
+
+    function applyMaterialVisibilityState() {
+      for (const key in parts) {
+        const grp = parts[key].group;
+        const isIsolated = (state.selectedPart === 'all' || state.selectedPart === key);
+
+        grp.traverse((obj) => {
+          if (!obj.isMesh || !obj.userData.origMaterial) return;
+
+          if (!isIsolated) {
+            obj.material = obj.userData.ghostMaterial;
+          } else if (obj === owsOuterShellMesh || obj === pumpCutawayCoverMesh) {
+            obj.material = state.xrayVessel ? matSightGlass : matMarineGreen;
+            if (obj === pumpCutawayCoverMesh && !state.xrayVessel) {
+              obj.material = matCastBronze;
+            }
+          } else {
+            obj.material = obj.userData.origMaterial;
+          }
+        });
+      }
+    }
+    applyMaterialVisibilityState();
+
+    function selectPart(partKey) {
+      state.selectedPart = partKey;
+
+      document.querySelectorAll('.part-chip').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.part === partKey);
+      });
+
+      const badgeEl = document.getElementById('info-badge');
+      const specEl = document.getElementById('info-spec');
+      const titleEl = document.getElementById('info-title');
+      const descEl = document.getElementById('info-desc');
+
+      if (partKey === 'all' || !parts[partKey]) {
+        badgeEl.textContent = 'SKID OVERVIEW · 7 SUB-ASSEMBLIES';
+        specEl.textContent = '2100 × 1250 × 1850 mm';
+        titleEl.textContent = 'Integrated Bilge/Ballast Pump & 15 ppm OWS Coalescer';
+        descEl.textContent = 'Seawater-resistant cast-bronze vertical centrifugal pump driven by a 440 V TEFC motor feeding a two-stage oleophilic coalescer vessel with IMO MEPC.107(49) 15 ppm laser Oil Content Monitor and automatic 3-way recirculation valve.';
+      } else {
+        const p = parts[partKey];
+        badgeEl.textContent = `SUB-ASSEMBLY · ${p.code}`;
+        specEl.textContent = p.spec;
+        titleEl.textContent = p.name;
+        descEl.textContent = p.desc;
+      }
+
+      applyMaterialVisibilityState();
+    }
+
+    function updateOwsAlarmStateUI() {
+      const btnMode = document.getElementById('btn-ows-mode');
+      const txtMode = document.getElementById('ows-mode-text');
+      const badgeValve = document.getElementById('valve-status-badge');
+
+      drawOcmScreenTexture(state.oilAlarm15Ppm);
+      drawPlcMimicTexture(state.oilAlarm15Ppm, state.pumpRpm);
+
+      if (state.oilAlarm15Ppm) {
+        btnMode.className = 'w-full py-2 px-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold tracking-wide shadow transition flex items-center justify-center gap-1.5';
+        txtMode.textContent = 'ALARM: 24.8 PPM (>15 PPM) · CLICK TO RESET';
+        badgeValve.textContent = 'RECIRCULATING TO BILGE TANK';
+        badgeValve.className = 'font-bold text-amber-600';
+      } else {
+        btnMode.className = 'w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold tracking-wide shadow transition flex items-center justify-center gap-1.5';
+        txtMode.textContent = 'RUN NORMAL (02.4 PPM < 15 PPM)';
+        badgeValve.textContent = 'OVERBOARD DISCHARGE OPEN';
+        badgeValve.className = 'font-bold text-emerald-700';
+      }
+
+      // Update PLC 3D Pilot Lamps & Sample Sight-Glass Bead Colors
+      if (lampPumpRunMesh && lampPumpRunMesh.userData.origMaterial) {
+        lampPumpRunMesh.userData.origMaterial.color.setHex(state.pumpRpm > 0 ? 0x10b981 : 0x334155);
+      }
+      if (lampAlarm15PpmMesh && lampAlarm15PpmMesh.userData.origMaterial) {
+        lampAlarm15PpmMesh.userData.origMaterial.color.setHex(state.oilAlarm15Ppm ? 0xef4444 : 0x334155);
+      }
+      if (lampRecircMesh && lampRecircMesh.userData.origMaterial) {
+        lampRecircMesh.userData.origMaterial.color.setHex(state.oilAlarm15Ppm ? 0xf59e0b : 0x334155);
+      }
+
+      sampleFlowBeads.forEach((b) => {
+        if (b.mesh.userData.origMaterial) {
+          b.mesh.userData.origMaterial.color.setHex(state.oilAlarm15Ppm ? 0xd97706 : 0x10b981);
+        }
+      });
+    }
+
+    // Bind UI Controls
+    const sliderExplode = document.getElementById('slider-explode');
+    function setExplodePct(pct) {
+      state.targetExplode = pct / 100;
+      sliderExplode.value = pct;
+      document.getElementById('lbl-explode-val').textContent = pct === 0 ? '0% · ASSEMBLED' : `${pct}% · EXPLODED`;
+    }
+    sliderExplode.addEventListener('input', (e) => setExplodePct(parseFloat(e.target.value)));
+    document.getElementById('btn-exp-0').addEventListener('click', () => setExplodePct(0));
+    document.getElementById('btn-exp-50').addEventListener('click', () => setExplodePct(50));
+    document.getElementById('btn-exp-100').addEventListener('click', () => setExplodePct(100));
+
+    const sliderRpm = document.getElementById('slider-rpm');
+    function setPumpRpm(rpm) {
+      state.pumpRpm = rpm;
+      sliderRpm.value = rpm;
+      document.getElementById('lbl-rpm-val').textContent = `${rpm.toLocaleString()} RPM`;
+      updateOwsAlarmStateUI();
+    }
+    sliderRpm.addEventListener('input', (e) => setPumpRpm(parseInt(e.target.value, 10)));
+    document.getElementById('btn-rpm-0').addEventListener('click', () => setPumpRpm(0));
+    document.getElementById('btn-rpm-900').addEventListener('click', () => setPumpRpm(900));
+    document.getElementById('btn-rpm-1750').addEventListener('click', () => setPumpRpm(1750));
+
+    document.getElementById('btn-ows-mode').addEventListener('click', () => {
+      state.oilAlarm15Ppm = !state.oilAlarm15Ppm;
+      updateOwsAlarmStateUI();
+    });
+
+    document.querySelectorAll('.part-chip').forEach((btn) => {
+      btn.addEventListener('click', () => selectPart(btn.dataset.part));
+    });
+
+    document.getElementById('btn-reset-view').addEventListener('click', () => {
+      tweenPos.copy(DEFAULT_CAM_POS);
+      tweenTarget.copy(DEFAULT_CAM_TARGET);
+      isCameraTweening = true;
+      setExplodePct(0);
+      selectPart('all');
+    });
+
+    const btnAutoRotate = document.getElementById('btn-auto-rotate');
+    btnAutoRotate.addEventListener('click', () => {
+      state.autoRotate = !state.autoRotate;
+      controls.autoRotate = state.autoRotate;
+      controls.autoRotateSpeed = 1.1;
+      btnAutoRotate.classList.toggle('active', state.autoRotate);
+    });
+
+    const btnToggleLabels = document.getElementById('btn-toggle-labels');
+    btnToggleLabels.addEventListener('click', () => {
+      state.labelsVisible = !state.labelsVisible;
+      btnToggleLabels.classList.toggle('active', state.labelsVisible);
+    });
+
+    const btnToggleXray = document.getElementById('btn-toggle-xray');
+    btnToggleXray.addEventListener('click', () => {
+      state.xrayVessel = !state.xrayVessel;
+      btnToggleXray.classList.toggle('active', state.xrayVessel);
+      applyMaterialVisibilityState();
+    });
+
+    // Raycaster 3D Click Selection
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    const downXY = { x: 0, y: 0 };
+
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      downXY.x = e.clientX;
+      downXY.y = e.clientY;
+    });
+
+    renderer.domElement.addEventListener('pointerup', (e) => {
+      if (Math.hypot(e.clientX - downXY.x, e.clientY - downXY.y) > 5) return;
+      pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+
+      const pickMeshes = [];
+      for (const k in parts) {
+        parts[k].group.traverse((o) => {
+          if (o.isMesh && o.userData.partKey) pickMeshes.push(o);
+        });
+      }
+      const hits = raycaster.intersectObjects(pickMeshes, false);
+      if (hits.length > 0) {
+        const hitKey = hits[0].object.userData.partKey;
+        selectPart(state.selectedPart === hitKey ? 'all' : hitKey);
+      } else {
+        selectPart('all');
+      }
+    });
+
+    /* =====================================================================
+       7. MAIN ANIMATION & KINEMATIC RENDER LOOP
+       ===================================================================== */
+    let lastTime = performance.now();
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+
+      state.explode += (state.targetExplode - state.explode) * 0.12;
+
+      // 1. Apply Explode Vectors to All 7 Sub-Assemblies
+      for (const key in parts) {
+        const p = parts[key];
+        p.group.position.copy(p.explodeVec).multiplyScalar(state.explode);
+      }
+
+      // 2. Concentric Rotation of Double-Curvature Bronze Impeller & Vertical Motor Fan around Y-Axis
+      const omegaVis = (state.pumpRpm / 1750) * 14.0;
+      if (impellerSpinGroup) {
+        impellerSpinGroup.rotation.y += omegaVis * dt;
+      }
+      if (motorCoolingFanGroup) {
+        motorCoolingFanGroup.rotation.y += omegaVis * dt;
+      }
+
+      // 3. 3-Way Automatic Diversion Valve Indicator Rotation (0 rad = Overboard +X, -Math.PI/2 = Bilge Tank -Y)
+      if (diversionValveRotor) {
+        const targetValveAngle = state.oilAlarm15Ppm ? -Math.PI / 2 : 0.0;
+        diversionValveRotor.rotation.z += (targetValveAngle - diversionValveRotor.rotation.z) * 0.16;
+      }
+
+      // 4. Animate Sample Sight-Glass Flow Beads
+      const flowSpeed = (state.pumpRpm / 1750) * 0.65;
+      sampleFlowBeads.forEach((b) => {
+        b.offset = (b.offset + dt * flowSpeed) % 1.0;
+        b.mesh.position.y = 0.95 - 0.16 + b.offset * 0.16;
+      });
+
+      // 5. Camera Preset Tweening & OrbitControls
+      if (isCameraTweening) {
+        camera.position.lerp(tweenPos, 0.10);
+        controls.target.lerp(tweenTarget, 0.10);
+        if (camera.position.distanceTo(tweenPos) < 0.03) {
+          isCameraTweening = false;
+        }
+      }
+      controls.update();
+
+      // 6. Update Divided Left & Right Callout Columns
+      updateDividedCallouts();
+
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    updateOwsAlarmStateUI();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

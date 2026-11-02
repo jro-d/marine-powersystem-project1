@@ -70,8 +70,8 @@ export const vesselLayout: Record<string, VesselPlacement> = {
   dg2: { position: [-5.9, -1.72, -1.25], size: [2.05, 1.12, 0.98], space: 'hull' },
   dg3: { position: [-8.8, -1.72, 1.25], size: [2.05, 1.12, 0.98], space: 'hull' },
   dg4: { position: [-5.9, -1.72, 1.25], size: [2.05, 1.12, 0.98], space: 'hull' },
-  busA: { position: [-8.7, -0.3, -0.7], size: [1.35, 0.92, 0.62], space: 'hull' },
-  busB: { position: [-6.8, -0.3, 0.7], size: [1.35, 0.92, 0.62], space: 'hull' },
+  busA: { position: [-8.7, -0.3, -0.7], size: [1.35, 0.86, 0.58], space: 'hull' },
+  busB: { position: [-6.8, -0.3, 0.7], size: [1.35, 0.86, 0.58], space: 'hull' },
   drive: { position: [-11.3, -1.7, -1.25], size: [1.4, 1.15, 0.65], rotation: Math.PI, space: 'hull' },
   motor: { position: [-13.5, -2.599, 0], size: [1.55, 0.85, 0.80], rotation: Math.PI, space: 'hull' },
   prop: { position: [-17.38, -2.22, 0], size: [0.65, 1.0, 1.0], space: 'external' },
@@ -87,8 +87,8 @@ export const vesselLayout: Record<string, VesselPlacement> = {
   txReeferB: { position: [3.5, -0.30, 1.25], size: [1.0, 0.95, 0.8], space: 'hull' },
 
   // Dual 440 V Main Switchboards
-  lvBusA: { position: [-4.25, -0.30, -0.9], size: [1.35, 0.82, 0.56], space: 'hull' },
-  lvBusB: { position: [-4.25, -0.30, 0.9], size: [1.35, 0.82, 0.56], space: 'hull' },
+  lvBusA: { position: [-4.25, -0.30, -0.9], size: [1.35, 0.86, 0.58], space: 'hull' },
+  lvBusB: { position: [-4.25, -0.30, 0.9], size: [1.35, 0.86, 0.58], space: 'hull' },
 
   // Dual Reefer Distribution Boards
   reeferA: { position: [7.75, 0.94, -2.3], size: [0.62, 0.67, 0.39], rotation: Math.PI, space: 'deck' },

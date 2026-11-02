@@ -1,0 +1,1871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOLAS 440 V 600 kW (750 kVA) Emergency Diesel Generator (EDG) — 3D CAD Digital Twin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #f2f4f7;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #0f172a;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    #canvas-container {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+    }
+    .hud-glass {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(203, 213, 225, 0.92);
+      box-shadow: 0 10px 30px -8px rgba(15, 23, 42, 0.08), 0 4px 10px -2px rgba(15, 23, 42, 0.04);
+    }
+    .toolbar-btn {
+      transition: all 0.16s ease;
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+    .toolbar-btn:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+      color: #0f172a;
+    }
+    .toolbar-btn.active {
+      background: #fff7ed;
+      border-color: #ea580c;
+      color: #9a3412;
+      font-weight: 600;
+    }
+    .part-chip {
+      transition: all 0.15s ease;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: #475569;
+    }
+    .part-chip:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      color: #0f172a;
+    }
+    .part-chip.active {
+      background: #ea580c;
+      border-color: #c2410c;
+      color: #ffffff;
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #ea580c;
+      border: 2px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.3);
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+    .callout-badge {
+      position: absolute;
+      width: 180px;
+      pointer-events: auto;
+      transform: translateY(-50%);
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid rgba(203, 213, 225, 0.95);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+      border-radius: 10px;
+      padding: 6px 10px;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .callout-badge:hover {
+      border-color: #94a3b8;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
+    }
+    .callout-badge.selected {
+      background: #fff7ed;
+      border-color: #ea580c;
+      box-shadow: 0 6px 18px rgba(234, 88, 12, 0.18);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 3D WebGL Viewport -->
+  <div id="canvas-container"></div>
+
+  <!-- Divided Left/Right Callout Badges & SVG Leader Lines Overlay -->
+  <div id="callouts-overlay" class="fixed inset-0 pointer-events-none z-10 overflow-hidden">
+    <svg id="leader-svg" class="w-full h-full block"></svg>
+    <div id="badges-layer" class="absolute inset-0 pointer-events-none"></div>
+  </div>
+
+  <!-- Top-Left Header & Sub-Assembly Isolation Bar -->
+  <header class="fixed top-4 left-4 z-20 max-w-xl pointer-events-auto flex flex-col gap-2">
+    <div class="hud-glass rounded-2xl px-4 py-3">
+      <div class="flex items-center gap-2.5">
+        <span class="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 mono text-[11px] font-bold">SOLAS CH. II-1 REG. 42/43</span>
+        <h1 class="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+          Autonomous 440 V 600 kW (750 kVA) Emergency Diesel Generator
+        </h1>
+      </div>
+      <p class="text-[11px] text-slate-500 mt-0.5 mono">
+        1800 RPM V12 Turbo · Tropical Radiator (Zero Seawater) · Dual 24V DC &amp; 210 bar Hydraulic Starters
+      </p>
+
+      <!-- Sub-Assembly Quick Filter Chips -->
+      <div class="flex flex-wrap items-center gap-1.5 mt-2.5 pt-2.5 border-t border-slate-200/80" id="part-chips-bar">
+        <button class="part-chip active px-2.5 py-1 rounded-lg text-[11px] font-semibold" data-part="all">Show All</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="edg_skid_tank">SK · 24h Belly Tank Skid</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="diesel_v12_engine">EN · 1800 RPM V12 Block</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="turbo_exhaust">TE · Twin Turbos &amp; Exhaust</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="radiator_fan">RD · Tropical Radiator &amp; Fan</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="dual_starters">ST · Dual SOLAS Starters</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="brushless_alternator">AL · 440V 750kVA Alternator</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="auto_start_panel">CP · &lt;10s Auto-Start Panel</button>
+      </div>
+    </div>
+
+    <!-- Active Sub-Assembly Inspector & Live EDG Telemetry Card -->
+    <div id="part-info-card" class="hud-glass rounded-xl px-3.5 py-2.5 text-xs max-w-md">
+      <div class="flex items-center justify-between">
+        <span id="info-badge" class="mono text-[10px] font-bold uppercase text-orange-700">EDG OVERVIEW · 7 SUB-ASSEMBLIES</span>
+        <span id="info-spec" class="mono text-[10px] text-slate-400">440 V · 60 Hz · 4-Pole · 1800 RPM</span>
+      </div>
+      <div id="info-title" class="font-semibold text-slate-900 mt-0.5">Self-Contained Emergency Power Plant &amp; Dual Starting Redundancy</div>
+      <p id="info-desc" class="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+        Located above the uppermost continuous deck, this self-contained V12 genset features a skid-mounted radiator (requiring zero seawater pumps), an integral 24-hour fuel belly tank, a 48°C jacket-water pre-heater, and dual independent 24 V DC electric + 210 bar hydraulic accumulator starters for &lt;10s blackout pickup.
+      </p>
+      <div class="grid grid-cols-4 gap-1.5 mt-2 pt-2 border-t border-slate-200/80 text-center mono">
+        <div class="bg-slate-50 rounded-lg py-1 px-1.5 border border-slate-200/60">
+          <span class="text-[9px] text-slate-400 block">SPEED / FREQ</span>
+          <span id="tel-rpm" class="text-[11px] font-bold text-emerald-700">1800 · 60Hz</span>
+        </div>
+        <div class="bg-slate-50 rounded-lg py-1 px-1.5 border border-slate-200/60">
+          <span class="text-[9px] text-slate-400 block">VOLTAGE / kW</span>
+          <span id="tel-volt" class="text-[11px] font-bold text-slate-800">440V · 600kW</span>
+        </div>
+        <div class="bg-slate-50 rounded-lg py-1 px-1.5 border border-slate-200/60">
+          <span class="text-[9px] text-slate-400 block">JACKET H2O</span>
+          <span id="tel-temp" class="text-[11px] font-bold text-orange-600">84.0 °C</span>
+        </div>
+        <div class="bg-slate-50 rounded-lg py-1 px-1.5 border border-slate-200/60">
+          <span class="text-[9px] text-slate-400 block">START TIME</span>
+          <span id="tel-start" class="text-[11px] font-bold text-sky-700">4.2s &lt; 10s</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Top-Right Pill Toolbar -->
+  <nav class="fixed top-4 right-4 z-20 pointer-events-auto flex flex-wrap items-center gap-1.5">
+    <button id="btn-reset-view" class="toolbar-btn px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm">
+      Reset View
+    </button>
+    <button id="btn-auto-rotate" class="toolbar-btn px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm">
+      Auto-Rotate
+    </button>
+    <button id="btn-toggle-labels" class="toolbar-btn active px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm">
+      Toggle Labels
+    </button>
+    <button id="btn-toggle-xray" class="toolbar-btn px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm">
+      X-Ray Alternator &amp; Guard
+    </button>
+  </nav>
+
+  <!-- Bottom Dock Control Bar (Explode Slider, Blackout Auto-Start Simulation & Starter Mode) -->
+  <footer class="fixed bottom-4 left-1/2 -translate-x-1/2 z-20 w-[95vw] max-w-4xl hud-glass rounded-2xl px-5 py-3.5 pointer-events-auto">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+
+      <!-- 1. Explode Assembly Slider (0% to 100%) -->
+      <div class="md:col-span-5 flex flex-col gap-1">
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-semibold text-slate-700">Explode Assembly</span>
+          <span id="lbl-explode-val" class="mono text-[11px] font-bold text-orange-700">0% · ASSEMBLED</span>
+        </div>
+        <input id="slider-explode" type="range" min="0" max="100" value="0" step="1" />
+        <div class="flex justify-between text-[9px] mono text-slate-400">
+          <button id="btn-exp-0" class="hover:text-slate-800">0% Assembled</button>
+          <button id="btn-exp-50" class="hover:text-slate-800">50% Inspect</button>
+          <button id="btn-exp-100" class="hover:text-slate-800">100% Teardown</button>
+        </div>
+      </div>
+
+      <!-- 2. SOLAS Blackout Auto-Start / Standby Toggle -->
+      <div class="md:col-span-4 flex flex-col gap-1.5">
+        <button id="btn-blackout-test" class="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold tracking-wide shadow transition flex items-center justify-center gap-2">
+          <span id="dot-run-state" class="w-2.5 h-2.5 rounded-full bg-emerald-200 animate-ping"></span>
+          <span id="lbl-run-btn">RUNNING · 1800 RPM (440V 60Hz)</span>
+        </button>
+        <div class="flex items-center justify-between text-[10px] mono text-slate-500 px-1">
+          <span>PRE-HEATER: <strong id="lbl-heater-state" class="text-slate-700">STANDBY 48°C</strong></span>
+          <span>TANK: <strong class="text-emerald-700">24.0h (100%)</strong></span>
+        </div>
+      </div>
+
+      <!-- 3. Dual Independent Starter Selector (SOLAS II-1/44) -->
+      <div class="md:col-span-3 flex flex-col gap-1.5">
+        <button id="btn-starter-source" class="w-full py-1.5 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-[11px] font-semibold shadow transition flex items-center justify-center gap-1.5">
+          <span id="lbl-starter-btn">⚡ STARTER 1: 24V DC AGM</span>
+        </button>
+        <div class="flex items-center justify-between px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200/90 text-[10px] mono">
+          <span class="text-slate-500">ACCUMULATOR:</span>
+          <span id="lbl-accum-bar" class="font-bold text-red-600">210 bar READY</span>
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- Three.js ES Module Application -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+    /* =====================================================================
+       1. SCENE, RENDERER, CAMERA & SMOOTH CLAMPED WHEEL ZOOM (MANDATORY)
+       ===================================================================== */
+    const container = document.getElementById('canvas-container');
+    const leaderSvg = document.getElementById('leader-svg');
+    const badgesLayer = document.getElementById('badges-layer');
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf2f4f7);
+
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environmentIntensity = 0.84;
+
+    const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
+    const DEFAULT_CAM_POS = new THREE.Vector3(-3.4, 2.2, 4.2);
+    const DEFAULT_CAM_TARGET = new THREE.Vector3(0, 0.95, 0);
+    camera.position.copy(DEFAULT_CAM_POS);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.copy(DEFAULT_CAM_TARGET);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.enablePan = true;
+    controls.enableZoom = false; // Mandatory custom non-jumping wheel zoom below
+    controls.minDistance = 1.8;
+    controls.maxDistance = 12.0;
+    controls.maxPolarAngle = Math.PI * 0.495;
+    controls.update();
+
+    let isCameraTweening = false;
+    const tweenPos = DEFAULT_CAM_POS.clone();
+    const tweenTarget = DEFAULT_CAM_TARGET.clone();
+
+    controls.addEventListener('start', () => {
+      isCameraTweening = false;
+    });
+
+    // Smooth Non-Jumping Wheel Zoom (4.2% per scroll notch, clamped between 1.8m and 12.0m)
+    renderer.domElement.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = THREE.MathUtils.clamp(e.deltaY, -100, 100);
+      const zoomFactor = 1 + (delta > 0 ? 0.042 : -0.042) * (Math.abs(delta) / 100);
+      const offset = camera.position.clone().sub(controls.target);
+      const newDist = THREE.MathUtils.clamp(offset.length() * zoomFactor, controls.minDistance, controls.maxDistance);
+      offset.setLength(newDist);
+      camera.position.copy(controls.target).add(offset);
+    }, { passive: false });
+
+    // Studio Lighting
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xdbe2ea, 1.15);
+    scene.add(hemiLight);
+
+    const keyLight = new THREE.DirectionalLight(0xfffdf9, 1.38);
+    keyLight.position.set(-5.0, 9.0, 6.5);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.width = 2048;
+    keyLight.shadow.mapSize.height = 2048;
+    keyLight.shadow.bias = -0.0003;
+    keyLight.shadow.camera.near = 0.5;
+    keyLight.shadow.camera.far = 25;
+    keyLight.shadow.camera.left = -4.5;
+    keyLight.shadow.camera.right = 4.5;
+    keyLight.shadow.camera.top = 4.5;
+    keyLight.shadow.camera.bottom = -4.5;
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0xe2e8f0, 0.85);
+    fillLight.position.set(6.0, 5.5, -5.0);
+    scene.add(fillLight);
+
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.55);
+    rimLight.position.set(0.0, 4.5, 7.5);
+    scene.add(rimLight);
+
+    // Studio Plinth & Drafting Grid positioned at FLOOR_Y = -0.46 m so that even at 100% Explode (where `edg_skid_tank` shifts -0.45 m), no part ever clips below the floor!
+    const FLOOR_Y = -0.46;
+    const plinthGroup = new THREE.Group();
+    const plinthTop = new THREE.Mesh(
+      new THREE.BoxGeometry(5.6, 0.06, 3.6),
+      new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.85, metalness: 0.05 })
+    );
+    plinthTop.position.set(0, FLOOR_Y - 0.03, 0.10);
+    plinthTop.receiveShadow = true;
+    plinthGroup.add(plinthTop);
+
+    const plinthCurb = new THREE.Mesh(
+      new THREE.BoxGeometry(5.76, 0.06, 3.76),
+      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.80, metalness: 0.08 })
+    );
+    plinthCurb.position.set(0, FLOOR_Y - 0.07, 0.10);
+    plinthCurb.receiveShadow = true;
+    plinthGroup.add(plinthCurb);
+    scene.add(plinthGroup);
+
+    const gridHelper = new THREE.GridHelper(18, 36, 0xdde2e8, 0xe8ecf0);
+    gridHelper.position.y = FLOOR_Y - 0.095;
+    scene.add(gridHelper);
+
+    const shadowPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(24, 24),
+      new THREE.ShadowMaterial({ opacity: 0.16 })
+    );
+    shadowPlane.rotation.x = -Math.PI / 2;
+    shadowPlane.position.y = FLOOR_Y + 0.002;
+    shadowPlane.receiveShadow = true;
+    scene.add(shadowPlane);
+
+    /* =====================================================================
+       2. PHYSICALLY BASED MATERIAL PALETTE (`MeshStandardMaterial`)
+       ===================================================================== */
+    function createCastMetalBumpTexture() {
+      const c = document.createElement('canvas');
+      c.width = 128;
+      c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#808080';
+      ctx.fillRect(0, 0, 128, 128);
+      for (let i = 0; i < 1400; i++) {
+        const v = 114 + Math.floor(Math.random() * 32);
+        ctx.fillStyle = `rgb(${v},${v},${v})`;
+        ctx.fillRect(Math.random() * 128, Math.random() * 128, 2, 2);
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(6, 6);
+      return tex;
+    }
+
+    function createRadiatorFinTexture() {
+      const c = document.createElement('canvas');
+      c.width = 128;
+      c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#b45d2c';
+      ctx.fillRect(0, 0, 128, 128);
+      ctx.fillStyle = '#7c3a16';
+      for (let y = 0; y < 128; y += 4) {
+        ctx.fillRect(0, y, 128, 2);
+      }
+      ctx.fillStyle = '#e08955';
+      for (let x = 0; x < 128; x += 12) {
+        ctx.fillRect(x, 0, 3, 128);
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(4, 4);
+      return tex;
+    }
+
+    const castBumpTex = createCastMetalBumpTexture();
+    const radiatorFinTex = createRadiatorFinTexture();
+
+    // Exact Prompt Material Palette
+    const matCatYellow = new THREE.MeshStandardMaterial({
+      color: 0xd97706, // SOLAS Emergency Caterpillar-Yellow / Amber Engine Block
+      roughness: 0.34,
+      metalness: 0.28,
+      bumpMap: castBumpTex,
+      bumpScale: 0.002
+    });
+    const matDarkSlate = new THREE.MeshStandardMaterial({
+      color: 0x263238, // Dark Slate Common Skid & Alternator Stator Frame
+      roughness: 0.45,
+      metalness: 0.50,
+      bumpMap: castBumpTex,
+      bumpScale: 0.0018,
+      side: THREE.DoubleSide
+    });
+    const matCopper = new THREE.MeshStandardMaterial({
+      color: 0xd97742, // Copper Alternator Windings & Radiator Core
+      roughness: 0.22,
+      metalness: 0.88
+    });
+    const matRadiatorCore = new THREE.MeshStandardMaterial({
+      color: 0xd97742,
+      map: radiatorFinTex,
+      roughness: 0.32,
+      metalness: 0.78
+    });
+    const matStainless = new THREE.MeshStandardMaterial({
+      color: 0xd0d7de, // Stainless Exhaust Heat-Shield & Turbocharger
+      roughness: 0.22,
+      metalness: 0.85
+    });
+    const matSolasRed = new THREE.MeshStandardMaterial({
+      color: 0xdc2626, // SOLAS Red Hydraulic Accumulator & Starting Air Bottles
+      roughness: 0.30,
+      metalness: 0.35
+    });
+    const matBrass = new THREE.MeshStandardMaterial({
+      color: 0xd4af37,
+      roughness: 0.25,
+      metalness: 0.84
+    });
+    const matPanelGrey = new THREE.MeshStandardMaterial({
+      color: 0xc9d2db,
+      roughness: 0.38,
+      metalness: 0.24
+    });
+    const matHoseRubber = new THREE.MeshStandardMaterial({
+      color: 0x334155,
+      roughness: 0.65,
+      metalness: 0.12
+    });
+    const matFilterBlue = new THREE.MeshStandardMaterial({
+      color: 0x0284c7,
+      roughness: 0.32,
+      metalness: 0.25
+    });
+    const matSightFuel = new THREE.MeshPhysicalMaterial({
+      color: 0xf59e0b,
+      transparent: true,
+      opacity: 0.80,
+      roughness: 0.10,
+      transmission: 0.65
+    });
+    const matXrayShell = new THREE.MeshPhysicalMaterial({
+      color: 0x93c5fd,
+      transparent: true,
+      opacity: 0.22,
+      roughness: 0.10,
+      transmission: 0.84,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+
+    // Dynamic Canvas Texture for SOLAS Auto-Start Microprocessor Controller Screen
+    const ctrlCanvas = document.createElement('canvas');
+    ctrlCanvas.width = 512;
+    ctrlCanvas.height = 256;
+    const ctrlCtx = ctrlCanvas.getContext('2d');
+    const ctrlScreenTex = new THREE.CanvasTexture(ctrlCanvas);
+    ctrlScreenTex.colorSpace = THREE.SRGBColorSpace;
+
+    function updateControllerScreenCanvas(isRunning, rpm, startSec, starterMode) {
+      ctrlCtx.fillStyle = '#0f172a';
+      ctrlCtx.fillRect(0, 0, 512, 256);
+      ctrlCtx.strokeStyle = '#38bdf8';
+      ctrlCtx.lineWidth = 5;
+      ctrlCtx.strokeRect(8, 8, 496, 240);
+
+      ctrlCtx.fillStyle = isRunning ? '#065f46' : '#1e3a8a';
+      ctrlCtx.fillRect(16, 16, 480, 44);
+
+      ctrlCtx.fillStyle = '#ffffff';
+      ctrlCtx.font = 'bold 21px JetBrains Mono, monospace';
+      ctrlCtx.fillText(
+        isRunning ? 'SOLAS EDG: EMERGENCY BUS ONLINE' : 'SOLAS EDG: AUTO STANDBY READY',
+        28,
+        45
+      );
+
+      ctrlCtx.fillStyle = '#38bdf8';
+      ctrlCtx.font = 'bold 24px JetBrains Mono, monospace';
+      ctrlCtx.fillText(
+        isRunning ? `440.0 V   60.0 Hz   ${Math.round(rpm)} RPM` : `000.0 V   00.0 Hz   0000 RPM`,
+        28,
+        98
+      );
+
+      ctrlCtx.fillStyle = isRunning ? '#4ade80' : '#facc15';
+      ctrlCtx.font = 'bold 19px JetBrains Mono, monospace';
+      ctrlCtx.fillText(
+        isRunning
+          ? `BLACKOUT PICKUP: ${startSec.toFixed(1)}s (<10.0s SOLAS OK)`
+          : `BLACKOUT TIMER: 0.0s · PRE-HEAT 48.0°C`,
+        28,
+        142
+      );
+
+      ctrlCtx.fillStyle = '#e2e8f0';
+      ctrlCtx.font = '600 16px JetBrains Mono, monospace';
+      const stStr = starterMode === 0 ? '24V DC AGM BATTERY' : '210 BAR HYD ACCUMULATOR';
+      ctrlCtx.fillText(`STARTER: ${stStr}`, 28, 184);
+      ctrlCtx.fillText(
+        `JACKET: ${isRunning ? '84.0°C' : '48.0°C'}  |  LUBE: ${isRunning ? '5.2 bar' : '0.0 bar'}  |  FUEL: 24.0h`,
+        28,
+        220
+      );
+
+      ctrlScreenTex.needsUpdate = true;
+    }
+    updateControllerScreenCanvas(true, 1800, 4.2, 0);
+
+    /* =====================================================================
+       3. SEVEN COHESIVE FUNCTIONAL SUB-ASSEMBLIES (`parts` REGISTRY)
+       ===================================================================== */
+    const parts = {
+      edg_skid_tank: {
+        code: 'SK',
+        name: '24-Hour Belly Tank Baseframe Skid',
+        spec: '2.90×1.20 m Skid · SOLAS 24h Diesel Tank',
+        desc: 'Heavy welded channel-steel skid incorporating an integral SOLAS 18-to-24 hour diesel fuel oil belly tank with sight-glass gauge, SOLAS II-2 remote quick-closing fuel shut-off valve, drip tray, and 8 captive spring-elastomer vibration isolators.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(0, -0.45, 0),
+        anchor: new THREE.Vector3(-0.65, 0.22, 0.58)
+      },
+      diesel_v12_engine: {
+        code: 'EN',
+        name: '1800 RPM V12 Turbocharged Diesel Block',
+        spec: '60° V12 · Common-Rail · 48°C Pre-Heater',
+        desc: 'Compact high-speed 4-stroke V12 diesel prime mover (1800 RPM) with 12 individual cylinder head rocker covers, common-rail fuel injection gallery, duplex spin-on lube/fuel filters, and a 220 V thermostatically controlled jacket-water pre-heater.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(-0.15, 0.25, 0),
+        anchor: new THREE.Vector3(-0.25, 0.88, -0.42)
+      },
+      turbo_exhaust: {
+        code: 'TE',
+        name: 'Twin Turbos, Aftercooler & Exhaust',
+        spec: 'Twin Radial Turbos · Stainless Heat Shield',
+        desc: 'Stainless-cladded water-cooled exhaust manifolds in the V-valley feeding twin high-efficiency radial turbochargers, central charge-air aftercooler housing, stainless expansion bellows, and dual pleated air intake filters.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(-0.25, 0.75, 0),
+        anchor: new THREE.Vector3(-0.35, 1.48, -0.25)
+      },
+      radiator_fan: {
+        code: 'RD',
+        name: 'Tropical Finned Radiator & Pusher Fan',
+        spec: 'Zero-Seawater Finned Core · 8-Blade Fan',
+        desc: 'Skid-mounted vertical brass/copper finned radiator core (1.10×1.15 m) with top expansion header tank, belt-driven 8-blade pusher cooling fan behind a perforated guard, and rubber coolant hoses.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(-1.05, 0.15, 0),
+        anchor: new THREE.Vector3(-1.25, 1.05, -0.35)
+      },
+      dual_starters: {
+        code: 'ST',
+        name: 'SOLAS Dual Independent Starters',
+        spec: '24V DC Electric + 210 bar Hydraulic Rack',
+        desc: 'Dual-redundant 24 V DC electric starters with AGM battery bank plus an independent SOLAS II-1/44 hydraulic rack-and-pinion starter powered by two red 210 bar nitrogen-charged piston accumulator bottles and hand recharge pump.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(-0.15, 0.05, 0.75),
+        anchor: new THREE.Vector3(-0.20, 0.72, 0.56)
+      },
+      brushless_alternator: {
+        code: 'AL',
+        name: '440 V 750 kVA 4-Pole Brushless Alternator',
+        spec: '440 V · 60 Hz · 0.8 PF · Coaxial Exciter & AVR',
+        desc: 'Cylindrical dark-slate stator frame coupled to the flywheel housing, containing an internal 4-pole salient-pole copper rotor (1800 RPM), coaxial brushless exciter with rotating diode bridge, digital AVR, and top 440 V terminal box.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(0.85, 0.20, 0),
+        anchor: new THREE.Vector3(0.85, 0.82, -0.38)
+      },
+      auto_start_panel: {
+        code: 'CP',
+        name: 'SOLAS <10s Auto-Start Control Panel',
+        spec: 'Blackout Sensing · Auto Synch & Protection',
+        desc: 'Vibration-isolated IP55 local control cabinet featuring a microprocessor auto-start controller (<10s blackout pickup), analog V / Hz / RPM / Oil Bar gauges, AUTO/TEST/MANUAL selector, and Emergency Stop pushbutton.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(0.85, 0.55, 0.65),
+        anchor: new THREE.Vector3(0.95, 1.25, 0.48)
+      }
+    };
+
+    for (const key in parts) {
+      scene.add(parts[key].group);
+    }
+
+    // Kinematic & X-Ray References
+    const xrayMeshes = [];
+    let radiatorFanRotor = null;
+    let crankPulleyRotor = null;
+    let chargingAltPulleyRotor = null;
+    let turboImpellerPort = null;
+    let turboImpellerStbd = null;
+    let alternatorRotorGroup = null;
+    let qcvHandlePivot = null;
+
+    /* =====================================================================
+       3.1 BUILD `edg_skid_tank` — COMMON SKID & 24-HOUR BELLY FUEL TANK
+       ===================================================================== */
+    function buildEdgSkidTank() {
+      const grp = parts.edg_skid_tank.group;
+      const skidL = 2.90, skidH = 0.26, skidW = 1.20;
+
+      // Longitudinal Heavy C-Channel Side Beams (`0x263238`)
+      [-0.56, 0.56].forEach((zs) => {
+        const beam = new THREE.Mesh(new THREE.BoxGeometry(skidL, skidH, 0.08), matDarkSlate);
+        beam.position.set(0, 0.21, zs);
+        beam.castShadow = true;
+        beam.receiveShadow = true;
+        grp.add(beam);
+      });
+
+      // Front & Rear Box Cross-Members & 4 Yellow Crane Lifting Eye Lugs
+      [-1.41, 1.41].forEach((xs) => {
+        const cross = new THREE.Mesh(new THREE.BoxGeometry(0.08, skidH, skidW), matDarkSlate);
+        cross.position.set(xs, 0.21, 0);
+        cross.castShadow = true;
+        grp.add(cross);
+
+        [-0.56, 0.56].forEach((zl) => {
+          const lugEye = new THREE.Mesh(new THREE.TorusGeometry(0.038, 0.010, 10, 20), matCatYellow);
+          lugEye.position.set(xs, 0.35, zl);
+          grp.add(lugEye);
+        });
+      });
+
+      // Integral SOLAS 18-to-24 Hour Diesel Fuel Oil Belly Tank recessed between the Skid Channels
+      const bellyTank = new THREE.Mesh(new THREE.BoxGeometry(2.68, 0.22, 1.02), matDarkSlate);
+      bellyTank.position.set(0, 0.21, 0);
+      bellyTank.castShadow = true;
+      bellyTank.receiveShadow = true;
+      grp.add(bellyTank);
+
+      // Perimeter Drip Tray Coaming Lip & Machined Mounting Pads
+      const topDeck = new THREE.Mesh(new THREE.BoxGeometry(2.74, 0.02, 1.08), matPanelGrey);
+      topDeck.position.set(0, 0.33, 0);
+      topDeck.receiveShadow = true;
+      grp.add(topDeck);
+
+      // 8 Captive Spring-Elastomer Marine Anti-Vibration Isolator Mounts underneath the Skid (`Y = 0.0` to `0.08 m`)
+      [-1.25, -0.42, 0.42, 1.25].forEach((xm) => {
+        [-0.54, 0.54].forEach((zm) => {
+          const basePad = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.02, 0.14), matDarkSlate);
+          basePad.position.set(xm, 0.01, zm);
+          grp.add(basePad);
+
+          const springCoil = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.06, 20), matCatYellow);
+          springCoil.position.set(xm, 0.05, zm);
+          grp.add(springCoil);
+
+          const topCap = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.018, 20), matStainless);
+          topCap.position.set(xm, 0.08, zm);
+          grp.add(topCap);
+        });
+      });
+
+      // Belly Tank Protected Fuel Level Sight-Glass Gauge (`X = -0.75 m, Z = +0.605 m`)
+      const sightGuard = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.20, 0.03), matBrass);
+      sightGuard.position.set(-0.75, 0.21, 0.605);
+      grp.add(sightGuard);
+
+      const sightColumn = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.17, 16), matSightFuel);
+      sightColumn.position.set(-0.75, 0.21, 0.618);
+      grp.add(sightColumn);
+
+      // Brass Fuel Fill Pipe, Flame-Trap Vent Goose-Neck & SOLAS II-2 Remote Quick-Closing Fuel Shut-Off Valve (`QCV`)
+      const fillPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.18, 18), matBrass);
+      fillPipe.position.set(-1.05, 0.40, 0.48);
+      grp.add(fillPipe);
+
+      const fillCap = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.025, 6), matSolasRed);
+      fillCap.position.set(-1.05, 0.49, 0.48);
+      grp.add(fillCap);
+
+      // SOLAS Quick-Closing Fuel Valve (`QCV`) with Red Pull-Cable Trip Lever
+      const qcvBody = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.09, 20), matSolasRed);
+      qcvBody.rotation.x = Math.PI / 2;
+      qcvBody.position.set(-0.52, 0.36, 0.54);
+      grp.add(qcvBody);
+
+      qcvHandlePivot = new THREE.Group();
+      qcvHandlePivot.position.set(-0.52, 0.41, 0.56);
+      grp.add(qcvHandlePivot);
+
+      const qcvLever = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.018, 0.016), matSolasRed);
+      qcvLever.position.x = 0.04;
+      qcvHandlePivot.add(qcvLever);
+    }
+
+    /* =====================================================================
+       3.2 BUILD `diesel_v12_engine` — 1800 RPM V12 TURBO DIESEL PRIME MOVER
+       ===================================================================== */
+    function buildDieselV12Engine() {
+      const grp = parts.diesel_v12_engine.group;
+      const engX = -0.25;
+
+      // Deep Cast-Iron Oil Sump & Crankcase Skirt sitting on Engine Mounting Feet (`Y = 0.34 m` to `0.68 m`)
+      const oilPan = new THREE.Mesh(new THREE.BoxGeometry(1.32, 0.22, 0.56), matCatYellow);
+      oilPan.position.set(engX, 0.44, 0);
+      oilPan.castShadow = true;
+      grp.add(oilPan);
+
+      const crankcaseBlock = new THREE.Mesh(new THREE.BoxGeometry(1.36, 0.36, 0.64), matCatYellow);
+      crankcaseBlock.position.set(engX, 0.72, 0);
+      crankcaseBlock.castShadow = true;
+      grp.add(crankcaseBlock);
+
+      // 4 Heavy Cast Engine Mounting Feet bolted to the Skid Deck
+      [-0.78, 0.28].forEach((xf) => {
+        [-0.38, 0.38].forEach((zf) => {
+          const foot = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.16, 0.14), matDarkSlate);
+          foot.position.set(xf, 0.42, zf);
+          grp.add(foot);
+        });
+      });
+
+      // 60° V12 Cylinder Banks (Port -Z Bank & Starboard +Z Bank) + 12 Individual Finned Cylinder Heads & Rocker Covers
+      [-1, 1].forEach((side) => {
+        const bankGroup = new THREE.Group();
+        bankGroup.position.set(engX, 0.86, side * 0.18);
+        bankGroup.rotation.x = side * (Math.PI / 6); // 30° from vertical = 60° V-angle
+        grp.add(bankGroup);
+
+        // Main V-Bank Cylinder Casting with Cast Side Ribs
+        const bankBlock = new THREE.Mesh(new THREE.BoxGeometry(1.30, 0.32, 0.30), matCatYellow);
+        bankBlock.position.set(0, 0.14, 0);
+        bankBlock.castShadow = true;
+        bankGroup.add(bankBlock);
+
+        // 6 Individual Cylinder Heads & Die-Cast Rocker Arm Covers per Bank (12 Cylinders Total)
+        for (let c = 0; c < 6; c++) {
+          const cx = -0.525 + c * 0.21;
+
+          const cylHead = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.10, 0.28), matCatYellow);
+          cylHead.position.set(cx, 0.35, 0);
+          cylHead.castShadow = true;
+          bankGroup.add(cylHead);
+
+          const rockerBonnet = new THREE.Mesh(new THREE.BoxGeometry(0.175, 0.075, 0.25), matStainless);
+          rockerBonnet.position.set(cx, 0.435, 0);
+          rockerBonnet.castShadow = true;
+          bankGroup.add(rockerBonnet);
+
+          const oilCap = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.02, 14), matDarkSlate);
+          oilCap.position.set(cx, 0.48, 0);
+          bankGroup.add(oilCap);
+
+          // High-Pressure Common-Rail Injector Line entering each Cylinder Head
+          const injLine = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.16, 8), matStainless);
+          injLine.rotation.x = Math.PI / 4;
+          injLine.position.set(cx, 0.38, side * 0.14);
+          bankGroup.add(injLine);
+        }
+
+        // High-Pressure Common-Rail Fuel Log along each V-Bank
+        const fuelRail = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 1.24, 16), matStainless);
+        fuelRail.rotation.z = Math.PI / 2;
+        fuelRail.position.set(0, 0.30, side * 0.17);
+        bankGroup.add(fuelRail);
+      });
+
+      // Aft SAE #0 Cast Flywheel Bellhousing (`X = +0.38 m, Y = 0.78 m`)
+      const bellhousing = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.44, 0.16, 36), matCatYellow);
+      bellhousing.rotation.z = Math.PI / 2;
+      bellhousing.position.set(0.38, 0.78, 0);
+      bellhousing.castShadow = true;
+      grp.add(bellhousing);
+
+      // Front Timing Gear Cover, Crankshaft Vibration Damper Pulley, Water Pump Pulley & 24V Charging Alternator (`X = -0.96 m`)
+      const timingCover = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.52, 0.54), matCatYellow);
+      timingCover.position.set(-0.95, 0.78, 0);
+      grp.add(timingCover);
+
+      // Concentric Rotating Crankshaft Pulley & V-Belt Drive (`crankPulleyRotor`)
+      crankPulleyRotor = new THREE.Group();
+      crankPulleyRotor.position.set(-1.01, 0.68, 0);
+      grp.add(crankPulleyRotor);
+
+      const damperDisc = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.05, 28), matDarkSlate);
+      damperDisc.rotation.z = Math.PI / 2;
+      crankPulleyRotor.add(damperDisc);
+
+      for (let s = 0; s < 6; s++) {
+        const sa = (s / 6) * Math.PI * 2;
+        const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.06, 6), matBrass);
+        bolt.rotation.z = Math.PI / 2;
+        bolt.position.set(0, Math.cos(sa) * 0.08, Math.sin(sa) * 0.08);
+        crankPulleyRotor.add(bolt);
+      }
+
+      // 24 V Belt-Driven Battery Charging Alternator on Port Front (`X = -0.98 m, Y = 0.92 m, Z = -0.28 m`)
+      const chgAltBody = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.14, 20), matStainless);
+      chgAltBody.rotation.z = Math.PI / 2;
+      chgAltBody.position.set(-0.92, 0.92, -0.28);
+      grp.add(chgAltBody);
+
+      chargingAltPulleyRotor = new THREE.Group();
+      chargingAltPulleyRotor.position.set(-1.01, 0.92, -0.28);
+      grp.add(chargingAltPulleyRotor);
+
+      const chgPulley = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.03, 18), matBrass);
+      chgPulley.rotation.z = Math.PI / 2;
+      chargingAltPulleyRotor.add(chgPulley);
+
+      // Port-Side Twin Spin-On Lube Oil Filters & Duplex Spin-On Fuel Filters (`Z = -0.40 m`)
+      [-0.55, -0.38].forEach((xf) => {
+        const lubeCan = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.24, 24), matFilterBlue);
+        lubeCan.position.set(xf, 0.66, -0.40);
+        lubeCan.castShadow = true;
+        grp.add(lubeCan);
+      });
+
+      [-0.15, 0.00].forEach((xf) => {
+        const fuelCan = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.048, 0.20, 24), matSolasRed);
+        fuelCan.position.set(xf, 0.72, -0.40);
+        fuelCan.castShadow = true;
+        grp.add(fuelCan);
+      });
+
+      // SOLAS 220 V / 3 kW Thermostatic Jacket-Water Pre-Heater Cylinder on Port Side (`X = +0.18 m, Y = 0.56 m, Z = -0.42 m`)
+      const preHeaterBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.058, 0.34, 24), matCopper);
+      preHeaterBarrel.rotation.z = Math.PI / 2;
+      preHeaterBarrel.position.set(0.18, 0.56, -0.42);
+      preHeaterBarrel.castShadow = true;
+      grp.add(preHeaterBarrel);
+
+      const thermostatBox = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.09, 0.08), matDarkSlate);
+      thermostatBox.position.set(0.35, 0.56, -0.42);
+      grp.add(thermostatBox);
+    }
+
+    /* =====================================================================
+       3.3 BUILD `turbo_exhaust` — TWIN TURBOS, AFTERCOOLER & EXHAUST MANIFOLD
+       ===================================================================== */
+    function buildTurboExhaust() {
+      const grp = parts.turbo_exhaust.group;
+
+      // Central Charge-Air Cooler (Aftercooler) Housing nestled in the V-Valley (`X = -0.25 m, Y = 1.24 m, Z = 0`)
+      const aftercooler = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.16, 0.26), matCatYellow);
+      aftercooler.position.set(-0.25, 1.24, 0);
+      aftercooler.castShadow = true;
+      grp.add(aftercooler);
+
+      // Stainless-Cladded Thermal-Insulated Exhaust Manifolds along Port & Starboard V-Banks (`0xd0d7de`)
+      [-0.18, 0.18].forEach((zm) => {
+        const exhManifold = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.058, 1.18, 24), matStainless);
+        exhManifold.rotation.z = Math.PI / 2;
+        exhManifold.position.set(-0.25, 1.36, zm);
+        exhManifold.castShadow = true;
+        grp.add(exhManifold);
+      });
+
+      // Twin High-Efficiency Radial Turbochargers at Rear-Top of Engine (`X = +0.26 m, Y = 1.44 m, Z = ±0.24 m`)
+      [-1, 1].forEach((side) => {
+        const tz = side * 0.24;
+        const tx = 0.26;
+        const ty = 1.44;
+
+        // Exhaust Turbine Volute Snail-Shell (`0xd0d7de`)
+        const turbineVolute = new THREE.Mesh(new THREE.TorusGeometry(0.095, 0.048, 16, 28), matStainless);
+        turbineVolute.rotation.y = Math.PI / 2;
+        turbineVolute.position.set(tx - 0.06, ty, tz);
+        turbineVolute.castShadow = true;
+        grp.add(turbineVolute);
+
+        // Compressor Volute Snail-Shell (`0xd97706` / `0xd0d7de`)
+        const compVolute = new THREE.Mesh(new THREE.TorusGeometry(0.105, 0.052, 16, 28), matStainless);
+        compVolute.rotation.y = Math.PI / 2;
+        compVolute.position.set(tx + 0.06, ty, tz);
+        compVolute.castShadow = true;
+        grp.add(compVolute);
+
+        // Spinning Compressor Impeller Wheel visible inside Intake Mouth
+        const impGrp = new THREE.Group();
+        impGrp.position.set(tx + 0.11, ty, tz);
+        grp.add(impGrp);
+        if (side < 0) turboImpellerPort = impGrp;
+        else turboImpellerStbd = impGrp;
+
+        const impHub = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.045, 0.04, 16), matBrass);
+        impHub.rotation.z = -Math.PI / 2;
+        impGrp.add(impHub);
+
+        for (let b = 0; b < 8; b++) {
+          const ba = (b / 8) * Math.PI * 2;
+          const blade = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.075, 0.004), matStainless);
+          blade.position.set(0, Math.cos(ba) * 0.035, Math.sin(ba) * 0.035);
+          blade.rotation.x = ba + 0.4;
+          impGrp.add(blade);
+        }
+
+        // Heavy-Duty Pleated Cylindrical Air Intake Filter Canister (`X = +0.46 m, Y = 1.44 m, Z = ±0.34 m`)
+        const airFilter = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.28, 28), matDarkSlate);
+        airFilter.rotation.z = Math.PI / 2;
+        airFilter.position.set(tx + 0.22, ty, side * 0.32);
+        airFilter.castShadow = true;
+        grp.add(airFilter);
+
+        const filterEndCap = new THREE.Mesh(new THREE.CylinderGeometry(0.116, 0.116, 0.02, 28), matCatYellow);
+        filterEndCap.rotation.z = Math.PI / 2;
+        filterEndCap.position.set(tx + 0.36, ty, side * 0.32);
+        grp.add(filterEndCap);
+
+        // Charge-Air Boost Crossover Pipe from Turbo Compressor to Central Aftercooler
+        const boostCurve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(tx + 0.06, ty + 0.12, tz),
+          new THREE.Vector3(tx - 0.10, ty + 0.14, tz * 0.5),
+          new THREE.Vector3(-0.05, 1.32, 0)
+        ]);
+        const boostPipe = new THREE.Mesh(new THREE.TubeGeometry(boostCurve, 18, 0.036, 12, false), matCatYellow);
+        grp.add(boostPipe);
+      });
+
+      // Twin-to-Single Stainless Exhaust Collector Wye, Corrugated Bellows & Vertical Uptake Stack (`X = +0.12 m, Y = 1.68 m`)
+      const collectorBox = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.52, 24), matStainless);
+      collectorBox.rotation.x = Math.PI / 2;
+      collectorBox.position.set(0.12, 1.62, 0);
+      grp.add(collectorBox);
+
+      // Corrugated Stainless Expansion Bellows & Uptake Stack
+      for (let b = 0; b < 5; b++) {
+        const bellowRing = new THREE.Mesh(new THREE.TorusGeometry(0.095, 0.012, 10, 28), matStainless);
+        bellowRing.rotation.x = Math.PI / 2;
+        bellowRing.position.set(0.12, 1.72 + b * 0.026, 0);
+        grp.add(bellowRing);
+      }
+
+      const uptakeStack = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.24, 24), matStainless);
+      uptakeStack.position.set(0.12, 1.96, 0);
+      uptakeStack.castShadow = true;
+      grp.add(uptakeStack);
+
+      const rainFlap = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.105, 0.015, 24), matDarkSlate);
+      rainFlap.position.set(0.12, 2.09, 0);
+      rainFlap.rotation.z = -0.25;
+      grp.add(rainFlap);
+    }
+
+    /* =====================================================================
+       3.4 BUILD `radiator_fan` — TROPICAL FINNED RADIATOR & 8-BLADE FAN
+       ===================================================================== */
+    function buildRadiatorFan() {
+      const grp = parts.radiator_fan.group;
+      const radX = -1.25;
+      const radY = 0.98;
+
+      // Outer Structural Steel Radiator Frame (`1.12 m` wide × `1.18 m` high) bolted to Forward Skid
+      [-0.54, 0.54].forEach((zr) => {
+        const sidePost = new THREE.Mesh(new THREE.BoxGeometry(0.22, 1.24, 0.06), matDarkSlate);
+        sidePost.position.set(radX, 0.96, zr);
+        sidePost.castShadow = true;
+        grp.add(sidePost);
+      });
+
+      // Top Brass/Steel Expansion Header Tank (`Y = 1.56 m`) with Brass Pressure Relief Cap & Sight Glass
+      const topHeaderTank = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.16, 1.14), matDarkSlate);
+      topHeaderTank.position.set(radX, 1.56, 0);
+      topHeaderTank.castShadow = true;
+      grp.add(topHeaderTank);
+
+      const radCap = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.035, 16), matBrass);
+      radCap.position.set(radX, 1.655, 0);
+      grp.add(radCap);
+
+      // Bottom Radiator Header Tank (`Y = 0.39 m`)
+      const botHeaderTank = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.12, 1.14), matDarkSlate);
+      botHeaderTank.position.set(radX, 0.39, 0);
+      grp.add(botHeaderTank);
+
+      // Vertical Brass/Copper Finned Tropical Radiator Core (`1.04 m × 1.05 m`, `0xd97742`)
+      const finnedCore = new THREE.Mesh(new THREE.BoxGeometry(0.14, 1.05, 1.02), matRadiatorCore);
+      finnedCore.position.set(radX - 0.02, radY, 0);
+      finnedCore.castShadow = true;
+      grp.add(finnedCore);
+
+      // Front Protective Louvered Grille Bars on Forward Face of Radiator (`X = -1.34 m`)
+      for (let g = -0.44; g <= 0.44; g += 0.11) {
+        const grilleBar = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.022, 1.00), matDarkSlate);
+        grilleBar.position.set(radX - 0.10, radY + g, 0);
+        grilleBar.rotation.z = 0.28;
+        grp.add(grilleBar);
+      }
+
+      // Rear Cylindrical Fan Shroud Venturi & Perforated Safety Guard Cage (`X = -1.12 m`)
+      const fanShroud = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.48, 0.14, 36, 1, true), matDarkSlate);
+      fanShroud.rotation.z = Math.PI / 2;
+      fanShroud.position.set(radX + 0.12, radY, 0);
+      grp.add(fanShroud);
+      xrayMeshes.push(fanShroud);
+
+      // Yellow Safety Wire Guard Rings behind Pusher Fan
+      [0.18, 0.32, 0.45].forEach((rGuard) => {
+        const guardRing = new THREE.Mesh(new THREE.TorusGeometry(rGuard, 0.006, 8, 32), matCatYellow);
+        guardRing.rotation.y = Math.PI / 2;
+        guardRing.position.set(radX + 0.19, radY, 0);
+        grp.add(guardRing);
+        xrayMeshes.push(guardRing);
+      });
+
+      // Concentric Rotating 8-Blade Pusher Cooling Fan Group (`radiatorFanRotor`) aligned strictly along X-axis!
+      radiatorFanRotor = new THREE.Group();
+      radiatorFanRotor.position.set(radX + 0.13, radY, 0);
+      grp.add(radiatorFanRotor);
+
+      const fanHub = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.095, 0.08, 24), matBrass);
+      fanHub.rotation.z = Math.PI / 2;
+      radiatorFanRotor.add(fanHub);
+
+      for (let b = 0; b < 8; b++) {
+        const ba = (b / 8) * Math.PI * 2;
+        const bladeCarrier = new THREE.Group();
+        bladeCarrier.rotation.x = ba;
+        radiatorFanRotor.add(bladeCarrier);
+
+        const blade = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.33, 0.085), matCatYellow);
+        blade.position.set(0, 0.24, 0);
+        blade.rotation.y = 0.42; // Pitched airfoil angle
+        blade.castShadow = true;
+        bladeCarrier.add(blade);
+      }
+
+      // Upper Supply & Lower Return Molded Rubber Coolant Hoses with Stainless Worm-Drive Clamps connecting Engine to Radiator
+      const topHoseCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(-0.88, 1.18, 0.0),
+        new THREE.Vector3(-1.02, 1.36, 0.0),
+        new THREE.Vector3(radX + 0.08, 1.52, 0.0)
+      ]);
+      const topHose = new THREE.Mesh(new THREE.TubeGeometry(topHoseCurve, 20, 0.038, 14, false), matHoseRubber);
+      topHose.castShadow = true;
+      grp.add(topHose);
+
+      const botHoseCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(radX + 0.08, 0.42, -0.28),
+        new THREE.Vector3(-1.05, 0.46, -0.28),
+        new THREE.Vector3(-0.88, 0.58, -0.22)
+      ]);
+      const botHose = new THREE.Mesh(new THREE.TubeGeometry(botHoseCurve, 20, 0.036, 14, false), matHoseRubber);
+      grp.add(botHose);
+    }
+
+    /* =====================================================================
+       3.5 BUILD `dual_starters` — SOLAS DUAL INDEPENDENT STARTING SYSTEMS
+       ===================================================================== */
+    function buildDualStarters() {
+      const grp = parts.dual_starters.group;
+
+      // 1. PRIMARY STARTER: Dual-Redundant 24 V DC Electric Starter Motors + AGM Battery Crate on Starboard Skid (`Z = +0.42 m`)
+      [-0.36, -0.02].forEach((xs) => {
+        const starterMotor = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.058, 0.28, 20), matDarkSlate);
+        starterMotor.rotation.z = Math.PI / 2;
+        starterMotor.position.set(xs, 0.62, 0.36);
+        starterMotor.castShadow = true;
+        grp.add(starterMotor);
+
+        // Top Bendix Engagement Solenoid Cylinder (`0xd4af37`)
+        const solenoid = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.034, 0.16, 16), matBrass);
+        solenoid.rotation.z = Math.PI / 2;
+        solenoid.position.set(xs + 0.03, 0.69, 0.38);
+        grp.add(solenoid);
+      });
+
+      // Skid-Mounted 24 V DC AGM Starter Battery Crate (2 × 12V 200Ah Heavy-Duty Marine Batteries at `X = -0.68 m, Y = 0.42 m, Z = +0.46 m`)
+      const batteryTray = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.04, 0.28), matDarkSlate);
+      batteryTray.position.set(-0.68, 0.35, 0.44);
+      grp.add(batteryTray);
+
+      [-0.81, -0.55].forEach((xb) => {
+        const batteryCase = new THREE.Mesh(new THREE.BoxGeometry(0.23, 0.20, 0.22), matHoseRubber);
+        batteryCase.position.set(xb, 0.46, 0.44);
+        batteryCase.castShadow = true;
+        grp.add(batteryCase);
+
+        const redTop = new THREE.Mesh(new THREE.BoxGeometry(0.235, 0.025, 0.225), matSolasRed);
+        redTop.position.set(xb, 0.56, 0.44);
+        grp.add(redTop);
+
+        // Brass Battery Terminal Posts
+        [-0.06, 0.06].forEach((xt) => {
+          const post = new THREE.Mesh(new THREE.CylinderGeometry(0.010, 0.012, 0.03, 12), matBrass);
+          post.position.set(xb + xt, 0.585, 0.48);
+          grp.add(post);
+        });
+      });
+
+      // 2. SECONDARY INDEPENDENT STARTER (SOLAS II-1/44): Hydraulic Rack-and-Pinion Starter + Two Red 210 bar Nitrogen Accumulator Bottles
+      // Hydraulic Starter Motor bolted to Flywheel Bellhousing (`X = +0.24 m, Y = 0.72 m, Z = +0.38 m`)
+      const hydStarter = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.055, 0.26, 20), matSolasRed);
+      hydStarter.rotation.z = Math.PI / 2;
+      hydStarter.position.set(0.24, 0.74, 0.38);
+      hydStarter.castShadow = true;
+      grp.add(hydStarter);
+
+      // Vertical Steel Support Rack holding the Two Red 210 bar Hydraulic Piston Accumulator Bottles (`X = +0.08 m, Z = +0.50 m`)
+      const accumRack = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.72, 0.22), matDarkSlate);
+      accumRack.position.set(0.08, 0.70, 0.50);
+      grp.add(accumRack);
+
+      [-0.04, 0.20].forEach((xa) => {
+        // Seamless Red High-Pressure Hydraulic Accumulator Cylinder (`0xdc2626`, R = 0.082 m, H = 0.74 m)
+        const bottleCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.082, 0.64, 28), matSolasRed);
+        bottleCyl.position.set(xa, 0.76, 0.50);
+        bottleCyl.castShadow = true;
+        grp.add(bottleCyl);
+
+        const topDome = new THREE.Mesh(new THREE.SphereGeometry(0.082, 24, 16), matSolasRed);
+        topDome.position.set(xa, 1.08, 0.50);
+        grp.add(topDome);
+
+        // Top Brass Nitrogen Pre-Charge Valve & Pressure Gauge (`210 bar`)
+        const n2Valve = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, 0.06, 14), matBrass);
+        n2Valve.position.set(xa, 1.18, 0.50);
+        grp.add(n2Valve);
+
+        // Two Steel Clamping Straps around Accumulator Bottle
+        [0.58, 0.94].forEach((ys) => {
+          const clamp = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.008, 8, 24), matStainless);
+          clamp.rotation.x = Math.PI / 2;
+          clamp.position.set(xa, ys, 0.50);
+          grp.add(clamp);
+        });
+      });
+
+      // Manual Emergency Hand-Jacking Recharge Pump & Long Red Handle Lever + Foot-Operated Start Valve (`X = +0.34 m, Y = 0.66 m, Z = +0.54 m`)
+      const handPumpBody = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.18, 0.11), matBrass);
+      handPumpBody.position.set(0.36, 0.58, 0.52);
+      grp.add(handPumpBody);
+
+      const pumpHandleBar = new THREE.Mesh(new THREE.CylinderGeometry(0.010, 0.010, 0.48, 12), matStainless);
+      pumpHandleBar.position.set(0.38, 0.84, 0.56);
+      pumpHandleBar.rotation.z = -0.22;
+      grp.add(pumpHandleBar);
+
+      const pumpGrip = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.11, 14), matSolasRed);
+      pumpGrip.position.set(0.43, 1.06, 0.56);
+      pumpGrip.rotation.z = -0.22;
+      grp.add(pumpGrip);
+
+      // High-Pressure Hydraulic Hose from Accumulators to Hydraulic Starter Motor
+      const hydHoseCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(0.08, 0.42, 0.50),
+        new THREE.Vector3(0.20, 0.48, 0.44),
+        new THREE.Vector3(0.24, 0.74, 0.38)
+      ]);
+      const hydHose = new THREE.Mesh(new THREE.TubeGeometry(hydHoseCurve, 18, 0.014, 10, false), matBrass);
+      grp.add(hydHose);
+    }
+
+    /* =====================================================================
+       3.6 BUILD `brushless_alternator` — 440 V 750 kVA 4-POLE ALTERNATOR
+       ===================================================================== */
+    function buildBrushlessAlternator() {
+      const grp = parts.brushless_alternator.group;
+      const altX = 0.85;
+      const altY = 0.78;
+
+      // Cylindrical Dark-Slate Stator Frame (`R = 0.44 m, L = 0.95 m`, `0x263238`)
+      const statorShell = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.44, 0.44, 0.95, 40, 1, true),
+        matDarkSlate
+      );
+      statorShell.rotation.z = Math.PI / 2;
+      statorShell.position.set(altX, altY, 0);
+      statorShell.castShadow = true;
+      grp.add(statorShell);
+      xrayMeshes.push(statorShell);
+
+      // 24 External Axial Cast Cooling Fins around Stator Frame
+      for (let f = 0; f < 24; f++) {
+        const fa = (f / 24) * Math.PI * 2;
+        if (Math.sin(fa) < -0.72) continue;
+        const fin = new THREE.Mesh(new THREE.BoxGeometry(0.90, 0.045, 0.018), matDarkSlate);
+        fin.position.set(altX, altY + Math.sin(fa) * 0.45, Math.cos(fa) * 0.45);
+        fin.rotation.x = -fa;
+        grp.add(fin);
+        xrayMeshes.push(fin);
+      }
+
+      // Drive-End & Non-Drive-End Cast End-Shields with Louvered Ventilation Grilles
+      [-0.48, 0.48].forEach((dx) => {
+        const endShield = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.38, 0.06, 36), matDarkSlate);
+        endShield.rotation.z = dx > 0 ? -Math.PI / 2 : Math.PI / 2;
+        endShield.position.set(altX + dx, altY, 0);
+        grp.add(endShield);
+        xrayMeshes.push(endShield);
+      });
+
+      // Heavy Welded Alternator Mounting Feet bolted to Skid Deck
+      [-0.38, 0.38].forEach((zf) => {
+        const foot = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.18, 0.14), matDarkSlate);
+        foot.position.set(altX, 0.42, zf);
+        foot.castShadow = true;
+        grp.add(foot);
+      });
+
+      // Internal Laminated Stator Core & Copper End-Windings (`0xd97742`, visible in X-Ray or Explode)
+      const statorCore = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.41, 0.41, 0.68, 36, 1, true),
+        matPanelGrey
+      );
+      statorCore.rotation.z = Math.PI / 2;
+      statorCore.position.set(altX, altY, 0);
+      grp.add(statorCore);
+      xrayMeshes.push(statorCore);
+
+      [-0.36, 0.36].forEach((dx) => {
+        const coilOverhang = new THREE.Mesh(new THREE.TorusGeometry(0.33, 0.048, 14, 32), matCopper);
+        coilOverhang.rotation.y = Math.PI / 2;
+        coilOverhang.position.set(altX + dx, altY, 0);
+        grp.add(coilOverhang);
+      });
+
+      // Concentric Rotating 4-Pole Salient-Pole Copper Rotor, Coaxial Brushless Exciter & Rotating Diode Bridge (`alternatorRotorGroup`)
+      alternatorRotorGroup = new THREE.Group();
+      alternatorRotorGroup.position.set(altX, altY, 0);
+      grp.add(alternatorRotorGroup);
+
+      // Forged Rotor Shaft (`R = 0.085 m, L = 1.22 m`)
+      const rotorShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 1.22, 28), matStainless);
+      rotorShaft.rotation.z = Math.PI / 2;
+      alternatorRotorGroup.add(rotorShaft);
+
+      // 4 Salient Rotor Poles with Copper Field Windings & Damper Cage Bars (90° apart for 4-Pole 1800 RPM = 60 Hz)
+      for (let p = 0; p < 4; p++) {
+        const pa = (p / 4) * Math.PI * 2;
+        const poleCarrier = new THREE.Group();
+        poleCarrier.rotation.x = pa;
+        alternatorRotorGroup.add(poleCarrier);
+
+        const copperFieldCoil = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.14, 0.22), matCopper);
+        copperFieldCoil.position.set(-0.04, 0.18, 0);
+        poleCarrier.add(copperFieldCoil);
+
+        const laminatedPoleShoe = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.055, 0.26), matStainless);
+        laminatedPoleShoe.position.set(-0.04, 0.265, 0);
+        laminatedPoleShoe.castShadow = true;
+        poleCarrier.add(laminatedPoleShoe);
+      }
+
+      // Drive-End Shaft-Mounted Centrifugal Cooling Fan (`X = -0.40 m` local)
+      const fanDisc = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.03, 28), matBrass);
+      fanDisc.rotation.z = Math.PI / 2;
+      fanDisc.position.x = -0.40;
+      alternatorRotorGroup.add(fanDisc);
+
+      for (let fb = 0; fb < 12; fb++) {
+        const fba = (fb / 12) * Math.PI * 2;
+        const blade = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.11, 0.012), matStainless);
+        blade.position.set(-0.38, Math.cos(fba) * 0.28, Math.sin(fba) * 0.28);
+        blade.rotation.x = fba;
+        alternatorRotorGroup.add(blade);
+      }
+
+      // Non-Drive-End Coaxial Brushless Exciter Armature & 6-Diode Rotating Silicon Rectifier Bridge (`X = +0.38 m` local)
+      const exciterArmature = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.16, 24), matCopper);
+      exciterArmature.rotation.z = Math.PI / 2;
+      exciterArmature.position.x = 0.42;
+      alternatorRotorGroup.add(exciterArmature);
+
+      const diodeWheel = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.018, 10, 24), matBrass);
+      diodeWheel.rotation.y = Math.PI / 2;
+      diodeWheel.position.x = 0.31;
+      alternatorRotorGroup.add(diodeWheel);
+
+      // Top-Mounted 440 V Main Terminal Box & Digital Automatic Voltage Regulator (`AVR`) Housing (`Y = 1.38 m`)
+      const mainTermBox = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.34, 0.48), matDarkSlate);
+      mainTermBox.position.set(altX - 0.04, 1.36, 0);
+      mainTermBox.castShadow = true;
+      grp.add(mainTermBox);
+
+      const avrPod = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.22, 0.08), matPanelGrey);
+      avrPod.position.set(altX - 0.04, 1.36, -0.26);
+      grp.add(avrPod);
+
+      // 4 Brass Compression Cable Glands & 440 V Emergency Switchboard Feeder Conduits
+      [-0.15, -0.05, 0.05, 0.15].forEach((xg) => {
+        const gland = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.026, 0.06, 6), matBrass);
+        gland.rotation.x = Math.PI / 2;
+        gland.position.set(altX - 0.04 + xg, 1.28, 0.26);
+        grp.add(gland);
+      });
+    }
+
+    /* =====================================================================
+       3.7 BUILD `auto_start_panel` — SOLAS <10s AUTO-START CONTROL PANEL
+       ===================================================================== */
+    function buildAutoStartPanel() {
+      const grp = parts.auto_start_panel.group;
+      const px = 0.95;
+      const py = 1.18;
+      const pz = 0.48;
+
+      // Twin Tubular Steel Pedestal Stanchions with Anti-Vibration Rubber Mounts (`Y = 0.34 m` to `0.86 m`)
+      [-0.18, 0.18].forEach((dx) => {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.024, 0.56, 16), matDarkSlate);
+        leg.position.set(px + dx, 0.62, pz);
+        leg.castShadow = true;
+        grp.add(leg);
+
+        const isoPad = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.03, 16), matCatYellow);
+        isoPad.position.set(px + dx, 0.89, pz);
+        grp.add(isoPad);
+      });
+
+      // IP55 Marine Steel Control Cabinet (`0.54 m` wide × `0.62 m` high × `0.26 m` deep)
+      const cabinet = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.62, 0.26), matPanelGrey);
+      cabinet.position.set(px, py, pz);
+      cabinet.castShadow = true;
+      grp.add(cabinet);
+
+      const doorBevel = new THREE.Mesh(new THREE.BoxGeometry(0.50, 0.58, 0.016), matDarkSlate);
+      doorBevel.position.set(px, py, pz + 0.132);
+      grp.add(doorBevel);
+
+      // Glowing SOLAS Auto-Start Microprocessor Controller Screen (`AUTO READY · BLACKOUT TIMER <10s`)
+      const lcdScreen = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.38, 0.19),
+        new THREE.MeshBasicMaterial({ map: ctrlScreenTex })
+      );
+      lcdScreen.position.set(px, py + 0.14, pz + 0.142);
+      grp.add(lcdScreen);
+
+      // 4 Round Analog Gauges (`440 V`, `60 Hz`, `1800 RPM`, `Oil Bar`) below the Screen
+      [-0.165, -0.055, 0.055, 0.165].forEach((gx) => {
+        const bezel = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.016, 24), matBrass);
+        bezel.rotation.x = Math.PI / 2;
+        bezel.position.set(px + gx, py - 0.04, pz + 0.140);
+        grp.add(bezel);
+
+        const dial = new THREE.Mesh(
+          new THREE.CircleGeometry(0.036, 24),
+          new THREE.MeshBasicMaterial({ color: 0xf8fafc })
+        );
+        dial.position.set(px + gx, py - 0.04, pz + 0.149);
+        grp.add(dial);
+      });
+
+      // `AUTO / TEST / MANUAL` Rotary Selector Switch & Red Emergency Stop Mushroom Pushbutton
+      const modeSwitch = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.024, 0.024, 16), matDarkSlate);
+      modeSwitch.rotation.x = Math.PI / 2;
+      modeSwitch.position.set(px - 0.12, py - 0.18, pz + 0.144);
+      grp.add(modeSwitch);
+
+      const estopCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.030, 0.030, 0.012, 20), matCatYellow);
+      estopCollar.rotation.x = Math.PI / 2;
+      estopCollar.position.set(px + 0.14, py - 0.18, pz + 0.142);
+      grp.add(estopCollar);
+
+      const estopMushroom = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.016, 0.026, 20), matSolasRed);
+      estopMushroom.rotation.x = Math.PI / 2;
+      estopMushroom.position.set(px + 0.14, py - 0.18, pz + 0.156);
+      grp.add(estopMushroom);
+
+      // Top Flashing Amber/Red SOLAS Emergency Beacon Strobe Dome
+      const beaconBase = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.036, 0.03, 18), matDarkSlate);
+      beaconBase.position.set(px + 0.18, py + 0.325, pz);
+      grp.add(beaconBase);
+
+      const beaconDome = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.030, 0.055, 18), matSolasRed);
+      beaconDome.position.set(px + 0.18, py + 0.365, pz);
+      grp.add(beaconDome);
+    }
+
+    buildEdgSkidTank();
+    buildDieselV12Engine();
+    buildTurboExhaust();
+    buildRadiatorFan();
+    buildDualStarters();
+    buildBrushlessAlternator();
+    buildAutoStartPanel();
+
+    /* =====================================================================
+       4. NATIVE-COLOR GHOST ISOLATION & EXPLODE DASHED CENTERLINES
+       ===================================================================== */
+    const state = {
+      explode: 0.0,
+      targetExplode: 0.0,
+      isRunning: true,       // Default RUNNING at 1800 RPM so radiator fan & 4-pole rotor motion are immediately visible!
+      currentRpm: 1800.0,
+      targetRpm: 1800.0,
+      startElapsedSec: 4.2,
+      starterMode: 0,        // 0 = Primary 24V DC AGM Electric, 1 = Secondary 210 bar Hydraulic Accumulator
+      selectedPart: 'all',
+      labelsOn: true,
+      xrayMode: false,
+      autoRotate: false,
+      time: 0
+    };
+
+    const explodeLines = [];
+
+    function prepareMaterialsAndGuideLines() {
+      for (const key in parts) {
+        const p = parts[key];
+        const origMap = new Map();
+        const ghostMap = new Map();
+
+        p.group.traverse((obj) => {
+          if (obj.isMesh && obj.material) {
+            obj.userData.partKey = key;
+            if (!origMap.has(obj.material)) {
+              const origClone = obj.material.clone();
+              const ghostClone = origClone.clone();
+              ghostClone.transparent = true;
+              ghostClone.opacity = 0.14;
+              ghostClone.depthWrite = false;
+              origMap.set(obj.material, origClone);
+              ghostMap.set(obj.material, ghostClone);
+            }
+            obj.userData.origMaterial = origMap.get(obj.material);
+            obj.userData.ghostMaterial = ghostMap.get(obj.material);
+            obj.material = obj.userData.origMaterial;
+          }
+        });
+
+        const lMat = new THREE.LineDashedMaterial({
+          color: 0xea580c,
+          dashSize: 0.08,
+          gapSize: 0.05,
+          transparent: true,
+          opacity: 0.0
+        });
+        const lGeo = new THREE.BufferGeometry().setFromPoints([p.anchor.clone(), p.anchor.clone()]);
+        const line = new THREE.Line(lGeo, lMat);
+        line.computeLineDistances();
+        scene.add(line);
+        explodeLines.push({ key, line, base: p.anchor, vec: p.explodeVec });
+      }
+    }
+    prepareMaterialsAndGuideLines();
+
+    function applyMaterialIsolationAndXray() {
+      for (const k in parts) {
+        const p = parts[k];
+        const isTarget = (state.selectedPart === 'all' || state.selectedPart === k);
+        p.group.traverse((obj) => {
+          if (!obj.isMesh || !obj.userData.origMaterial) return;
+          if (isTarget) {
+            if (state.xrayMode && xrayMeshes.includes(obj)) {
+              obj.material = matXrayShell;
+            } else {
+              obj.material = obj.userData.origMaterial;
+            }
+          } else {
+            obj.material = obj.userData.ghostMaterial;
+          }
+        });
+      }
+    }
+
+    function selectPart(partKey) {
+      state.selectedPart = partKey;
+
+      document.querySelectorAll('.part-chip').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.part === partKey);
+      });
+      document.querySelectorAll('.callout-badge').forEach((badge) => {
+        badge.classList.toggle('selected', badge.dataset.part === partKey);
+      });
+
+      if (partKey !== 'all' && parts[partKey]) {
+        const m = parts[partKey];
+        document.getElementById('info-badge').textContent = `${m.code} · SUB-ASSEMBLY INSPECTION`;
+        document.getElementById('info-title').textContent = m.name;
+        document.getElementById('info-spec').textContent = m.spec;
+        document.getElementById('info-desc').textContent = m.desc;
+      } else {
+        document.getElementById('info-badge').textContent = 'EDG OVERVIEW · 7 SUB-ASSEMBLIES';
+        document.getElementById('info-title').textContent = 'Self-Contained Emergency Power Plant & Dual Starting Redundancy';
+        document.getElementById('info-spec').textContent = '440 V · 60 Hz · 4-Pole · 1800 RPM';
+        document.getElementById('info-desc').textContent = 'Located above the uppermost continuous deck, this self-contained V12 genset features a skid-mounted radiator (requiring zero seawater pumps), an integral 24-hour fuel belly tank, a 48°C jacket-water pre-heater, and dual independent 24 V DC electric + 210 bar hydraulic accumulator starters for <10s blackout pickup.';
+      }
+
+      applyMaterialIsolationAndXray();
+    }
+
+    /* =====================================================================
+       5. DIVIDED LEFT & RIGHT CALLOUT COLUMNS WITH LONG SVG LEADER LINES
+       ===================================================================== */
+    const calloutDefs = [
+      // Left Column (RD, TE, EN, SK at LEFT_X = 24px)
+      { key: 'radiator_fan',        code: 'RD', title: 'Tropical Radiator & Fan', side: 'left' },
+      { key: 'turbo_exhaust',       code: 'TE', title: 'Twin Turbos & Exhaust',   side: 'left' },
+      { key: 'diesel_v12_engine',   code: 'EN', title: '1800 RPM V12 Engine',     side: 'left' },
+      { key: 'edg_skid_tank',       code: 'SK', title: '24h Belly Tank Skid',     side: 'left' },
+      // Right Column (CP, AL, ST at RIGHT_X = window.innerWidth - 204px)
+      { key: 'auto_start_panel',    code: 'CP', title: '<10s Auto-Start Panel',   side: 'right' },
+      { key: 'brushless_alternator',code: 'AL', title: '440V 750kVA Alternator',  side: 'right' },
+      { key: 'dual_starters',       code: 'ST', title: 'Dual SOLAS Starters',     side: 'right' }
+    ];
+
+    const calloutBadgesMap = new Map();
+
+    calloutDefs.forEach((def) => {
+      const badge = document.createElement('div');
+      badge.className = 'callout-badge';
+      badge.dataset.part = def.key;
+      badge.innerHTML = `
+        <div class="flex items-center justify-between gap-1.5">
+          <div class="flex items-center gap-1.5 truncate">
+            <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 mono text-[9px] font-bold">${def.code}</span>
+            <span class="text-[11px] font-semibold text-slate-800 truncate">${def.title}</span>
+          </div>
+          <span class="text-slate-400 text-[10px]">↗</span>
+        </div>
+      `;
+      badge.addEventListener('click', () => {
+        selectPart(state.selectedPart === def.key ? 'all' : def.key);
+      });
+      badgesLayer.appendChild(badge);
+
+      const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      polyline.setAttribute('fill', 'none');
+      polyline.setAttribute('stroke', '#94a3b8');
+      polyline.setAttribute('stroke-width', '1.3');
+      leaderSvg.appendChild(polyline);
+
+      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('r', '3.0');
+      dot.setAttribute('fill', '#ea580c');
+      leaderSvg.appendChild(dot);
+
+      calloutBadgesMap.set(def.key, { def, badge, polyline, dot, y: 0, anchorX: 0, anchorY: 0, visible: true });
+    });
+
+    function updateDividedCallouts() {
+      if (!state.labelsOn) {
+        badgesLayer.style.display = 'none';
+        leaderSvg.style.display = 'none';
+        return;
+      }
+      badgesLayer.style.display = 'block';
+      leaderSvg.style.display = 'block';
+
+      const leftItems = [];
+      const rightItems = [];
+      const tempV = new THREE.Vector3();
+
+      calloutDefs.forEach((def) => {
+        const item = calloutBadgesMap.get(def.key);
+        const p = parts[def.key];
+        tempV.copy(p.anchor).addScaledVector(p.explodeVec, state.explode);
+        tempV.project(camera);
+
+        if (tempV.z > 1.0) {
+          item.visible = false;
+          item.badge.style.display = 'none';
+          item.polyline.style.display = 'none';
+          item.dot.style.display = 'none';
+          return;
+        }
+
+        item.visible = true;
+        item.anchorX = (tempV.x * 0.5 + 0.5) * window.innerWidth;
+        item.anchorY = (-(tempV.y * 0.5) + 0.5) * window.innerHeight;
+        item.y = item.anchorY;
+
+        if (def.side === 'left') leftItems.push(item);
+        else rightItems.push(item);
+      });
+
+      function resolveCollision(arr) {
+        if (arr.length === 0) return;
+        arr.sort((a, b) => a.y - b.y);
+        const minY = 235;
+        const maxY = window.innerHeight - 135;
+        const MIN_GAP = 42;
+
+        arr[0].y = Math.max(minY, arr[0].y);
+        for (let i = 1; i < arr.length; i++) {
+          if (arr[i].y - arr[i - 1].y < MIN_GAP) {
+            arr[i].y = arr[i - 1].y + MIN_GAP;
+          }
+        }
+        const last = arr[arr.length - 1];
+        if (last.y > maxY) {
+          last.y = maxY;
+          for (let i = arr.length - 2; i >= 0; i--) {
+            if (arr[i + 1].y - arr[i].y < MIN_GAP) {
+              arr[i].y = Math.max(minY, arr[i + 1].y - MIN_GAP);
+            }
+          }
+        }
+      }
+
+      resolveCollision(leftItems);
+      resolveCollision(rightItems);
+
+      const LEFT_X = 24;
+      const RIGHT_X = window.innerWidth - 204;
+
+      calloutDefs.forEach((def) => {
+        const item = calloutBadgesMap.get(def.key);
+        if (!item.visible) return;
+
+        const colX = def.side === 'left' ? LEFT_X : RIGHT_X;
+        const badgeEdgeX = def.side === 'left' ? (LEFT_X + 180) : RIGHT_X;
+        const elbowX = def.side === 'left' ? (badgeEdgeX + 18) : (badgeEdgeX - 18);
+
+        item.badge.style.display = 'block';
+        item.badge.style.left = `${colX}px`;
+        item.badge.style.top = `${item.y}px`;
+
+        const isSelected = (state.selectedPart === def.key);
+        item.polyline.style.display = 'block';
+        item.polyline.setAttribute(
+          'points',
+          `${item.anchorX},${item.anchorY} ${elbowX},${item.y} ${badgeEdgeX},${item.y}`
+        );
+        item.polyline.setAttribute('stroke', isSelected ? '#ea580c' : '#94a3b8');
+        item.polyline.setAttribute('stroke-width', isSelected ? '2.0' : '1.3');
+
+        item.dot.style.display = 'block';
+        item.dot.setAttribute('cx', `${item.anchorX}`);
+        item.dot.setAttribute('cy', `${item.anchorY}`);
+      });
+    }
+
+    /* =====================================================================
+       6. UI CONTROLS & BLACKOUT AUTO-START SIMULATION
+       ===================================================================== */
+    document.querySelectorAll('.part-chip').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        selectPart(btn.dataset.part);
+      });
+    });
+
+    const sliderExplode = document.getElementById('slider-explode');
+    function setExplode(pct) {
+      state.targetExplode = pct / 100;
+      sliderExplode.value = pct;
+      document.getElementById('lbl-explode-val').textContent = pct === 0 ? '0% · ASSEMBLED' : `${pct}% · EXPLODED`;
+    }
+    sliderExplode.addEventListener('input', (e) => setExplode(parseFloat(e.target.value)));
+    document.getElementById('btn-exp-0').addEventListener('click', () => setExplode(0));
+    document.getElementById('btn-exp-50').addEventListener('click', () => setExplode(50));
+    document.getElementById('btn-exp-100').addEventListener('click', () => setExplode(100));
+
+    // Engine Speed / Blackout Auto-Start Toggle Button
+    const btnBlackout = document.getElementById('btn-blackout-test');
+    const lblRunBtn = document.getElementById('lbl-run-btn');
+    const dotRunState = document.getElementById('dot-run-state');
+    const lblHeaterState = document.getElementById('lbl-heater-state');
+
+    btnBlackout.addEventListener('click', () => {
+      state.isRunning = !state.isRunning;
+      state.targetRpm = state.isRunning ? 1800.0 : 0.0;
+      if (state.isRunning) {
+        state.startElapsedSec = 0.0;
+        btnBlackout.className = 'w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold tracking-wide shadow transition flex items-center justify-center gap-2';
+        lblRunBtn.textContent = 'RUNNING · 1800 RPM (440V 60Hz)';
+        dotRunState.className = 'w-2.5 h-2.5 rounded-full bg-emerald-200 animate-ping';
+        lblHeaterState.textContent = 'CUT-OUT (ENGINE HOT)';
+      } else {
+        btnBlackout.className = 'w-full py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold tracking-wide shadow transition flex items-center justify-center gap-2';
+        lblRunBtn.textContent = 'STANDBY (0 RPM · CLICK TO AUTO-START)';
+        dotRunState.className = 'w-2.5 h-2.5 rounded-full bg-amber-200';
+        lblHeaterState.textContent = 'ACTIVE 48.0°C';
+      }
+      updateControllerScreenCanvas(state.isRunning, state.targetRpm, 4.2, state.starterMode);
+    });
+
+    // Dual Starter Source Toggle (24V DC AGM vs 210 bar Hydraulic Accumulator)
+    document.getElementById('btn-starter-source').addEventListener('click', () => {
+      state.starterMode = (state.starterMode + 1) % 2;
+      const lbl = document.getElementById('lbl-starter-btn');
+      const accum = document.getElementById('lbl-accum-bar');
+      if (state.starterMode === 0) {
+        lbl.textContent = '⚡ STARTER 1: 24V DC AGM';
+        accum.textContent = '210 bar READY';
+      } else {
+        lbl.textContent = '🛢 STARTER 2: 210 BAR HYDRAULIC';
+        accum.textContent = '210 bar ENGAGED';
+      }
+      updateControllerScreenCanvas(state.isRunning, state.currentRpm, 4.2, state.starterMode);
+    });
+
+    document.getElementById('btn-reset-view').addEventListener('click', () => {
+      tweenPos.copy(DEFAULT_CAM_POS);
+      tweenTarget.copy(DEFAULT_CAM_TARGET);
+      isCameraTweening = true;
+      setExplode(0);
+      selectPart('all');
+    });
+
+    const btnAutoRotate = document.getElementById('btn-auto-rotate');
+    btnAutoRotate.addEventListener('click', () => {
+      state.autoRotate = !state.autoRotate;
+      controls.autoRotate = state.autoRotate;
+      controls.autoRotateSpeed = 1.3;
+      btnAutoRotate.classList.toggle('active', state.autoRotate);
+    });
+
+    const btnToggleLabels = document.getElementById('btn-toggle-labels');
+    btnToggleLabels.addEventListener('click', () => {
+      state.labelsOn = !state.labelsOn;
+      btnToggleLabels.classList.toggle('active', state.labelsOn);
+    });
+
+    const btnToggleXray = document.getElementById('btn-toggle-xray');
+    btnToggleXray.addEventListener('click', () => {
+      state.xrayMode = !state.xrayMode;
+      btnToggleXray.classList.toggle('active', state.xrayMode);
+      applyMaterialIsolationAndXray();
+    });
+
+    // 3D Raycaster Click to Isolate Sub-Assembly
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    let pointerDownPos = { x: 0, y: 0 };
+
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      pointerDownPos = { x: e.clientX, y: e.clientY };
+    });
+    renderer.domElement.addEventListener('pointerup', (e) => {
+      if (Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y) > 5) return;
+      pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const allMeshes = [];
+      for (const k in parts) {
+        parts[k].group.traverse((o) => { if (o.isMesh) allMeshes.push(o); });
+      }
+      const hits = raycaster.intersectObjects(allMeshes, false);
+      if (hits.length > 0) {
+        const hitKey = hits[0].object.userData.partKey;
+        if (hitKey) {
+          selectPart(state.selectedPart === hitKey ? 'all' : hitKey);
+        }
+      }
+    });
+
+    /* =====================================================================
+       7. MAIN ANIMATION LOOP & CONCENTRIC 1800 RPM KINEMATICS
+       ===================================================================== */
+    let lastTime = performance.now();
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+      state.time += dt;
+
+      // Smooth Explode & RPM Ramp (<10s SOLAS Blackout Pickup)
+      state.explode += (state.targetExplode - state.explode) * 0.12;
+      state.currentRpm += (state.targetRpm - state.currentRpm) * Math.min(1.0, dt * 3.2);
+
+      if (state.isRunning && state.startElapsedSec < 4.2) {
+        state.startElapsedSec = Math.min(4.2, state.startElapsedSec + dt * 1.8);
+      }
+
+      // Apply Explode Vectors & Dashed Guide Lines
+      for (const key in parts) {
+        const p = parts[key];
+        p.group.position.copy(p.explodeVec).multiplyScalar(state.explode);
+      }
+
+      explodeLines.forEach((g) => {
+        if (state.explode > 0.02) {
+          const arr = g.line.geometry.attributes.position.array;
+          arr[0] = g.base.x;
+          arr[1] = g.base.y;
+          arr[2] = g.base.z;
+          arr[3] = g.base.x + g.vec.x * state.explode;
+          arr[4] = g.base.y + g.vec.y * state.explode;
+          arr[5] = g.base.z + g.vec.z * state.explode;
+          g.line.geometry.attributes.position.needsUpdate = true;
+          g.line.computeLineDistances();
+          g.line.material.opacity = Math.min(0.65, state.explode * 0.85);
+        } else {
+          g.line.material.opacity = 0.0;
+        }
+      });
+
+      // Concentric Rotations along X-Axis (Zero Wobble!)
+      const speedNorm = state.currentRpm / 1800.0;
+      const shaftOmegaVis = speedNorm * 18.0;
+
+      if (radiatorFanRotor) {
+        radiatorFanRotor.rotation.x += shaftOmegaVis * dt;
+      }
+      if (crankPulleyRotor) {
+        crankPulleyRotor.rotation.x += shaftOmegaVis * dt;
+      }
+      if (chargingAltPulleyRotor) {
+        chargingAltPulleyRotor.rotation.x += shaftOmegaVis * 2.4 * dt;
+      }
+      if (alternatorRotorGroup) {
+        alternatorRotorGroup.rotation.x += shaftOmegaVis * dt;
+      }
+      if (turboImpellerPort && turboImpellerStbd) {
+        turboImpellerPort.rotation.x += shaftOmegaVis * 3.5 * dt;
+        turboImpellerStbd.rotation.x += shaftOmegaVis * 3.5 * dt;
+      }
+
+      // Live Telemetry Readouts Update
+      const freqHz = (state.currentRpm / 1800.0) * 60.0;
+      const voltV = Math.round((state.currentRpm / 1800.0) * 440.0);
+      const powerKw = Math.round(Math.pow(state.currentRpm / 1800.0, 2) * 600.0);
+      const jacketTemp = 48.0 + (state.currentRpm / 1800.0) * 36.0;
+
+      document.getElementById('tel-rpm').textContent = `${Math.round(state.currentRpm)} · ${freqHz.toFixed(0)}Hz`;
+      document.getElementById('tel-volt').textContent = `${voltV}V · ${powerKw}kW`;
+      document.getElementById('tel-temp').textContent = `${jacketTemp.toFixed(1)} °C`;
+      document.getElementById('tel-start').textContent = state.isRunning ? `${state.startElapsedSec.toFixed(1)}s < 10s` : 'STANDBY';
+
+      // Camera Tweening
+      if (isCameraTweening) {
+        camera.position.lerp(tweenPos, 0.10);
+        controls.target.lerp(tweenTarget, 0.10);
+        if (camera.position.distanceTo(tweenPos) < 0.03) {
+          isCameraTweening = false;
+        }
+      }
+      controls.update();
+
+      updateDividedCallouts();
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

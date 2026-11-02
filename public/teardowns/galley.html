@@ -1,0 +1,1751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>440 V / 220 V Marine Galley Distribution Switchboard, Cooking Island &amp; SOLAS Shunt-Trip — 3D CAD Digital Twin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #f2f4f7;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #0f172a;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    #canvas-container {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+    }
+    .hud-glass {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(203, 213, 225, 0.92);
+      box-shadow: 0 10px 30px -8px rgba(15, 23, 42, 0.08), 0 4px 10px -2px rgba(15, 23, 42, 0.04);
+    }
+    .toolbar-btn {
+      transition: all 0.16s ease;
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+    .toolbar-btn:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+      color: #0f172a;
+    }
+    .toolbar-btn.active {
+      background: #fff7ed;
+      border-color: #ea580c;
+      color: #9a3412;
+      font-weight: 600;
+    }
+    .part-chip {
+      transition: all 0.15s ease;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: #475569;
+    }
+    .part-chip:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      color: #0f172a;
+    }
+    .part-chip.active {
+      background: #ea580c;
+      border-color: #c2410c;
+      color: #ffffff;
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #ea580c;
+      border: 2px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.3);
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+    .callout-badge {
+      position: absolute;
+      width: 180px;
+      pointer-events: auto;
+      transform: translateY(-50%);
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid rgba(203, 213, 225, 0.95);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+      border-radius: 10px;
+      padding: 6px 10px;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .callout-badge:hover {
+      border-color: #94a3b8;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
+    }
+    .callout-badge.selected {
+      background: #fff7ed;
+      border-color: #ea580c;
+      box-shadow: 0 6px 18px rgba(234, 88, 12, 0.18);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 3D WebGL Viewport -->
+  <div id="canvas-container"></div>
+
+  <!-- Divided Left/Right Callout Badges & SVG Leader Lines Overlay -->
+  <div id="callouts-overlay" class="fixed inset-0 pointer-events-none z-10 overflow-hidden">
+    <svg id="leader-svg" class="w-full h-full block"></svg>
+    <div id="badges-layer" class="absolute inset-0 pointer-events-none"></div>
+  </div>
+
+  <!-- Top-Left Header & Sub-Assembly Isolation Bar -->
+  <header class="fixed top-4 left-4 z-20 max-w-xl pointer-events-auto flex flex-col gap-2">
+    <div class="hud-glass rounded-2xl px-4 py-3">
+      <div class="flex items-center gap-2.5">
+        <span class="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 mono text-[11px] font-bold">SOLAS II-2 REG 9.2</span>
+        <h1 class="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+          440 V / 220 V Marine Galley Switchboard &amp; Cooking Island
+        </h1>
+      </div>
+      <p class="text-[11px] text-slate-500 mt-0.5 mono">
+        IEC 60092-307 · 250 A MCCB · 316 Stainless Range, Ovens &amp; Fryers · Outdoor E-Stop Shunt Trip
+      </p>
+
+      <!-- Sub-Assembly Quick Filter Chips -->
+      <div class="flex flex-wrap items-center gap-1.5 mt-2.5 pt-2.5 border-t border-slate-200/80" id="part-chips-bar">
+        <button class="part-chip active px-2.5 py-1 rounded-lg text-[11px] font-semibold" data-part="all">Show All</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="galley_switchboard">GS · Switchboard</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="mccb_busbar_bank">MB · MCCB &amp; Busbars</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="shunt_trip_relay">SR · Shunt-Trip Relay</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="cooking_island">CI · Cooking Island</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="exhaust_canopy">EH · Exhaust Hood</button>
+        <button class="part-chip px-2 py-1 rounded-lg text-[11px] font-medium mono" data-part="outdoor_shunt_station">ES · Outdoor E-Stop</button>
+      </div>
+    </div>
+
+    <!-- Active Sub-Assembly Inspector Card -->
+    <div id="part-info-card" class="hud-glass rounded-xl px-3.5 py-2.5 text-xs max-w-md">
+      <div class="flex items-center justify-between">
+        <span id="info-badge" class="mono text-[10px] font-bold uppercase text-orange-700">GALLEY SYSTEM OVERVIEW · 6 SUB-ASSEMBLIES</span>
+        <span id="info-spec" class="mono text-[10px] text-slate-400">440 V 3P / 220 V 1P · 135 kW</span>
+      </div>
+      <div id="info-title" class="font-semibold text-slate-900 mt-0.5">Marine Galley Power Distribution &amp; SOLAS Fire Interlock</div>
+      <p id="info-desc" class="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+        IP44 primary galley switchboard feeding a 316 stainless-steel marine cooking island (6 cast-iron boiling plates with storm fiddle rails, twin convection roasting ovens, and twin 230°C deep fat fryers) protected by an outdoor SOLAS II-2 Reg 9.2 emergency shunt-trip station and quick-closing hood fire damper.
+      </p>
+    </div>
+  </header>
+
+  <!-- Top-Right Pill Toolbar -->
+  <nav class="fixed top-4 right-4 z-20 pointer-events-auto flex flex-wrap items-center gap-1.5">
+    <button id="btn-reset-view" class="toolbar-btn px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm">
+      Reset View
+    </button>
+    <button id="btn-auto-rotate" class="toolbar-btn px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm">
+      Auto-Rotate
+    </button>
+    <button id="btn-toggle-labels" class="toolbar-btn active px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm">
+      Toggle Labels
+    </button>
+    <button id="btn-toggle-xray" class="toolbar-btn active px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm">
+      X-Ray / Solid Doors
+    </button>
+  </nav>
+
+  <!-- Bottom Dock Control Bar (Explode Slider, Galley Heat Load & SOLAS Emergency Shunt-Trip Test) -->
+  <footer class="fixed bottom-4 left-1/2 -translate-x-1/2 z-20 w-[95vw] max-w-4xl hud-glass rounded-2xl px-5 py-3.5 pointer-events-auto">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+
+      <!-- 1. Explode Assembly Slider (0% to 100%) -->
+      <div class="md:col-span-4 flex flex-col gap-1">
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-semibold text-slate-700">Explode Assembly</span>
+          <span id="lbl-explode-val" class="mono text-[11px] font-bold text-orange-700">0% · ASSEMBLED</span>
+        </div>
+        <input id="slider-explode" type="range" min="0" max="100" value="0" step="1" />
+        <div class="flex justify-between text-[9px] mono text-slate-400">
+          <button id="btn-exp-0" class="hover:text-slate-800">0% Assembled</button>
+          <button id="btn-exp-50" class="hover:text-slate-800">50% Inspect</button>
+          <button id="btn-exp-100" class="hover:text-slate-800">100% Teardown</button>
+        </div>
+      </div>
+
+      <!-- 2. Galley Cooking Load / Hotplate Temperature Slider -->
+      <div class="md:col-span-3 flex flex-col gap-1">
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-semibold text-slate-700">Galley Heat Load</span>
+          <span id="lbl-heat-val" class="mono text-[11px] font-bold text-orange-600">85% · 115 kW</span>
+        </div>
+        <input id="slider-heat" type="range" min="15" max="100" value="85" step="5" />
+        <div class="flex justify-between text-[9px] mono text-slate-400">
+          <button id="btn-heat-25" class="hover:text-slate-800">25% Simmer</button>
+          <button id="btn-heat-60" class="hover:text-slate-800">60% Service</button>
+          <button id="btn-heat-100" class="hover:text-slate-800">100% Peak</button>
+        </div>
+      </div>
+
+      <!-- 3. SOLAS II-2 Reg 9.2 Outdoor Emergency Shunt-Trip Test Button -->
+      <div class="md:col-span-5 flex flex-col gap-1.5">
+        <button id="btn-shunt-trip" class="w-full py-2 px-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold tracking-wide shadow transition flex items-center justify-center gap-2">
+          <span id="shunt-btn-dot" class="w-2.5 h-2.5 rounded-full bg-yellow-300 animate-ping"></span>
+          <span id="shunt-btn-text">TEST SOLAS EMERGENCY SHUNT TRIP</span>
+        </button>
+        <div class="flex items-center justify-between px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200/90 text-[10px] mono">
+          <span class="text-slate-500">INTERLOCK STATUS:</span>
+          <span id="interlock-status-badge" class="font-bold text-emerald-700">440V LIVE · HOOD DAMPER OPEN</span>
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- Three.js ES Module Application -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+    /* =====================================================================
+       1. SCENE, RENDERER, CAMERA & SMOOTH CLAMPED WHEEL ZOOM (MANDATORY)
+       ===================================================================== */
+    const container = document.getElementById('canvas-container');
+    const leaderSvg = document.getElementById('leader-svg');
+    const badgesLayer = document.getElementById('badges-layer');
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf2f4f7);
+
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environmentIntensity = 0.78;
+
+    const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
+    const DEFAULT_CAM_POS = new THREE.Vector3(-3.2, 2.1, 4.0);
+    const DEFAULT_CAM_TARGET = new THREE.Vector3(0, 0.95, 0);
+    camera.position.copy(DEFAULT_CAM_POS);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.copy(DEFAULT_CAM_TARGET);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.enablePan = true;
+    controls.enableZoom = false; // Mandatory custom non-jumping wheel handler below
+    controls.minDistance = 1.8;
+    controls.maxDistance = 11.5;
+    controls.maxPolarAngle = Math.PI * 0.495;
+    controls.update();
+
+    let isCameraTweening = false;
+    const tweenPos = DEFAULT_CAM_POS.clone();
+    const tweenTarget = DEFAULT_CAM_TARGET.clone();
+
+    controls.addEventListener('start', () => {
+      isCameraTweening = false;
+    });
+
+    // Smooth Non-Jumping Wheel Zoom (4.2% per notch, clamped between 1.8m and 11.5m)
+    renderer.domElement.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = THREE.MathUtils.clamp(e.deltaY, -100, 100);
+      const zoomFactor = 1 + (delta > 0 ? 0.042 : -0.042) * (Math.abs(delta) / 100);
+      const offset = camera.position.clone().sub(controls.target);
+      const newDist = THREE.MathUtils.clamp(offset.length() * zoomFactor, controls.minDistance, controls.maxDistance);
+      offset.setLength(newDist);
+      camera.position.copy(controls.target).add(offset);
+    }, { passive: false });
+
+    // Studio Lighting & Galley Deck Floor
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xe2e8f0, 1.15);
+    scene.add(hemiLight);
+
+    const keyLight = new THREE.DirectionalLight(0xfffdf9, 1.25);
+    keyLight.position.set(-4.5, 8.5, 6.0);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.width = 2048;
+    keyLight.shadow.mapSize.height = 2048;
+    keyLight.shadow.bias = -0.0003;
+    keyLight.shadow.camera.near = 0.5;
+    keyLight.shadow.camera.far = 25;
+    keyLight.shadow.camera.left = -4.5;
+    keyLight.shadow.camera.right = 4.5;
+    keyLight.shadow.camera.top = 4.5;
+    keyLight.shadow.camera.bottom = -4.5;
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0xf1f5f9, 0.90);
+    fillLight.position.set(6.0, 5.0, -5.0);
+    scene.add(fillLight);
+
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.55);
+    rimLight.position.set(0.0, 4.0, 7.0);
+    scene.add(rimLight);
+
+    // Two-Tier Architectural Studio Plinth & Subtle Grid
+    const plinthGroup = new THREE.Group();
+    const plinthTop = new THREE.Mesh(
+      new THREE.BoxGeometry(4.6, 0.06, 2.4),
+      new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.85, metalness: 0.05 })
+    );
+    plinthTop.position.set(-0.25, -0.03, 0.05);
+    plinthTop.receiveShadow = true;
+    plinthGroup.add(plinthTop);
+
+    const plinthCurb = new THREE.Mesh(
+      new THREE.BoxGeometry(4.76, 0.06, 2.56),
+      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.80, metalness: 0.08 })
+    );
+    plinthCurb.position.set(-0.25, -0.07, 0.05);
+    plinthCurb.receiveShadow = true;
+    plinthGroup.add(plinthCurb);
+    scene.add(plinthGroup);
+
+    const gridHelper = new THREE.GridHelper(16, 32, 0xdde2e8, 0xe8ecf0);
+    gridHelper.position.y = -0.095;
+    scene.add(gridHelper);
+
+    const shadowPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(24, 24),
+      new THREE.ShadowMaterial({ opacity: 0.14 })
+    );
+    shadowPlane.rotation.x = -Math.PI / 2;
+    shadowPlane.position.y = 0.001;
+    shadowPlane.receiveShadow = true;
+    scene.add(shadowPlane);
+
+    /* =====================================================================
+       2. SOFT GRAYISH INDUSTRIAL CAD MATERIAL PALETTE (`MeshStandardMaterial`)
+       ===================================================================== */
+    function createBrushedCadBumpTexture() {
+      const c = document.createElement('canvas');
+      c.width = 128;
+      c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#808080';
+      ctx.fillRect(0, 0, 128, 128);
+      for (let i = 0; i < 1200; i++) {
+        const v = 120 + Math.floor(Math.random() * 24);
+        ctx.fillStyle = `rgb(${v},${v},${v})`;
+        ctx.fillRect(Math.random() * 128, Math.random() * 128, 3, 1);
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(6, 6);
+      return tex;
+    }
+    const cadBumpTex = createBrushedCadBumpTexture();
+
+    // Soft Light-Balanced Grayish CAD Materials
+    const matStainless316 = new THREE.MeshStandardMaterial({
+      color: 0xdce3ea,
+      roughness: 0.34,
+      metalness: 0.28,
+      bumpMap: cadBumpTex,
+      bumpScale: 0.001,
+      side: THREE.DoubleSide
+    });
+    const matStainlessDark = new THREE.MeshStandardMaterial({
+      color: 0xc5d0dc,
+      roughness: 0.38,
+      metalness: 0.24,
+      bumpMap: cadBumpTex,
+      bumpScale: 0.0012,
+      side: THREE.DoubleSide
+    });
+    const matSwitchboardLight = new THREE.MeshStandardMaterial({
+      color: 0xcfd8e2,
+      roughness: 0.40,
+      metalness: 0.18,
+      bumpMap: cadBumpTex,
+      bumpScale: 0.0012,
+      side: THREE.DoubleSide
+    });
+    const matSwitchboardSlate = new THREE.MeshStandardMaterial({
+      color: 0x9aa8b6,
+      roughness: 0.42,
+      metalness: 0.22,
+      bumpMap: cadBumpTex,
+      bumpScale: 0.0014,
+      side: THREE.DoubleSide
+    });
+    const matAccentSlate = new THREE.MeshStandardMaterial({
+      color: 0x8494a4,
+      roughness: 0.44,
+      metalness: 0.24,
+      side: THREE.DoubleSide
+    });
+    const matCopperBus = new THREE.MeshStandardMaterial({
+      color: 0xd97742,
+      roughness: 0.26,
+      metalness: 0.82
+    });
+    const matSafetyYellow = new THREE.MeshStandardMaterial({
+      color: 0xfacc15,
+      roughness: 0.34,
+      metalness: 0.14
+    });
+    const matEmergencyRed = new THREE.MeshStandardMaterial({
+      color: 0xdc2626,
+      roughness: 0.34,
+      metalness: 0.14
+    });
+    const matBrassFitting = new THREE.MeshStandardMaterial({
+      color: 0xd8b25c,
+      roughness: 0.28,
+      metalness: 0.78
+    });
+    const matInsulatorMaroon = new THREE.MeshStandardMaterial({
+      color: 0xa6534c,
+      roughness: 0.36,
+      metalness: 0.10
+    });
+    const matPhaseL1 = new THREE.MeshStandardMaterial({
+      color: 0xd9534f,
+      roughness: 0.34,
+      metalness: 0.20
+    });
+    const matPhaseL2 = new THREE.MeshStandardMaterial({
+      color: 0xe6a23c,
+      roughness: 0.34,
+      metalness: 0.20
+    });
+    const matPhaseL3 = new THREE.MeshStandardMaterial({
+      color: 0x4a89dc,
+      roughness: 0.34,
+      metalness: 0.20
+    });
+    const matWhitePlaque = new THREE.MeshStandardMaterial({
+      color: 0xf8fafc,
+      roughness: 0.25,
+      metalness: 0.08
+    });
+    const matClearGlass = new THREE.MeshPhysicalMaterial({
+      color: 0xd8ecff,
+      roughness: 0.10,
+      metalness: 0.05,
+      transparent: true,
+      opacity: 0.26,
+      transmission: 0.78,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+    const matFryerOil = new THREE.MeshPhysicalMaterial({
+      color: 0xf59e0b,
+      roughness: 0.14,
+      metalness: 0.05,
+      transparent: true,
+      opacity: 0.78,
+      transmission: 0.55
+    });
+
+    // Dynamic Canvas Texture for Digital Meter
+    const meterCanvas = document.createElement('canvas');
+    meterCanvas.width = 320;
+    meterCanvas.height = 170;
+    const meterCtx = meterCanvas.getContext('2d');
+    const meterTex = new THREE.CanvasTexture(meterCanvas);
+    meterTex.colorSpace = THREE.SRGBColorSpace;
+
+    function updateSwitchboardMeterTexture(isTripped, heatPct) {
+      meterCtx.fillStyle = '#091520';
+      meterCtx.fillRect(0, 0, 320, 170);
+      meterCtx.strokeStyle = isTripped ? '#ef4444' : '#38bdf8';
+      meterCtx.lineWidth = 5;
+      meterCtx.strokeRect(4, 4, 312, 162);
+
+      meterCtx.fillStyle = '#94a3b8';
+      meterCtx.font = 'bold 12px JetBrains Mono, monospace';
+      meterCtx.fillText('GALLEY PRIMARY FEEDER · 440V 3P 60Hz', 16, 26);
+
+      if (isTripped) {
+        meterCtx.fillStyle = '#f87171';
+        meterCtx.font = 'bold 28px JetBrains Mono, monospace';
+        meterCtx.fillText('0.0 V   0.0 A', 16, 68);
+
+        meterCtx.fillStyle = '#dc2626';
+        meterCtx.fillRect(16, 86, 288, 34);
+        meterCtx.fillStyle = '#ffffff';
+        meterCtx.font = 'bold 14px Inter, sans-serif';
+        meterCtx.textAlign = 'center';
+        meterCtx.fillText('SOLAS SHUNT TRIP ACTIVATED', 160, 108);
+        meterCtx.textAlign = 'left';
+      } else {
+        const kw = Math.round(135 * (heatPct / 100));
+        const amps = Math.round((kw * 1000) / (Math.sqrt(3) * 440 * 0.96));
+        meterCtx.fillStyle = '#34d399';
+        meterCtx.font = 'bold 25px JetBrains Mono, monospace';
+        meterCtx.fillText(`440 V   ${amps} A`, 16, 66);
+
+        meterCtx.fillStyle = '#38bdf8';
+        meterCtx.font = 'bold 17px JetBrains Mono, monospace';
+        meterCtx.fillText(`LOAD: ${kw} kW  |  220V: OK`, 16, 98);
+      }
+
+      meterCtx.fillStyle = '#cbd5e1';
+      meterCtx.font = '11px JetBrains Mono, monospace';
+      meterCtx.fillText('OVENS: 440V | FRYERS: 440V | HOOD: INTERLOCK', 16, 148);
+      meterTex.needsUpdate = true;
+    }
+    updateSwitchboardMeterTexture(false, 85);
+
+    // Outdoor Station Legend Plaque Texture
+    function createEstopPlaqueTexture() {
+      const c = document.createElement('canvas');
+      c.width = 512;
+      c.height = 256;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(0, 0, 512, 256);
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 12;
+      ctx.strokeRect(8, 8, 496, 240);
+
+      ctx.fillStyle = '#dc2626';
+      ctx.fillRect(20, 20, 472, 54);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 23px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('SOLAS II-2 REG 9.2 EMERGENCY STOP', 256, 55);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 20px Inter, sans-serif';
+      ctx.fillText('EMERGENCY GALLEY POWER &', 256, 110);
+      ctx.fillText('VENTILATION SHUTDOWN', 256, 138);
+
+      ctx.fillStyle = '#b91c1c';
+      ctx.font = 'bold 16px JetBrains Mono, monospace';
+      ctx.fillText('LOCATION: OUTSIDE GALLEY CORRIDOR', 256, 182);
+      ctx.fillStyle = '#1e293b';
+      ctx.font = '600 14px JetBrains Mono, monospace';
+      ctx.fillText('LATCHING MUSHROOM · TWIST TO RESET', 256, 218);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+    const estopPlaqueTex = createEstopPlaqueTexture();
+
+    /* =====================================================================
+       3. SIX COHESIVE FUNCTIONAL SUB-ASSEMBLIES (`parts` REGISTRY)
+       ===================================================================== */
+    const SWBD_X = -0.85;
+    const ISLAND_X = 0.35;
+    const ESTOP_X = -1.55;
+
+    const parts = {
+      galley_switchboard: {
+        code: 'GS',
+        name: '440V/220V Galley Switchboard',
+        spec: 'IP44 Cubicle · 800×1850×550 mm',
+        desc: 'Marine IP44 drip-proof steel switchboard cubicle with hinged front cutout viewing door, digital 440 V / 3-Phase power meter, GALLEY POWER LIVE / SHUNT TRIPPED lamps, and bottom armored cable gland plate.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(-0.55, 0, -0.25),
+        anchor: new THREE.Vector3(-0.85, 1.55, 0.28)
+      },
+      mccb_busbar_bank: {
+        code: 'MB',
+        name: '3-Phase Busbars & MCCB Bank',
+        spec: '250 A Main MCCB · 6 Branch Feeders',
+        desc: '3-phase electrolytic copper busbars (L1, L2, L3) with a 250 A Incoming MCCB and 6 outgoing thermal-magnetic branch MCCBs feeding the Roasting Ovens, Deep Fat Fryers, Range Hotplates, and 220 V Appliances.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(-0.55, 0.25, 0.55),
+        anchor: new THREE.Vector3(-0.85, 0.95, 0.12)
+      },
+      shunt_trip_relay: {
+        code: 'SR',
+        name: 'SOLAS 24V DC Shunt-Trip Relay',
+        spec: 'Solenoid Striker · Hood Fan Interlock',
+        desc: 'Electromagnetic 24 V DC shunt-trip solenoid coil, mechanical trip striker bar coupled to the 250 A main MCCB toggle, and auxiliary fire-alarm interlock relay that simultaneously trips cooking power and hood fans.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(-0.25, 0.48, 0.68),
+        anchor: new THREE.Vector3(-0.72, 1.22, 0.14)
+      },
+      cooking_island: {
+        code: 'CI',
+        name: 'Stainless Marine Cooking Island',
+        spec: '6 Cast Hotplates · 2 Ovens · 2 Fryers',
+        desc: 'Heavy 316 stainless-steel marine galley cooking island featuring 6 square cast-iron boiling plates with storm fiddle rails (sea bars), twin lower convection roasting ovens, and twin 230°C deep fat fryers.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(0.45, -0.15, 0),
+        anchor: new THREE.Vector3(0.35, 0.72, 0.42)
+      },
+      exhaust_canopy: {
+        code: 'EH',
+        name: 'Exhaust Hood & Fire Damper',
+        spec: 'Labyrinth Baffles · SOLAS Fire Damper',
+        desc: 'Brushed 316 stainless exhaust canopy hood with removable inclined labyrinth grease baffle filters, vapor-proof LED work lights, wet-chemical fire nozzles, and top quick-closing SOLAS fire damper blade.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(0.45, 0.65, 0),
+        anchor: new THREE.Vector3(0.35, 1.72, 0.42)
+      },
+      outdoor_shunt_station: {
+        code: 'ES',
+        name: 'Outdoor Emergency Shunt-Trip',
+        spec: 'SOLAS II-2 Reg 9.2 · Outside Galley',
+        desc: 'High-visibility safety-yellow weatherproof station mounted outside the galley corridor featuring a spring-loaded transparent protective flip-up safety flap and a 40 mm red latching mushroom E-Stop pushbutton.',
+        group: new THREE.Group(),
+        explodeVec: new THREE.Vector3(-1.05, 0.15, 0.65),
+        anchor: new THREE.Vector3(-1.55, 1.12, 0.38)
+      }
+    };
+
+    for (const key in parts) {
+      scene.add(parts[key].group);
+    }
+
+    // Dynamic Kinematic & Thermal References
+    const hotplateElementMeshes = [];
+    const ovenHeaterMeshes = [];
+    const hoodWorkLightMeshes = [];
+    let swbdDoorPivot = null;
+    let mainMccbHandlePivot = null;
+    let shuntStrikerPin = null;
+    let shuntCoilLedMesh = null;
+    let lampLiveMesh = null;
+    let lampTrippedMesh = null;
+    let fireDamperBladePivot = null;
+    let damperCrankLink = null;
+    let exhaustFanRotor = null;
+    let outdoorMushroomPlunger = null;
+    let outdoorSafetyFlapPivot = null;
+
+    /* =====================================================================
+       3.1 BUILD `galley_switchboard` — 440 V / 220 V GALLEY SWITCHBOARD
+       ===================================================================== */
+    function buildGalleySwitchboard() {
+      const grp = parts.galley_switchboard.group;
+      const w = 0.80, h = 1.85, d = 0.55;
+      const cy = 0.985;
+
+      const plinth = new THREE.Mesh(new THREE.BoxGeometry(w + 0.04, 0.06, d + 0.04), matSwitchboardSlate);
+      plinth.position.set(SWBD_X, 0.03, 0);
+      plinth.castShadow = true; plinth.receiveShadow = true;
+      grp.add(plinth);
+
+      [-0.38, 0.38].forEach((px) => {
+        [-0.24, 0.24].forEach((pz) => {
+          const pad = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.016, 0.08), matAccentSlate);
+          pad.position.set(SWBD_X + px, 0.008, pz);
+          grp.add(pad);
+
+          const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.035, 6), matBrassFitting);
+          bolt.position.set(SWBD_X + px, 0.025, pz);
+          grp.add(bolt);
+        });
+      });
+
+      [-w / 2, w / 2].forEach((px) => {
+        [-d / 2, d / 2].forEach((pz) => {
+          const post = new THREE.Mesh(new THREE.BoxGeometry(0.032, h, 0.032), matSwitchboardSlate);
+          post.position.set(SWBD_X + px, cy, pz);
+          post.castShadow = true;
+          grp.add(post);
+
+          const eye = new THREE.Mesh(new THREE.TorusGeometry(0.022, 0.006, 10, 20), matStainless316);
+          eye.position.set(SWBD_X + px, 1.955, pz);
+          grp.add(eye);
+        });
+      });
+
+      const rearWall = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.02), matSwitchboardLight);
+      rearWall.position.set(SWBD_X, cy, -d / 2 + 0.01);
+      rearWall.castShadow = true;
+      grp.add(rearWall);
+
+      const bottomPlate = new THREE.Mesh(new THREE.BoxGeometry(w, 0.02, d), matSwitchboardSlate);
+      bottomPlate.position.set(SWBD_X, 0.07, 0);
+      grp.add(bottomPlate);
+
+      const topPlate = new THREE.Mesh(new THREE.BoxGeometry(w + 0.06, 0.035, d + 0.08), matSwitchboardSlate);
+      topPlate.position.set(SWBD_X, 1.92, 0.02);
+      topPlate.rotation.x = 0.04;
+      topPlate.castShadow = true;
+      grp.add(topPlate);
+
+      [-w / 2 + 0.01, w / 2 - 0.01].forEach((dx) => {
+        const sideWall = new THREE.Mesh(new THREE.BoxGeometry(0.02, h, d), matSwitchboardLight);
+        sideWall.position.set(SWBD_X + dx, cy, 0);
+        sideWall.castShadow = true;
+        grp.add(sideWall);
+
+        for (let l = 0; l < 6; l++) {
+          const slat = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.012, 0.28), matSwitchboardSlate);
+          slat.position.set(SWBD_X + dx, 1.48 - l * 0.03, 0);
+          slat.rotation.z = dx > 0 ? -0.3 : 0.3;
+          grp.add(slat);
+        }
+      });
+
+      const upperHeader = new THREE.Mesh(new THREE.BoxGeometry(w - 0.02, 0.34, 0.025), matSwitchboardSlate);
+      upperHeader.position.set(SWBD_X, 1.73, d / 2 - 0.01);
+      grp.add(upperHeader);
+
+      const namePlaque = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.042, 0.008), matWhitePlaque);
+      namePlaque.position.set(SWBD_X, 1.87, d / 2 + 0.004);
+      grp.add(namePlaque);
+
+      const meterBezel = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.20, 0.012), matAccentSlate);
+      meterBezel.position.set(SWBD_X - 0.17, 1.72, d / 2 + 0.002);
+      grp.add(meterBezel);
+
+      const meterScreen = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.34, 0.18),
+        new THREE.MeshBasicMaterial({ map: meterTex })
+      );
+      meterScreen.position.set(SWBD_X - 0.17, 1.72, d / 2 + 0.009);
+      grp.add(meterScreen);
+
+      [0.06, 0.15, 0.24].forEach((ax) => {
+        const ammeterFrame = new THREE.Mesh(new THREE.BoxGeometry(0.072, 0.072, 0.012), matAccentSlate);
+        ammeterFrame.position.set(SWBD_X + ax, 1.78, d / 2 + 0.004);
+        grp.add(ammeterFrame);
+
+        const ammeterDial = new THREE.Mesh(new THREE.BoxGeometry(0.058, 0.058, 0.006), matWhitePlaque);
+        ammeterDial.position.set(SWBD_X + ax, 1.78, d / 2 + 0.009);
+        grp.add(ammeterDial);
+
+        const needle = new THREE.Mesh(new THREE.BoxGeometry(0.003, 0.036, 0.004), matEmergencyRed);
+        needle.position.set(SWBD_X + ax - 0.008, 1.775, d / 2 + 0.013);
+        needle.rotation.z = -0.38;
+        grp.add(needle);
+      });
+
+      const lampGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.020, 20);
+      lampGeo.rotateX(Math.PI / 2);
+
+      lampLiveMesh = new THREE.Mesh(lampGeo, new THREE.MeshBasicMaterial({ color: 0x10b981 }));
+      lampLiveMesh.position.set(SWBD_X + 0.07, 1.65, d / 2 + 0.008);
+      grp.add(lampLiveMesh);
+
+      lampTrippedMesh = new THREE.Mesh(lampGeo, new THREE.MeshBasicMaterial({ color: 0x94a3b8 }));
+      lampTrippedMesh.position.set(SWBD_X + 0.15, 1.65, d / 2 + 0.008);
+      grp.add(lampTrippedMesh);
+
+      const selectorEscutcheon = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.024, 0.012, 20), matSafetyYellow);
+      selectorEscutcheon.rotation.x = Math.PI / 2;
+      selectorEscutcheon.position.set(SWBD_X + 0.25, 1.65, d / 2 + 0.006);
+      grp.add(selectorEscutcheon);
+
+      const selectorKnob = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.038, 0.020), matEmergencyRed);
+      selectorKnob.position.set(SWBD_X + 0.25, 1.65, d / 2 + 0.016);
+      selectorKnob.rotation.z = -0.45;
+      grp.add(selectorKnob);
+
+      swbdDoorPivot = new THREE.Group();
+      swbdDoorPivot.position.set(SWBD_X - w / 2 + 0.015, 0.81, d / 2);
+      grp.add(swbdDoorPivot);
+
+      const doorW = 0.77, doorH = 1.48, doorD = 0.022;
+      const doorShape = new THREE.Shape();
+      doorShape.moveTo(0, -doorH / 2);
+      doorShape.lineTo(doorW, -doorH / 2);
+      doorShape.lineTo(doorW, doorH / 2);
+      doorShape.lineTo(0, doorH / 2);
+      doorShape.closePath();
+
+      const hole = new THREE.Path();
+      hole.moveTo(0.15, -0.44);
+      hole.lineTo(0.62, -0.44);
+      hole.lineTo(0.62, 0.48);
+      hole.lineTo(0.15, 0.48);
+      hole.closePath();
+      doorShape.holes.push(hole);
+
+      const doorGeo = new THREE.ExtrudeGeometry(doorShape, { depth: doorD, bevelEnabled: false });
+      doorGeo.translate(0, 0, -doorD / 2);
+      const doorPanel = new THREE.Mesh(doorGeo, matSwitchboardLight);
+      doorPanel.castShadow = true;
+      swbdDoorPivot.add(doorPanel);
+
+      const bezelShape = new THREE.Shape();
+      bezelShape.moveTo(0.125, -0.465);
+      bezelShape.lineTo(0.645, -0.465);
+      bezelShape.lineTo(0.645, 0.505);
+      bezelShape.lineTo(0.125, 0.505);
+      bezelShape.closePath();
+      bezelShape.holes.push(hole);
+      const bezelGeo = new THREE.ExtrudeGeometry(bezelShape, { depth: 0.030, bevelEnabled: false });
+      bezelGeo.translate(0, 0, -0.015);
+      const doorBezel = new THREE.Mesh(bezelGeo, matSwitchboardSlate);
+      swbdDoorPivot.add(doorBezel);
+
+      const doorGlass = new THREE.Mesh(new THREE.BoxGeometry(0.47, 0.92, 0.006), matClearGlass);
+      doorGlass.position.set(0.385, 0.02, 0);
+      swbdDoorPivot.add(doorGlass);
+
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.16, 16), matStainless316);
+      handle.position.set(0.71, 0, 0.024);
+      swbdDoorPivot.add(handle);
+
+      [-0.52, 0.52].forEach((ly) => {
+        const latch = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.014, 16), matSwitchboardSlate);
+        latch.rotation.x = Math.PI / 2;
+        latch.position.set(0.71, ly, 0.014);
+        swbdDoorPivot.add(latch);
+      });
+
+      const peBar = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.032, 0.010), matCopperBus);
+      peBar.position.set(SWBD_X, 0.14, -0.18);
+      grp.add(peBar);
+
+      for (let g = 0; g < 6; g++) {
+        const gx = SWBD_X - 0.25 + g * 0.10;
+        const gland = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, 0.05, 6), matBrassFitting);
+        gland.position.set(gx, 0.10, -0.05);
+        grp.add(gland);
+      }
+    }
+
+    /* =====================================================================
+       3.2 BUILD `mccb_busbar_bank` — 3-PHASE COPPER BUSBARS & MCCB BANK
+       ===================================================================== */
+    function buildMccbBusbarBank() {
+      const grp = parts.mccb_busbar_bank.group;
+
+      const backplate = new THREE.Mesh(new THREE.BoxGeometry(0.70, 1.36, 0.014), matStainless316);
+      backplate.position.set(SWBD_X, 0.85, -0.14);
+      grp.add(backplate);
+
+      [-0.31, 0.31].forEach((tx) => {
+        const wireDuct = new THREE.Mesh(new THREE.BoxGeometry(0.042, 1.28, 0.055), matSwitchboardSlate);
+        wireDuct.position.set(SWBD_X + tx, 0.85, -0.09);
+        grp.add(wireDuct);
+      });
+
+      const phaseMats = [matPhaseL1, matPhaseL2, matPhaseL3];
+      [-0.14, 0.0, 0.14].forEach((dx, idx) => {
+        const busbar = new THREE.Mesh(new THREE.BoxGeometry(0.038, 1.18, 0.012), matCopperBus);
+        busbar.position.set(SWBD_X + dx, 0.84, -0.06);
+        busbar.castShadow = true;
+        grp.add(busbar);
+
+        const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.044, 0.14, 0.018), phaseMats[idx]);
+        sleeve.position.set(SWBD_X + dx, 1.36, -0.06);
+        grp.add(sleeve);
+
+        [0.34, 0.84, 1.32].forEach((yIns) => {
+          const standoff = new THREE.Mesh(new THREE.CylinderGeometry(0.020, 0.026, 0.065, 16), matInsulatorMaroon);
+          standoff.rotation.x = Math.PI / 2;
+          standoff.position.set(SWBD_X + dx, yIns, -0.10);
+          grp.add(standoff);
+        });
+      });
+
+      const mainMccbBody = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.26, 0.14), matAccentSlate);
+      mainMccbBody.position.set(SWBD_X - 0.05, 1.22, 0.03);
+      mainMccbBody.castShadow = true;
+      grp.add(mainMccbBody);
+
+      [-0.04, 0.04].forEach((bx) => {
+        const fin = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.05, 0.12), matSwitchboardLight);
+        fin.position.set(SWBD_X - 0.05 + bx, 1.37, 0.03);
+        grp.add(fin);
+      });
+
+      const mainEscutcheon = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.012), matSwitchboardLight);
+      mainEscutcheon.position.set(SWBD_X - 0.05, 1.22, 0.102);
+      grp.add(mainEscutcheon);
+
+      mainMccbHandlePivot = new THREE.Group();
+      mainMccbHandlePivot.position.set(SWBD_X - 0.05, 1.22, 0.108);
+      grp.add(mainMccbHandlePivot);
+
+      const toggleLever = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.095, 0.036), matEmergencyRed);
+      toggleLever.position.y = 0.02;
+      mainMccbHandlePivot.add(toggleLever);
+
+      const branchRowsY = [0.88, 0.68, 0.48];
+      const branchColsX = [SWBD_X - 0.20, SWBD_X + 0.20];
+
+      branchRowsY.forEach((by) => {
+        branchColsX.forEach((bx, cIdx) => {
+          const branchBody = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.14, 0.11), matAccentSlate);
+          branchBody.position.set(bx, by, 0.02);
+          branchBody.castShadow = true;
+          grp.add(branchBody);
+
+          const labelTag = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.024, 0.006), matWhitePlaque);
+          labelTag.position.set(bx, by + 0.045, 0.078);
+          grp.add(labelTag);
+
+          const strap = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.018, 0.010), matCopperBus);
+          strap.position.set(SWBD_X + (cIdx === 0 ? -0.10 : 0.10), by, -0.04);
+          grp.add(strap);
+
+          const handleKnob = new THREE.Mesh(new THREE.BoxGeometry(0.020, 0.055, 0.024), matSafetyYellow);
+          handleKnob.position.set(bx, by - 0.01, 0.082);
+          handleKnob.rotation.z = -0.35;
+          grp.add(handleKnob);
+        });
+      });
+
+      const auxTx = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.16, 0.14), matCopperBus);
+      auxTx.position.set(SWBD_X - 0.06, 0.24, -0.02);
+      grp.add(auxTx);
+
+      const auxTxCore = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.12, 0.16), matSwitchboardSlate);
+      auxTxCore.position.set(SWBD_X - 0.06, 0.24, -0.02);
+      grp.add(auxTxCore);
+
+      const rcmToroid = new THREE.Mesh(new THREE.TorusGeometry(0.042, 0.014, 12, 24), matInsulatorMaroon);
+      rcmToroid.position.set(SWBD_X + 0.19, 0.25, 0.0);
+      grp.add(rcmToroid);
+    }
+
+    /* =====================================================================
+       3.3 BUILD `shunt_trip_relay` — SOLAS 24 V DC SHUNT-TRIP MODULE
+       ===================================================================== */
+    function buildShuntTripRelay() {
+      const grp = parts.shunt_trip_relay.group;
+      const sx = -0.72, sy = 1.22, sz = 0.04;
+
+      const relayHousing = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.24, 0.13), matSafetyYellow);
+      relayHousing.position.set(sx, sy, sz);
+      relayHousing.castShadow = true;
+      grp.add(relayHousing);
+
+      [-0.13, 0.13].forEach((ty) => {
+        const termBlock = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.028, 0.09), matSwitchboardLight);
+        termBlock.position.set(sx, sy + ty, sz + 0.01);
+        grp.add(termBlock);
+
+        [-0.03, 0.0, 0.03].forEach((tx) => {
+          const screw = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.012, 12), matBrassFitting);
+          screw.position.set(sx + tx, sy + ty + (ty > 0 ? 0.016 : -0.016), sz + 0.035);
+          grp.add(screw);
+        });
+      });
+
+      const solenoidCoil = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.095, 24), matCopperBus);
+      solenoidCoil.rotation.z = Math.PI / 2;
+      solenoidCoil.position.set(sx, sy + 0.03, sz + 0.045);
+      grp.add(solenoidCoil);
+
+      const coilCover = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.10, 24), matClearGlass);
+      coilCover.rotation.z = Math.PI / 2;
+      coilCover.position.set(sx, sy + 0.03, sz + 0.045);
+      grp.add(coilCover);
+
+      shuntStrikerPin = new THREE.Group();
+      shuntStrikerPin.position.set(sx - 0.06, sy + 0.03, sz + 0.045);
+      grp.add(shuntStrikerPin);
+
+      const strikerRod = new THREE.Mesh(new THREE.CylinderGeometry(0.010, 0.010, 0.16, 16), matStainless316);
+      strikerRod.rotation.z = Math.PI / 2;
+      strikerRod.position.x = -0.04;
+      shuntStrikerPin.add(strikerRod);
+
+      const returnSpring = new THREE.Mesh(new THREE.TorusGeometry(0.016, 0.003, 8, 20), matBrassFitting);
+      returnSpring.rotation.y = Math.PI / 2;
+      returnSpring.position.x = -0.02;
+      shuntStrikerPin.add(returnSpring);
+
+      const strikerPawl = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.055, 0.032), matEmergencyRed);
+      strikerPawl.position.x = -0.11;
+      shuntStrikerPin.add(strikerPawl);
+
+      const auxContactor = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.09, 0.08), matAccentSlate);
+      auxContactor.position.set(sx, sy - 0.07, sz + 0.04);
+      grp.add(auxContactor);
+
+      shuntCoilLedMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.012, 14, 14),
+        new THREE.MeshBasicMaterial({ color: 0x10b981 })
+      );
+      shuntCoilLedMesh.position.set(sx + 0.02, sy + 0.09, sz + 0.07);
+      grp.add(shuntCoilLedMesh);
+    }
+
+    /* =====================================================================
+       3.4 BUILD `cooking_island` — STAINLESS MARINE RANGE & DEEP FRYERS
+       ===================================================================== */
+    function buildCookingIsland() {
+      const grp = parts.cooking_island.group;
+      const islandW = 1.55, islandD = 0.85;
+      hotplateElementMeshes.length = 0;
+      ovenHeaterMeshes.length = 0;
+
+      [-0.68, 0.0, 0.68].forEach((dx) => {
+        [-0.36, 0.36].forEach((dz) => {
+          const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.034, 0.12, 20), matStainlessDark);
+          leg.position.set(ISLAND_X + dx, 0.21, dz);
+          leg.castShadow = true;
+          grp.add(leg);
+
+          const deckFlange = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.058, 0.018, 20), matSwitchboardSlate);
+          deckFlange.position.set(ISLAND_X + dx, 0.16, dz);
+          grp.add(deckFlange);
+        });
+      });
+
+      const rangeBody = new THREE.Mesh(new THREE.BoxGeometry(1.02, 0.68, islandD), matStainless316);
+      rangeBody.position.set(ISLAND_X - 0.265, 0.60, 0);
+      rangeBody.castShadow = true;
+      rangeBody.receiveShadow = true;
+      grp.add(rangeBody);
+
+      const stormHandrailCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(ISLAND_X - 0.82, 0.90, -0.38),
+        new THREE.Vector3(ISLAND_X - 0.82, 0.90, 0.48),
+        new THREE.Vector3(ISLAND_X + 0.82, 0.90, 0.48),
+        new THREE.Vector3(ISLAND_X + 0.82, 0.90, -0.38)
+      ]);
+      const stormHandrail = new THREE.Mesh(new THREE.TubeGeometry(stormHandrailCurve, 32, 0.012, 12, false), matStainless316);
+      stormHandrail.castShadow = true;
+      grp.add(stormHandrail);
+
+      const cooktopDeck = new THREE.Mesh(new THREE.BoxGeometry(1.04, 0.03, islandD + 0.02), matStainless316);
+      cooktopDeck.position.set(ISLAND_X - 0.265, 0.95, 0);
+      cooktopDeck.castShadow = true;
+      grp.add(cooktopDeck);
+
+      const plateColsX = [ISLAND_X - 0.60, ISLAND_X - 0.265, ISLAND_X + 0.07];
+      const plateRowsZ = [-0.20, 0.20];
+
+      plateColsX.forEach((px) => {
+        plateRowsZ.forEach((pz) => {
+          const collar = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.022, 0.28), matStainlessDark);
+          collar.position.set(px, 0.97, pz);
+          grp.add(collar);
+
+          const hotplateMat = new THREE.MeshStandardMaterial({
+            color: 0x52606d,
+            emissive: 0xea580c,
+            emissiveIntensity: 0.65,
+            roughness: 0.48,
+            metalness: 0.35
+          });
+          const hotplate = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.028, 0.25), hotplateMat);
+          hotplate.position.set(px, 0.985, pz);
+          hotplate.castShadow = true;
+          grp.add(hotplate);
+          hotplateElementMeshes.push(hotplate);
+
+          [0.055, 0.095].forEach((rGroove) => {
+            const groove = new THREE.Mesh(new THREE.TorusGeometry(rGroove, 0.0025, 8, 24), matStainlessDark);
+            groove.rotation.x = Math.PI / 2;
+            groove.position.set(px, 1.00, pz);
+            grp.add(groove);
+          });
+          const centerCap = new THREE.Mesh(new THREE.CylinderGeometry(0.020, 0.020, 0.006, 16), matStainless316);
+          centerCap.position.set(px, 1.001, pz);
+          grp.add(centerCap);
+        });
+      });
+
+      // Front Control Fascia Strip
+      const controlFascia = new THREE.Mesh(new THREE.BoxGeometry(1.02, 0.11, 0.025), matSwitchboardSlate);
+      controlFascia.position.set(ISLAND_X - 0.265, 0.86, islandD / 2 + 0.01);
+      grp.add(controlFascia);
+
+      // Twin Convection Roasting Ovens with Extruded Glass Doors & Glowing Heaters
+      [ISLAND_X - 0.52, ISLAND_X - 0.01].forEach((ox) => {
+        const ovenCavity = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.36, 0.36), matStainlessDark);
+        ovenCavity.position.set(ox, 0.54, islandD / 2 - 0.18);
+        grp.add(ovenCavity);
+
+        const ow = 0.46, oh = 0.44, od = 0.028;
+        const oShape = new THREE.Shape();
+        oShape.moveTo(-ow / 2, -oh / 2);
+        oShape.lineTo(ow / 2, -oh / 2);
+        oShape.lineTo(ow / 2, oh / 2);
+        oShape.lineTo(-ow / 2, oh / 2);
+        oShape.closePath();
+
+        const oHole = new THREE.Path();
+        oHole.moveTo(-0.15, -0.11);
+        oHole.lineTo(0.15, -0.11);
+        oHole.lineTo(0.15, 0.11);
+        oHole.lineTo(-0.15, 0.11);
+        oHole.closePath();
+        oShape.holes.push(oHole);
+
+        const oGeo = new THREE.ExtrudeGeometry(oShape, { depth: od, bevelEnabled: false });
+        oGeo.translate(0, 0, -od / 2);
+        const ovenDoor = new THREE.Mesh(oGeo, matStainless316);
+        ovenDoor.position.set(ox, 0.54, islandD / 2 + 0.016);
+        ovenDoor.castShadow = true;
+        grp.add(ovenDoor);
+
+        const ovenGlass = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.22, 0.008), matClearGlass);
+        ovenGlass.position.set(ox, 0.54, islandD / 2 + 0.016);
+        grp.add(ovenGlass);
+
+        const ovenGlowMat = new THREE.MeshStandardMaterial({
+          color: 0x52606d,
+          emissive: 0xea580c,
+          emissiveIntensity: 0.75,
+          roughness: 0.4
+        });
+        const ovenHeater = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.16, 0.012), ovenGlowMat);
+        ovenHeater.position.set(ox, 0.54, islandD / 2 - 0.24);
+        grp.add(ovenHeater);
+        ovenHeaterMeshes.push(ovenHeater);
+
+        const grabBar = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.36, 16), matStainless316);
+        grabBar.rotation.z = Math.PI / 2;
+        grabBar.position.set(ox, 0.70, islandD / 2 + 0.055);
+        grp.add(grabBar);
+      });
+
+      // Right Bay: Twin Commercial Deep Fat Fryers
+      const fryerBayX = ISLAND_X + 0.51;
+      const fryerCabinet = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.66, islandD), matStainless316);
+      fryerCabinet.position.set(fryerBayX, 0.59, 0);
+      fryerCabinet.castShadow = true;
+      grp.add(fryerCabinet);
+
+      [fryerBayX - 0.125, fryerBayX + 0.125].forEach((fx) => {
+        const vatRim = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.08, 0.56), matStainlessDark);
+        vatRim.position.set(fx, 0.95, -0.04);
+        grp.add(vatRim);
+
+        const oilVat = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.02, 0.50), matFryerOil);
+        oilVat.position.set(fx, 0.96, -0.04);
+        grp.add(oilVat);
+
+        const basketCage = new THREE.Mesh(
+          new THREE.BoxGeometry(0.16, 0.09, 0.38),
+          new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.3, metalness: 0.85, wireframe: true })
+        );
+        basketCage.position.set(fx, 1.00, -0.02);
+        grp.add(basketCage);
+      });
+    }
+
+    /* =====================================================================
+       3.5 BUILD `exhaust_canopy` — HOOD, BAFFLES & FIRE DAMPER
+       ===================================================================== */
+    function buildExhaustCanopy() {
+      const grp = parts.exhaust_canopy.group;
+      const hoodW = 1.68, hoodD = 0.98;
+
+      const canopySkirt = new THREE.Mesh(new THREE.BoxGeometry(hoodW, 0.10, hoodD), matStainless316);
+      canopySkirt.position.set(ISLAND_X, 1.59, 0);
+      canopySkirt.castShadow = true;
+      grp.add(canopySkirt);
+
+      const gutterTrim = new THREE.Mesh(new THREE.BoxGeometry(hoodW + 0.025, 0.024, hoodD + 0.025), matStainlessDark);
+      gutterTrim.position.set(ISLAND_X, 1.545, 0);
+      grp.add(gutterTrim);
+
+      const plenumGeo = new THREE.CylinderGeometry(0.48, 0.72, 0.18, 4);
+      plenumGeo.rotateY(Math.PI / 4);
+      plenumGeo.scale(1.62, 1, 0.95);
+      const canopyPlenum = new THREE.Mesh(plenumGeo, matStainless316);
+      canopyPlenum.position.set(ISLAND_X, 1.73, 0);
+      canopyPlenum.castShadow = true;
+      grp.add(canopyPlenum);
+
+      [-0.42, 0.42].forEach((lx) => {
+        const lightMat = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          emissive: 0xe0f2fe,
+          emissiveIntensity: 0.90,
+          roughness: 0.15
+        });
+        const ledBar = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.022, 0.08), lightMat);
+        ledBar.position.set(ISLAND_X + lx, 1.54, 0.28);
+        grp.add(ledBar);
+        hoodWorkLightMeshes.push(ledBar);
+      });
+
+      // TWO-STAGE CYLINDRICAL EXHAUST STACK (`Y = 1.82 m` to `2.34 m`, `R = 0.22 m`):
+      // Lower Spool (`Y = 1.94 m`) houses the SOLAS Butterfly Fire Damper Blade.
+      // Upper Spool (`Y = 2.24 m`) houses the 7-Blade Axial Extraction Fan & Motor Pod (Zero Collision!).
+      const stackH = 0.52;
+      const stackCenterY = 2.08;
+
+      const ductCollarRear = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.22, 0.22, stackH, 36, 1, true, Math.PI * 0.28, Math.PI * 1.44),
+        matSwitchboardLight
+      );
+      ductCollarRear.position.set(ISLAND_X, stackCenterY, 0);
+      ductCollarRear.castShadow = true;
+      grp.add(ductCollarRear);
+
+      const ductCollarWindow = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.223, 0.223, stackH, 28, 1, true, -Math.PI * 0.28, Math.PI * 0.56),
+        matClearGlass
+      );
+      ductCollarWindow.position.set(ISLAND_X, stackCenterY, 0);
+      grp.add(ductCollarWindow);
+
+      [1.83, 2.12, 2.34].forEach((yf) => {
+        const flangeRing = new THREE.Mesh(new THREE.TorusGeometry(0.232, 0.012, 10, 36), matSwitchboardSlate);
+        flangeRing.rotation.x = Math.PI / 2;
+        flangeRing.position.set(ISLAND_X, yf, 0);
+        grp.add(flangeRing);
+      });
+
+      // Stage 1 (Lower Spool): SOLAS Butterfly Fire Damper Blade
+      fireDamperBladePivot = new THREE.Group();
+      fireDamperBladePivot.position.set(ISLAND_X, 1.94, 0);
+      fireDamperBladePivot.rotation.x = Math.PI / 2; // Open initially
+      grp.add(fireDamperBladePivot);
+
+      const damperDisc = new THREE.Mesh(new THREE.CylinderGeometry(0.206, 0.206, 0.012, 32), matEmergencyRed);
+      fireDamperBladePivot.add(damperDisc);
+
+      const damperActuator = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.13, 0.095), matSafetyYellow);
+      damperActuator.position.set(ISLAND_X + 0.27, 1.94, 0);
+      grp.add(damperActuator);
+
+      damperCrankLink = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.065, 0.020), matBrassFitting);
+      damperCrankLink.position.set(ISLAND_X + 0.228, 1.96, 0.02);
+      grp.add(damperCrankLink);
+
+      // Stage 2 (Upper Spool): 7-Blade Axial Extraction Fan & Motor Pod at Y = 2.24 m
+      const fanStageY = 2.24;
+      const motorPod = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.11, 24), matSwitchboardLight);
+      motorPod.position.set(ISLAND_X, fanStageY, 0);
+      grp.add(motorPod);
+
+      exhaustFanRotor = new THREE.Group();
+      exhaustFanRotor.position.set(ISLAND_X, fanStageY + 0.01, 0);
+      grp.add(exhaustFanRotor);
+
+      const rotorHub = new THREE.Mesh(new THREE.CylinderGeometry(0.056, 0.056, 0.048, 24), matAccentSlate);
+      exhaustFanRotor.add(rotorHub);
+
+      for (let b = 0; b < 7; b++) {
+        const ba = (b / 7) * Math.PI * 2;
+        const radialArm = new THREE.Group();
+        radialArm.rotation.y = ba;
+        exhaustFanRotor.add(radialArm);
+
+        const bladeMesh = new THREE.Mesh(new THREE.BoxGeometry(0.135, 0.006, 0.046), matStainless316);
+        bladeMesh.position.set(0.122, 0, 0);
+        bladeMesh.rotation.x = 0.42;
+        radialArm.add(bladeMesh);
+      }
+    }
+
+    /* =====================================================================
+       3.6 BUILD `outdoor_shunt_station` — SOLAS EMERGENCY SHUNT-TRIP STATION
+       ===================================================================== */
+    function buildOutdoorShuntStation() {
+      const grp = parts.outdoor_shunt_station.group;
+      const ex = ESTOP_X, ey = 1.10, ez = 0.35;
+
+      const stanchionFoot = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.03, 0.24), matSwitchboardSlate);
+      stanchionFoot.position.set(ex, 0.015, ez - 0.06);
+      stanchionFoot.castShadow = true;
+      grp.add(stanchionFoot);
+
+      const stanchionPost = new THREE.Mesh(new THREE.BoxGeometry(0.065, 1.24, 0.065), matSwitchboardSlate);
+      stanchionPost.position.set(ex, 0.63, ez - 0.06);
+      stanchionPost.castShadow = true;
+      grp.add(stanchionPost);
+
+      const yellowBox = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.34, 0.15), matSafetyYellow);
+      yellowBox.position.set(ex, ey, ez);
+      yellowBox.castShadow = true;
+      grp.add(yellowBox);
+
+      const beaconBase = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.032, 0.022, 20), matSwitchboardSlate);
+      beaconBase.position.set(ex, ey + 0.18, ez);
+      grp.add(beaconBase);
+
+      const plaqueMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.25, 0.125),
+        new THREE.MeshBasicMaterial({ map: estopPlaqueTex })
+      );
+      plaqueMesh.position.set(ex, ey + 0.085, ez + 0.077);
+      grp.add(plaqueMesh);
+
+      const collarRing = new THREE.Mesh(new THREE.CylinderGeometry(0.046, 0.048, 0.016, 24), matSwitchboardSlate);
+      collarRing.rotation.x = Math.PI / 2;
+      collarRing.position.set(ex, ey - 0.055, ez + 0.078);
+      grp.add(collarRing);
+
+      outdoorMushroomPlunger = new THREE.Group();
+      outdoorMushroomPlunger.position.set(ex, ey - 0.055, ez + 0.095);
+      grp.add(outdoorMushroomPlunger);
+
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.035, 20), matStainless316);
+      stem.rotation.x = Math.PI / 2;
+      stem.position.z = -0.012;
+      outdoorMushroomPlunger.add(stem);
+
+      const mushroomCap = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.032, 0.028, 28), matEmergencyRed);
+      mushroomCap.rotation.x = Math.PI / 2;
+      outdoorMushroomPlunger.add(mushroomCap);
+
+      outdoorSafetyFlapPivot = new THREE.Group();
+      outdoorSafetyFlapPivot.position.set(ex, ey + 0.01, ez + 0.082);
+      grp.add(outdoorSafetyFlapPivot);
+
+      const clearCoverHood = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.065), matClearGlass);
+      clearCoverHood.position.set(0, -0.065, 0.032);
+      outdoorSafetyFlapPivot.add(clearCoverHood);
+    }
+
+    buildGalleySwitchboard();
+    buildMccbBusbarBank();
+    buildShuntTripRelay();
+    buildCookingIsland();
+    buildExhaustCanopy();
+    buildOutdoorShuntStation();
+
+    /* =====================================================================
+       4. STATE & NATIVE-COLOR GHOST ISOLATION SYSTEM
+       ===================================================================== */
+    const state = {
+      explode: 0.0,
+      targetExplode: 0.0,
+      heatLoadPct: 85,
+      shuntTripped: false,
+      selectedPart: 'all',
+      labelsOn: true,
+      xrayDoors: true,
+      autoRotate: false,
+      time: 0
+    };
+
+    function prepareMaterialsAndUserData() {
+      for (const key in parts) {
+        const p = parts[key];
+        p.group.traverse((obj) => {
+          if (obj.isMesh && obj.material) {
+            obj.userData.partKey = key;
+            if (!obj.userData.origMaterial) {
+              obj.userData.origMaterial = obj.material.clone();
+              obj.userData.ghostMaterial = obj.material.clone();
+              obj.userData.ghostMaterial.transparent = true;
+              obj.userData.ghostMaterial.opacity = 0.14;
+              obj.userData.ghostMaterial.depthWrite = false;
+            }
+          }
+        });
+      }
+    }
+    prepareMaterialsAndUserData();
+
+    function selectPart(partKey) {
+      state.selectedPart = partKey;
+      document.querySelectorAll('.part-chip').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.part === partKey);
+      });
+
+      document.querySelectorAll('.callout-badge').forEach((badge) => {
+        badge.classList.toggle('selected', badge.dataset.part === partKey);
+      });
+
+      for (const k in parts) {
+        const p = parts[k];
+        const isTarget = (partKey === 'all' || partKey === k);
+        p.group.traverse((obj) => {
+          if (obj.isMesh && obj.userData.origMaterial) {
+            obj.material = isTarget ? obj.userData.origMaterial : obj.userData.ghostMaterial;
+          }
+        });
+      }
+
+      if (partKey !== 'all' && parts[partKey]) {
+        const m = parts[partKey];
+        document.getElementById('info-badge').textContent = `${m.code} · SUB-ASSEMBLY INSPECTION`;
+        document.getElementById('info-title').textContent = m.name;
+        document.getElementById('info-spec').textContent = m.spec;
+        document.getElementById('info-desc').textContent = m.desc;
+      } else {
+        document.getElementById('info-badge').textContent = 'GALLEY SYSTEM OVERVIEW · 6 SUB-ASSEMBLIES';
+        document.getElementById('info-title').textContent = 'Marine Galley Power Distribution & SOLAS Fire Interlock';
+        document.getElementById('info-spec').textContent = '440 V 3P / 220 V 1P · 135 kW';
+        document.getElementById('info-desc').textContent = 'IP44 primary galley switchboard feeding a 316 stainless-steel marine cooking island (6 cast-iron boiling plates with storm fiddle rails, twin convection roasting ovens, and twin 230°C deep fat fryers) protected by an outdoor SOLAS II-2 Reg 9.2 emergency shunt-trip station and quick-closing hood fire damper.';
+      }
+    }
+
+    /* =====================================================================
+       5. DIVIDED LEFT & RIGHT CALLOUT COLUMNS WITH SVG LEADER LINES
+       ===================================================================== */
+    const calloutDefs = [
+      { key: 'galley_switchboard', code: 'GS', title: 'Galley Switchboard', side: 'left' },
+      { key: 'mccb_busbar_bank', code: 'MB', title: 'MCCB & Busbars', side: 'left' },
+      { key: 'shunt_trip_relay', code: 'SR', title: 'Shunt-Trip Relay', side: 'left' },
+      { key: 'cooking_island', code: 'CI', title: 'Cooking Island', side: 'right' },
+      { key: 'exhaust_canopy', code: 'EH', title: 'Exhaust Hood', side: 'right' },
+      { key: 'outdoor_shunt_station', code: 'ES', title: 'Outdoor E-Stop', side: 'right' }
+    ];
+
+    const calloutBadgesMap = new Map();
+
+    calloutDefs.forEach((def) => {
+      const badge = document.createElement('div');
+      badge.className = 'callout-badge';
+      badge.dataset.part = def.key;
+      badge.innerHTML = `
+        <div class="flex items-center gap-1.5">
+          <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 mono text-[9px] font-bold">${def.code}</span>
+          <span class="text-xs font-semibold text-slate-800">${def.title}</span>
+        </div>
+      `;
+      badge.addEventListener('click', () => {
+        selectPart(state.selectedPart === def.key ? 'all' : def.key);
+      });
+      badgesLayer.appendChild(badge);
+
+      const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      polyline.setAttribute('fill', 'none');
+      polyline.setAttribute('stroke', '#94a3b8');
+      polyline.setAttribute('stroke-width', '1.3');
+      leaderSvg.appendChild(polyline);
+
+      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('r', '3.0');
+      dot.setAttribute('fill', '#ea580c');
+      leaderSvg.appendChild(dot);
+
+      calloutBadgesMap.set(def.key, { def, badge, polyline, dot, y: 0 });
+    });
+
+    function updateDividedCallouts() {
+      if (!state.labelsOn) {
+        badgesLayer.style.display = 'none';
+        leaderSvg.style.display = 'none';
+        return;
+      }
+      badgesLayer.style.display = 'block';
+      leaderSvg.style.display = 'block';
+
+      const leftItems = [];
+      const rightItems = [];
+      const tempV = new THREE.Vector3();
+
+      calloutDefs.forEach((def) => {
+        const item = calloutBadgesMap.get(def.key);
+        const p = parts[def.key];
+        tempV.copy(p.anchor).addScaledVector(p.explodeVec, state.explode);
+        tempV.project(camera);
+
+        const screenX = (tempV.x * 0.5 + 0.5) * window.innerWidth;
+        const screenY = (-(tempV.y * 0.5) + 0.5) * window.innerHeight;
+
+        const isBehind = tempV.z > 1.0;
+        if (isBehind) {
+          item.badge.style.display = 'none';
+          item.polyline.style.display = 'none';
+          item.dot.style.display = 'none';
+          return;
+        }
+
+        item.anchorX = screenX;
+        item.anchorY = screenY;
+        item.y = screenY;
+        item.visible = true;
+
+        if (def.side === 'left') leftItems.push(item);
+        else rightItems.push(item);
+      });
+
+      function resolveSpacing(arr) {
+        arr.sort((a, b) => a.y - b.y);
+        const minY = 80, maxY = window.innerHeight - 80, minGap = 56;
+        if (arr.length > 0) {
+          arr[0].y = Math.max(minY, arr[0].y);
+          for (let i = 1; i < arr.length; i++) {
+            if (arr[i].y - arr[i - 1].y < minGap) {
+              arr[i].y = arr[i - 1].y + minGap;
+            }
+          }
+          const last = arr[arr.length - 1];
+          if (last.y > maxY) {
+            last.y = maxY;
+            for (let i = arr.length - 2; i >= 0; i--) {
+              if (arr[i + 1].y - arr[i].y < minGap) {
+                arr[i].y = Math.max(minY, arr[i + 1].y - minGap);
+              }
+            }
+          }
+        }
+      }
+
+      resolveSpacing(leftItems);
+      resolveSpacing(rightItems);
+
+      calloutDefs.forEach((def) => {
+        const item = calloutBadgesMap.get(def.key);
+        if (!item.visible) return;
+
+        const colX = def.side === 'left' ? 24 : window.innerWidth - 204;
+        const elbowX = def.side === 'left' ? colX + 184 : colX - 18;
+
+        item.badge.style.display = 'block';
+        item.badge.style.left = `${colX}px`;
+        item.badge.style.top = `${item.y}px`;
+
+        item.polyline.style.display = 'block';
+        item.polyline.setAttribute('points', `${item.anchorX},${item.anchorY} ${elbowX},${item.y} ${colX + (def.side === 'left' ? 180 : 0)},${item.y}`);
+        item.polyline.setAttribute('stroke', state.selectedPart === def.key ? '#ea580c' : '#94a3b8');
+        item.polyline.setAttribute('stroke-width', state.selectedPart === def.key ? '2.0' : '1.3');
+
+        item.dot.style.display = 'block';
+        item.dot.setAttribute('cx', `${item.anchorX}`);
+        item.dot.setAttribute('cy', `${item.anchorY}`);
+      });
+    }
+
+    /* =====================================================================
+       6. UI CONTROLS BINDING
+       ===================================================================== */
+    document.querySelectorAll('.part-chip').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        selectPart(btn.dataset.part);
+      });
+    });
+
+    const sliderExplode = document.getElementById('slider-explode');
+    function setExplode(pct) {
+      state.targetExplode = pct / 100;
+      sliderExplode.value = pct;
+      document.getElementById('lbl-explode-val').textContent = pct === 0 ? '0% · ASSEMBLED' : `${pct}% · EXPLODED`;
+    }
+    sliderExplode.addEventListener('input', (e) => setExplode(parseFloat(e.target.value)));
+    document.getElementById('btn-exp-0').addEventListener('click', () => setExplode(0));
+    document.getElementById('btn-exp-50').addEventListener('click', () => setExplode(50));
+    document.getElementById('btn-exp-100').addEventListener('click', () => setExplode(100));
+
+    function applyThermalAndInterlockState() {
+      const heatNorm = state.shuntTripped ? 0.0 : (state.heatLoadPct / 100);
+      hotplateElementMeshes.forEach((mesh) => {
+        if (mesh.userData.origMaterial) {
+          mesh.userData.origMaterial.emissiveIntensity = heatNorm * 0.85;
+        }
+      });
+      ovenHeaterMeshes.forEach((mesh) => {
+        if (mesh.userData.origMaterial) {
+          mesh.userData.origMaterial.emissiveIntensity = heatNorm * 0.90;
+        }
+      });
+      hoodWorkLightMeshes.forEach((mesh) => {
+        if (mesh.userData.origMaterial) {
+          mesh.userData.origMaterial.emissiveIntensity = state.shuntTripped ? 0.08 : 0.90;
+        }
+      });
+
+      if (lampLiveMesh && lampLiveMesh.userData.origMaterial) {
+        lampLiveMesh.userData.origMaterial.color.setHex(state.shuntTripped ? 0x475569 : 0x10b981);
+      }
+      if (lampTrippedMesh && lampTrippedMesh.userData.origMaterial) {
+        lampTrippedMesh.userData.origMaterial.color.setHex(state.shuntTripped ? 0xef4444 : 0x94a3b8);
+      }
+      if (shuntCoilLedMesh && shuntCoilLedMesh.userData.origMaterial) {
+        shuntCoilLedMesh.userData.origMaterial.color.setHex(state.shuntTripped ? 0xef4444 : 0x10b981);
+      }
+
+      updateSwitchboardMeterTexture(state.shuntTripped, state.heatLoadPct);
+
+      const btnShunt = document.getElementById('btn-shunt-trip');
+      const txtShunt = document.getElementById('shunt-btn-text');
+      const statusBadge = document.getElementById('interlock-status-badge');
+
+      if (state.shuntTripped) {
+        btnShunt.className = 'w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold tracking-wide shadow transition flex items-center justify-center gap-2';
+        txtShunt.textContent = 'RESET GALLEY ACB & OPEN FIRE DAMPER';
+        statusBadge.textContent = 'SHUNT TRIPPED · DAMPER CLOSED';
+        statusBadge.className = 'font-bold text-red-600';
+      } else {
+        btnShunt.className = 'w-full py-2 px-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold tracking-wide shadow transition flex items-center justify-center gap-2';
+        txtShunt.textContent = 'TEST SOLAS EMERGENCY SHUNT TRIP';
+        statusBadge.textContent = '440V LIVE · HOOD DAMPER OPEN';
+        statusBadge.className = 'font-bold text-emerald-700';
+      }
+    }
+
+    const sliderHeat = document.getElementById('slider-heat');
+    function setHeatLoad(pct) {
+      state.heatLoadPct = pct;
+      sliderHeat.value = pct;
+      const kw = Math.round(135 * (pct / 100));
+      document.getElementById('lbl-heat-val').textContent = `${pct}% · ${kw} kW`;
+      applyThermalAndInterlockState();
+    }
+    sliderHeat.addEventListener('input', (e) => setHeatLoad(parseFloat(e.target.value)));
+    document.getElementById('btn-heat-25').addEventListener('click', () => setHeatLoad(25));
+    document.getElementById('btn-heat-60').addEventListener('click', () => setHeatLoad(60));
+    document.getElementById('btn-heat-100').addEventListener('click', () => setHeatLoad(100));
+
+    document.getElementById('btn-shunt-trip').addEventListener('click', () => {
+      state.shuntTripped = !state.shuntTripped;
+      applyThermalAndInterlockState();
+    });
+
+    document.getElementById('btn-reset-view').addEventListener('click', () => {
+      tweenPos.copy(DEFAULT_CAM_POS);
+      tweenTarget.copy(DEFAULT_CAM_TARGET);
+      isCameraTweening = true;
+      setExplode(0);
+      selectPart('all');
+    });
+
+    const btnAutoRotate = document.getElementById('btn-auto-rotate');
+    btnAutoRotate.addEventListener('click', () => {
+      state.autoRotate = !state.autoRotate;
+      controls.autoRotate = state.autoRotate;
+      controls.autoRotateSpeed = 1.4;
+      btnAutoRotate.classList.toggle('active', state.autoRotate);
+    });
+
+    const btnToggleLabels = document.getElementById('btn-toggle-labels');
+    btnToggleLabels.addEventListener('click', () => {
+      state.labelsOn = !state.labelsOn;
+      btnToggleLabels.classList.toggle('active', state.labelsOn);
+    });
+
+    const btnToggleXray = document.getElementById('btn-toggle-xray');
+    btnToggleXray.addEventListener('click', () => {
+      state.xrayDoors = !state.xrayDoors;
+      btnToggleXray.classList.toggle('active', state.xrayDoors);
+    });
+
+    // 3D Raycaster Click to Isolate Sub-Assembly
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    let pointerDownPos = { x: 0, y: 0 };
+
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      pointerDownPos = { x: e.clientX, y: e.clientY };
+    });
+    renderer.domElement.addEventListener('pointerup', (e) => {
+      if (Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y) > 5) return;
+      pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const allMeshes = [];
+      for (const k in parts) {
+        parts[k].group.traverse((o) => { if (o.isMesh) allMeshes.push(o); });
+      }
+      const hits = raycaster.intersectObjects(allMeshes, false);
+      if (hits.length > 0) {
+        const hitKey = hits[0].object.userData.partKey;
+        if (hitKey) {
+          selectPart(state.selectedPart === hitKey ? 'all' : hitKey);
+        }
+      }
+    });
+
+    // Main Animation & Render Loop
+    let lastTime = performance.now();
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+      state.time += dt;
+
+      state.explode += (state.targetExplode - state.explode) * 0.12;
+
+      // Apply Explode Vectors
+      for (const key in parts) {
+        const p = parts[key];
+        p.group.position.copy(p.explodeVec).multiplyScalar(state.explode);
+      }
+
+      // Switchboard Hinged Front Door Swing
+      if (swbdDoorPivot) {
+        const targetDoorAngle = (state.xrayDoors || state.explode > 0.10) ? -1.78 : 0.0;
+        swbdDoorPivot.rotation.y += (targetDoorAngle - swbdDoorPivot.rotation.y) * 0.14;
+      }
+
+      // Outdoor E-Stop Safety Flap & Mushroom Plunger
+      if (outdoorSafetyFlapPivot) {
+        const targetFlapRot = (state.shuntTripped || state.explode > 0.08) ? -1.45 : -0.35;
+        outdoorSafetyFlapPivot.rotation.x += (targetFlapRot - outdoorSafetyFlapPivot.rotation.x) * 0.16;
+      }
+      if (outdoorMushroomPlunger) {
+        const targetPlungerZ = state.shuntTripped ? 0.077 : 0.095;
+        outdoorMushroomPlunger.position.z += (targetPlungerZ - outdoorMushroomPlunger.position.z) * 0.22;
+      }
+
+      // Shunt-Trip Solenoid Striker & 250 A MCCB Toggle Handle
+      if (shuntStrikerPin) {
+        const targetStrikerX = (-0.72 - 0.06) + (state.shuntTripped ? -0.025 : 0.0);
+        shuntStrikerPin.position.x += (targetStrikerX - shuntStrikerPin.position.x) * 0.22;
+      }
+      if (mainMccbHandlePivot) {
+        const targetMccbRot = state.shuntTripped ? 0.65 : -0.45;
+        mainMccbHandlePivot.rotation.x += (targetMccbRot - mainMccbHandlePivot.rotation.x) * 0.20;
+      }
+
+      // Exhaust Hood Fan Impeller Spin & SOLAS Fire Damper Blade
+      if (exhaustFanRotor && !state.shuntTripped) {
+        exhaustFanRotor.rotation.y += dt * 16.0;
+      }
+      if (fireDamperBladePivot) {
+        const targetDamperRot = state.shuntTripped ? 0.0 : (Math.PI / 2);
+        fireDamperBladePivot.rotation.x += (targetDamperRot - fireDamperBladePivot.rotation.x) * 0.18;
+      }
+      if (damperCrankLink) {
+        const targetCrankRot = state.shuntTripped ? 0.75 : -0.45;
+        damperCrankLink.rotation.x += (targetCrankRot - damperCrankLink.rotation.x) * 0.18;
+      }
+
+      // Camera Tweening
+      if (isCameraTweening) {
+        camera.position.lerp(tweenPos, 0.10);
+        controls.target.lerp(tweenTarget, 0.10);
+        if (camera.position.distanceTo(tweenPos) < 0.03) {
+          isCameraTweening = false;
+        }
+      }
+      controls.update();
+
+      updateDividedCallouts();
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
