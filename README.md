@@ -1,275 +1,340 @@
 # Marine Power System Simulator · V1
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-2ea44f?style=flat&logo=github)](https://jro-d.github.io/marine-powersystem-project1/)
-[![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?style=flat&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Vite](https://img.shields.io/badge/Vite-8.x-646CFF?style=flat&logo=vite&logoColor=white)](https://vitejs.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Three.js](https://img.shields.io/badge/Three.js-0.186-black?style=flat&logo=three.js&logoColor=white)](https://threejs.org/)
+[![Three.js](https://img.shields.io/badge/Three.js-r186-black?style=flat&logo=three.js&logoColor=white)](https://threejs.org/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Classification Standard](https://img.shields.io/badge/Standard-IEC%2060092%20%2F%20SOLAS-orange?style=flat)](https://www.imo.org/)
 
-An interactive, browser-based 3D educational simulator and digital twin modeling electrical power generation, medium-voltage distribution, safety interlocks, and electric propulsion aboard a **generic 3,000 kW electric-propulsion container vessel**.
+An interactive, browser-based 3D digital twin and marine electrical power simulator modeling medium-voltage (6.6 kV) generation, symmetrical distribution, automated Power Management System (PMS) operations, numerical protective relaying, safety interlocks, and electric propulsion aboard a **generic 10 MVA electric-propulsion container vessel**.
 
 > [!TIP]
-> 🌐 **Live Demo**: Access the running simulator directly at **[https://jro-d.github.io/marine-powersystem-project1/](https://jro-d.github.io/marine-powersystem-project1/)**.
+> 🌐 **Live Web Application**: Launch the interactive simulator directly in your browser at **[https://jro-d.github.io/marine-powersystem-project1/](https://jro-d.github.io/marine-powersystem-project1/)**.
 
 ---
 
-## ⚓ Overview
+## ⚓ Project Overview
 
-The **Marine Power System Simulator** teaches marine electrical engineering, Power Management System (PMS) automation, and Electro-Technical Officer (ETO) casualty response through real-time 3D spatial visualization and dynamic schematic power-flow analysis. Users can synchronize diesel generators, operate high-voltage vacuum circuit breakers (VCBs), execute Permit to Work (PTW) 5-step Lockout/Tagout (LOTO) sequences, observe automated blackout recovery cascades, and inspect internal components using the unified 3D CAD Assembly Viewer.
+The **Marine Power System Simulator** is a full-featured educational platform engineered for marine engineers, Electro-Technical Officers (ETOs), naval architects, and maritime simulator instructors. It bridges the gap between abstract 2D single-line diagrams and physical shipboard equipment layouts by combining:
+
+1. **Interactive 3D Vessel Machinery Spaces**: A spatial 3D model of the container vessel's hull, compartments, foundation chocks, equipment placement, and real-time animated electric power flow tracing.
+2. **Complete Suite of 22 Standalone 3D CAD Teardown Digital Twins**: Dedicated interactive CAD models for every major machine on board—featuring continuous 0% to 100% exploded assembly sliders, internal X-Ray cutaways, 3D raycasting inspection, animated kinematics, and classification-accurate Bills of Materials (BOM).
+3. **Synchronized Dynamic Single-Line Diagram (SLD)**: A zoomable, pan-enabled vector schematic displaying real-time busbar energization, circuit breaker contact positions, load currents, voltage drops, and bus frequency.
+4. **Quasi-Steady-State PMS & Numerical Relaying Engine**: Real-time modeling of generator paralleling, synchroscope phase-angle slip, ANSI 25/32/40/51/67N protective relay tripping curves, High-Resistance Earthing (NER 381 Ω), SOLAS 5-stage blackout recovery cascades, and IEC 60092-503 5-step Lockout/Tagout (LOTO) workflows.
 
 > [!NOTE]
-> This simulator is an educational digital twin designed for teaching principles of marine power distribution, protection, and isolation according to **IEC 60092** and **SOLAS Chapter II-1** conventions.
+> All electrical topologies, safety interlocks, and equipment ratings comply with **IEC 60092** (*Electrical installations in ships*), **SOLAS Chapter II-1** (*Construction – Structure, subdivision and stability, machinery and electrical installations*), and classification society guidelines (DNV, Bureau Veritas, Lloyd's Register).
 
 ---
 
-## ✨ Key Features
+## ✨ Key Features & Capabilities
 
-### 1. Interactive 3D Vessel View
-* **Maritime Navy Blue Net Floor & Translucent Machinery Hull**: An engineered navy blue grid net floor provides a deep, high-contrast datum while balanced translucent hull opacity (+20% opacity enhancement and dual-side depth sorting) clearly reveals internal machinery compartments, tanktop foundation chocks, and compartmental bulkheads without disappearing at acute camera angles.
-* **Enlarged Propeller & Full-Scale Reefer Loads**: 20% enlarged 4-blade skewed propeller and full-scale 40-foot reefer container modules matching container bay cell guides.
-* **Hydrodynamic Taylor/Nabla Bulbous Bow**: Organically lofted continuous bulbous bow emerging seamlessly from the lower forefoot and keel line, eliminating faceted step-cuts and featuring a smooth raked stem.
-* **Forecastle & Deck Machinery**: Raised forecastle deck with sheer rise, solid plated steel bulwarks, heavy-duty V-shaped breakwater, twin anchor windlasses/mooring winches, chain pipes, stockless bower anchors, and deck cargo cranes.
-* **Athwartships Thruster Tunnels & Propeller**: Structural transverse bow thruster duct with protective grates and a 4-blade skewed Kaplan propeller with real-time operational kinematics.
-* **Detailed Equipment Placement**: Exact spatial positioning of 4 Diesel Generators (DG 1–4), 6.6 kV Main Switchboards (Sections A & B), Propulsion Inverter Drive, 3,000 kW Propulsion Motor, Distribution Transformers, High Voltage Shore Connection (HVSC), Emergency Switchboard, and Auxiliary Machinery.
-* **Active Power Flow Visualization**: Real-time cable tracing with glowing red energized paths and pulsing yellow current flows indicating power routing from generators to active consumers.
+### 1. Spatial 3D Vessel View
+* **Translucent Machinery Hull & Engineered Grid Datum**: A translucent hull with dual-sided depth sorting reveals internal machinery compartments, tanktop chocks, and watertight bulkheads without geometry clipping.
+* **Symmetrical Switchboard Architecture**: True-to-scale 6.6 kV Medium-Voltage and 440 V Low-Voltage main switchboards positioned athwartships with matching dimensional scale and cubicle compartmentalization.
+* **Full Electric Propulsion Drivetrain**: Features a 6,000 kW Totally Enclosed Water-to-Air Cooled (TEWAC) propulsion motor, 12-pulse variable frequency inverter drive (VFD), intermediate shaft with plummer block bearings, stern tube seals, and a 4-blade skewed Nickel-Aluminum Bronze (Ni-Al Bronze) propeller.
+* **Maneuvering & Deck Machinery**: Athwartships bow thruster tunnel with protective trash racks and Kaplan bronze propeller, electro-hydraulic twin-ram steering gear, 40 t pedestal cargo deck cranes, and raised forecastle mooring winches.
+* **Active Power Flow Visualization**: Real-time cable tracing with glowing red energized conduits, pulsing yellow directional current particles, and de-energized standby pathways.
 
-### 2. Universal 3D CAD Twin Viewer (`universal_viewer.html`)
-* **Unified Data-Driven CAD Engine**: Replaces fragmented viewers with a standardized Three.js CAD viewer dynamically driven by URL parameters (`?eq=<equipment_id>`) and backed by `public/manifests/equipment_catalog.json`.
-* **Studio CAD Lighting & Tone Mapping**: ACESFilmic tone mapping (exposure 1.15), PCFSoftShadowMap, HemisphereLight, and 3-point Key/Fill/Rim studio directional lights.
-* **Interactive 3D Floating Callouts & SVG Leader Lines**: 2D HTML badges follow camera orbit in real time, connected to 3D anchor points via crisp SVG leader polylines and anchor dots.
-* **Emissive Raycasting Highlight**: Click or hover any mechanical/electrical component in 3D to trigger an active emissive glow (`#f97316`), synchronizing selection with the Bill of Materials and Inspector card.
-* **Dynamic Bill of Materials (BOM)**: Real-time parts list displaying classification materials, part codes (`PRT-0X`), and component isolation buttons (`Iso`).
-* **Dynamic Kinematics Controls**: Equipment-specific operational control panels (e.g., Bow Thruster port/starboard thrust order & cutaway toggle, Propeller ahead/astern RPM, Steering Gear rudder stock & hydraulic ram angle slider, Pump DOL starter, Fan supply/exhaust, and S-band Radar scan speed).
-* **Smooth LERP Explosion Slider**: Continuous 0% to 100% explosion slider with quick presets (`0% Assembled`, `45% Sub-Assy`, `100% Exploded`).
+### 2. Standalone 3D CAD Teardown Digital Twins (22 Interactive Models)
+Every equipment on board can be opened directly from the vessel view, the single-line diagram, or the unified catalog. Each teardown model provides:
+* **Continuous LERP Explosion Slider**: Explode any machine smoothly from 0% (Fully Assembled) to 45% (Sub-Assemblies) to 100% (Fully Exploded) along physically accurate assembly axes.
+* **X-Ray / Cutaway Viewing**: Toggle casing and enclosure opacity to inspect internal rotating shafts, vacuum interrupter ceramic bottles, transformer core laminations, or piston assemblies.
+* **Interactive 3D Raycasting & Emissive Highlight**: Hover or click any part in 3D to trigger an active glow (`#f97316`), highlighting the component's name, classification material, and engineering role in the Bill of Materials.
+* **Dynamic Bill of Materials (BOM)**: Real-time itemized parts table with part codes (`PRT-0X`), marine metallurgy descriptions, and component isolation toggles (`Iso`).
+* **Operational Kinematics**: Interactive sliders and controls to spin impellers, reciprocate compressor pistons, rack circuit breaker trucks in and out, operate hydraulic steering rams, rotate radar scanners, and modulate ventilation dampers.
 
-### 3. Synchronized Single-Line Diagram (SLD)
-* **Dynamic Electrical Topology**: Full vector single-line schematic displaying medium-voltage (6.6 kV) generation, 440 V distribution, 220 V hotel services, and isolated 440 V emergency distribution.
-* **Animated Power Flow**: Energized paths pulse with active flow indicators, de-energized lines display dotted standby states, and open breakers display visible air-gap isolation.
-* **Interactive Breaker Switching**: Click any circuit breaker on the schematic or control panel to open/close circuits.
+### 3. Dynamic Vector Single-Line Diagram (SLD)
+* **Real-Time Electrical Topology**: Displays 6.6 kV primary generation, 440 V essential distribution, 220 V hotel/domestic circuits, and isolated 440 V / 24 V DC SOLAS emergency systems.
+* **Pan, Zoom & Fit Controls**: Smooth vector navigation with responsive canvas auto-fitting and zoom presets.
+* **Collapsible Standardized Legend**: IEC 60617 / IEEE symbology panel with color-coded busbar voltage references and class rule citations.
+* **Interactive Breaker Switching**: Click any breaker to command trip or close operations with instant power-flow recalculation.
 
-### 4. Advanced ETO & PMS Automation Labs
-* **Generator Paralleling & Synchroscope Lab (`ANSI 25 / 25A`)**: Manual speed-trimming (`Gov −`/`Gov ＋`) and automatic phase-angle matching within a ±15° / ±0.35 Hz permissive window.
+### 4. Advanced ETO & Power Management System (PMS) Automation
+* **Generator Paralleling & Synchroscope Lab (`ANSI 25 / 25A`)**:
+  * Real-time synchroscope needle dial with adjustable governor speed trim (`Gov −` / `Gov ＋`).
+  * Manual breaker closure at "12 o'clock" or automated check-synchronizer sequencing within permissible tolerances: $|\Delta V| \le 5\%$, $|\Delta f| \le 0.35\text{ Hz}$, $|\Delta\theta| \le 15^\circ$.
 * **Numerical Protective Relay Engine**:
-  * **ANSI 32**: Reverse Power protection tripping generator VCBs at $P < -5\%$ after 3.0 s.
-  * **ANSI 40**: Loss of Excitation / Under-excitation tripping at $Q < -20\%$ with voltage collapse.
-  * **ANSI 51**: IEC 60255 Standard Inverse IDMT Overcurrent curve.
-  * **ANSI 67N**: Directional Ground Fault detection under High-Resistance Earthing ($R_{\text{NER}} = 381\ \Omega$, $I_{\text{fault}} = 10.0\text{ A}$).
-* **SOLAS Blackout Recovery 5-Stage Sequential Waterfall**: Controlled load restoration preventing secondary cascading blackouts.
-* **SOLAS II-1/42 & 43 Zero-Break Navigation UPS Battery Bridging**: Continuous uninterrupted power to wheelhouse navigation electronics during blackout.
-* **IEC 60092-503 5-Step LOTO & PTW Workflow**: Mandatory safety isolation sequence (Trip VCB $\rightarrow$ Rack Out $\rightarrow$ Padlock $\rightarrow$ Prove Dead $\rightarrow$ Close Earth Switch) before opening 6.6 kV cubicles.
+  * **ANSI 32 (Reverse Power)**: Trips generator circuit breaker when motoring load drops below $P < -5\%$ for $> 3.0\text{ s}$.
+  * **ANSI 40 (Loss of Excitation / Under-Excitation)**: Trips when reactive power $Q < -20\%$ and bus voltage drops below $85\%$ for $> 1.5\text{ s}$.
+  * **ANSI 51 (IDMT Overcurrent)**: Models the standard IEC 60255 inverse-time curve:
+    $$t = \frac{0.14}{(I / I_s)^{0.02} - 1}$$
+  * **ANSI 67N (Directional Ground Fault)**: High-Resistance Earthing with a Neutral Earthing Resistor ($R_{\text{NER}} = 381\ \Omega$) limits single-phase fault currents to $10.0\text{ A}$, triggering selective alarm without instantaneous trip.
+* **2-Stage Preferential Load Shedding**:
+  * Automatic trip of non-essential loads (Stage 1: Reefer container distribution sockets; Stage 2: Bow thruster) upon sustained generator overload ($> 105\%$ for $10\text{ s}$ or $> 115\%$ for $3\text{ s}$).
+* **SOLAS Chapter II-1/43 5-Stage Blackout Recovery Waterfall**:
+  * Sequential load-restoration cascade preventing secondary cascading blackouts upon total loss of main power.
+* **Zero-Break Navigation UPS Battery Bridging (SOLAS II-1/42 & 43)**:
+  * 24 V DC 600 Ah VRLA battery bank with dual float/boost chargers ensuring continuous, zero-break supply to wheelhouse navigation, ECDIS, S-band radar, gyrocompass, and GMDSS during blackout.
+* **IEC 60092-503 5-Step Lockout/Tagout (LOTO) & Permit to Work (PTW)**:
+  * Strict safety interlock sequence required before opening high-voltage switchboard doors:
+    $$\text{Trip VCB} \longrightarrow \text{Rack Out Truck} \longrightarrow \text{Padlock \& Tag} \longrightarrow \text{Prove Dead (Test Wand)} \longrightarrow \text{Close Earth Switch}$$
 
 ---
 
-## ⚡ Electrical System Architecture
+## 📦 Equipment Teardown Suite (22 Models)
 
-The vessel utilizes a modern medium-voltage electric-propulsion topology adhering to **IEC 60092-503**, **SOLAS Chapter II-1/40-43**, and marine classification society rules for high-voltage marine installations.
+The table below lists all 22 production 3D CAD digital twins integrated into the simulator:
+
+| # | Equipment Model | Rating / Specs | Standards | Teardown Features & Kinematics |
+| :-: | :--- | :--- | :--- | :--- |
+| **01** | **6.6 kV Marine Diesel Generator (Argon)** | 2,500 kVA, 6.6 kV, 60 Hz, 720 RPM | IEC 60092-503, SOLAS II-1/40 | 12-cylinder V-engine, turbocharger, alternator rotor/stator, AVR excitation, resilient mount chocks. |
+| **02** | **SOLAS Emergency Diesel Generator (EDG)** | 600 kW, 440 V, 60 Hz, 1,800 RPM | SOLAS II-1/43 | Radiator cooling, dual electric/hydraulic starters, independent fuel day tank, vibration dampers. |
+| **03** | **6.6 kV HVSC Shore Power Reel & Switchboard** | 6.6 kV, 1,600 kVA, Cold Ironing | IEC/ISO/IEEE 80005-1 | Motorized cable spooling reel, slip ring assembly, pilot wire interlocking safety circuit breaker. |
+| **04** | **3-Cubicle 6.6 kV Switchboard & VCB** | 6.6 kV, 1,250 A, 40 kA Breaking | IEC 62271-200, Form 4b | 3-bay line-up (Incomer, Bus-Tie, Feeder), withdrawable cassette truck, ceramic vacuum interrupters, automatic shutters. |
+| **05** | **440 V Main LV Switchboard & Withdrawable ACB** | 440 V, 3,200 A, 65 kA Breaking | IEC 60947-2, IEC 60092-302 | 3-pole drawout Air Circuit Breaker, arc chutes, racking mechanism, busbar compartment. |
+| **06** | **SOLAS Emergency Switchboard (ESB)** | 440 V / 220 V, 1,200 A, Auto-Transfer | SOLAS II-1/43 | Automatic Bus Transfer (ABT) interlocked breakers, non-blackout emergency bus, DC control rack. |
+| **07** | **6.6 kV / 440 V Cast-Resin Distribution Transformer** | 1,500 kVA, Dyn11, Class F/H | IEC 60076-11 | Step-lap silicon steel core, vacuum-cast epoxy HV coils, temperature monitoring PT100 sensors. |
+| **08** | **Marine Propulsion Inverter VFD** | 6,000 kW, 6.6 kV, 12-Pulse Topology | IEC 61800-4 | Phase-shifting transformer input, diode rectifier bridge, DC-link water-cooled foil capacitor bank, IGBT inverter phase legs. |
+| **09** | **6,000 kW TEWAC Marine Propulsion Motor** | 6,000 kW, 6.6 kV, 140 RPM, Dual Winding | IEC 60092-503 | Water-cooled air heat exchanger, PT100 RTD stator windings, insulated sleeve bearings, grounding brush. |
+| **10** | **Propulsion Shaftline & Ni-Al Bronze Propeller** | 650 mm dia. forged shaft, 4.8 m propeller | DNV Rules for Ships Pt.4 Ch.2 | 4-blade skewed Kaplan propeller, fairing cone, stern tube white metal bearings, mechanical face seals, plummer blocks. |
+| **11** | **6.6 kV Bow Tunnel Thruster Assembly** | 1,200 kW, 6.6 kV, Athwartships Duct | SOLAS II-1 / Classification | Transverse tunnel casing, bevel gear pod, skewed Kaplan impeller, jaw coupling, vertical electric drive motor. |
+| **12** | **440 V Cargo Reefer Switchboard & Socket Rack** | 440 V, 800 A, 32 A CEE 17 Outlets | ISO 1496-2, IEC 60309 | Weatherproof IP67 socket modules, individual 32 A thermal-magnetic breakers, pilot indicator lamps. |
+| **13** | **40-Foot High-Cube ISO Reefer Container** | 40 ft HC, 380–460 V 3-Phase, −30°C to +30°C | ISO 668, ISO 1496-2 | Scroll refrigeration compressor, finned air condenser, evaporator fans, micro-channel coils, insulated sandwich walls. |
+| **14** | **30 Bar Starting Air Compressor & Receiver Skid** | 30 bar (3.0 MPa), 45 kW, 2-Stage Skid | Class Rules (Machinery) | V-twin cast iron cylinders, concentric disc valves, intercooler & aftercooler, 1,000 L cylindrical air receiver. |
+| **15** | **40 t Electro-Hydraulic Pedestal Deck Crane** | 40 t SWL @ 28 m outreach, 440 V | ILO Convention No. 152 | Slew bearing ring, planetary slew drive, luffing hydraulic cylinders, telescopic lattice boom, hoist winch drum. |
+| **16** | **45 kW Axial Engine Room Vent Fan & Fire Damper** | 45 kW, 440 V, Reversible Aerofoil | SOLAS II-2/Reg 5 | Welded cylindrical duct, 8-blade cast aluminium aerofoil impeller, pneumatic fire damper with fusible link. |
+| **17** | **Vertical Ballast Pump & 15 ppm OWS Skid** | 450 m³/h, 440 V, IMO MEPC.107(49) | MARPOL Annex I | Vertical split-case centrifugal pump, bronze impeller, 2-stage coalescer pack, oil content monitor (OCM). |
+| **18** | **75 kW Centrifugal Cooling SW/FW Pump Skid** | 75 kW, 440 V, 250 m³/h @ 3.5 bar | IEC 60034-1, ISO 5199 | Volute casing, closed double-curvature bronze impeller, mechanical shaft seal, TEFC marine motor skid. |
+| **19** | **440 V Marine Galley Board & Cooking Island** | 440 V / 220 V with Remote Shunt Trip | SOLAS II-2/Reg 5 | Marine deep fryers, induction range, stainless steel extraction canopy, ANSUL fire suppression shunt-trip breaker. |
+| **20** | **Integrated Navigation Bridge Console & Radar** | Dual ECDIS, 24 RPM S-Band ARPA Radar | SOLAS V/19, IEC 62288 | Console desk modules, trackballs, rudder tiller, autopilot, gyro repeater, GMDSS VHF suite, turning radar scanner. |
+| **21** | **Twin-Ram Electro-Hydraulic Steering Gear** | 1,200 kN·m torque, 440 V Dual PPU | SOLAS II-1/29 | Dual hydraulic rams, central rudder tiller, variable-delivery axial piston pumps, hunting gear feedback lever. |
+| **22** | **24 V DC 600 Ah VRLA Battery Bank & Charger** | 24 V DC, 600 Ah, Dual Float/Boost Units | SOLAS II-1/42, IEEE 45 | Acid-resistant battery racks, AGM sealed cells, thyristor rectifier/charger, battery isolator switchboard. |
+
+---
+
+## ⚡ Electrical Distribution Architecture
+
+The single-line diagram below shows the high-voltage medium-voltage distribution network, dual step-down transformers, symmetrical 440 V switchboards, 220 V sub-boards, and the autonomous SOLAS emergency system:
 
 ```mermaid
 flowchart TD
-    subgraph SHORE ["Cold Ironing IEC/ISO/IEEE 80005-1"]
-        HVSC["6.6 kV Shore Connection Reel"] -->|Safety Interlocked CB| ShoreCB["Shore Incomer VCB"]
+    subgraph COLD_IRONING ["Shore Power (IEC/ISO/IEEE 80005-1)"]
+        HVSC["6.6 kV Shore Cable Reel"] --> ShoreVCB["Shore Incomer VCB"]
     end
 
-    subgraph GENERATION ["6.6 kV Primary Medium-Voltage Generation"]
-        DG1["DG 1 - 2,500 kVA / 6.6 kV"] -->|VCB 1| BusA["Main Switchboard 6.6 kV - BUS A"]
-        DG2["DG 2 - 2,500 kVA / 6.6 kV"] -->|VCB 2| BusA
-        ShoreCB -.->|Alternative Infeed| BusA
+    subgraph GENERATION ["Primary 6.6 kV Generation (10 MVA Total)"]
+        DG1["DG 1 · 2,500 kVA"] -->|VCB 1| BusA["6.6 kV Main Bus A (Port)"]
+        DG2["DG 2 · 2,500 kVA"] -->|VCB 2| BusA
+        ShoreVCB -.->|Interlocked Feed| BusA
         
-        BusA <-->|Tie VCB - ANSI 25 Synch| BusB["Main Switchboard 6.6 kV - BUS B"]
+        BusA <-->|Tie VCB · ANSI 25 Synch| BusB["6.6 kV Main Bus B (Starboard)"]
         
-        DG3["DG 3 - 2,500 kVA / 6.6 kV"] -->|VCB 3| BusB
-        DG4["DG 4 - 2,500 kVA / 6.6 kV"] -->|VCB 4| BusB
+        DG3["DG 3 · 2,500 kVA"] -->|VCB 3| BusB
+        DG4["DG 4 · 2,500 kVA"] -->|VCB 4| BusB
     end
 
-    subgraph HEAVY_CONSUMERS ["6.6 kV Heavy Machinery"]
-        BusA -->|Feeder VCB| VFD["Propulsion Converter 12-Pulse VFD"]
-        VFD --> PMotor["3,000 kW Induction Propulsion Motor"]
-        PMotor --> Prop["4-Blade Skewed Kaplan Propeller"]
+    subgraph HEAVY_MACHINERY ["6.6 kV Heavy Consumers"]
+        BusA -->|Feeder VCB| VFD["Propulsion VFD (12-Pulse Inverter)"]
+        VFD --> Motor["6,000 kW TEWAC Propulsion Motor"]
+        Motor --> Prop["Propeller Shaft & 4-Blade Propeller"]
 
-        BusA -->|Feeder VCB| BowDrive["Bow Thruster VFD / Soft-Starter"]
-        BowDrive --> BowMotor["750 kW Bow Thruster Motor"]
-        BowMotor --> BowImpeller["Athwartships Tunnel Impeller"]
+        BusB -->|Feeder VCB| BowVFD["Bow Thruster Drive"]
+        BowVFD --> BowThruster["1,200 kW Bow Tunnel Thruster"]
     end
 
-    subgraph TRANSFORMATION ["6.6 kV / 440 V Symmetrical Step-Down"]
-        BusA -->|Feeder VCB| TxA["Main Transformer A 1,500 kVA Dyn11"]
-        BusB -->|Feeder VCB| TxB["Main Transformer B 1,500 kVA Dyn11"]
+    subgraph STEP_DOWN ["6.6 kV / 440 V Transformation"]
+        BusA -->|Feeder VCB| TxA["Main Transformer A · 1,500 kVA Dyn11"]
+        BusB -->|Feeder VCB| TxB["Main Transformer B · 1,500 kVA Dyn11"]
     end
 
-    subgraph LV_DISTRIBUTION ["440 V Low-Voltage Auxiliary Switchboard"]
-        TxA -->|Incomer ACB 1| LVBusA["440 V Main Bus Section A"]
-        TxB -->|Incomer ACB 2| LVBusB["440 V Main Bus Section B"]
+    subgraph LV_MAINS ["440 V Main Low-Voltage Distribution"]
+        TxA -->|Incomer ACB 1| LVBusA["440 V Main Bus A (Port)"]
+        TxB -->|Incomer ACB 2| LVBusB["440 V Main Bus B (Starboard)"]
         LVBusA <-->|LV Bus-Tie ACB| LVBusB
 
-        LVBusA --> CoolingPump["Main SW Cooling Pumps DOL"]
-        LVBusA --> Compressors["30 bar Starting Air Compressors"]
-        LVBusB --> FirePump["Main Fire Pump Set SOLAS"]
-        LVBusB --> BallastOWS["Ballast Pump and 15 ppm OWS Skid"]
-        LVBusB --> VentFans["Engine Room Reversible Axial Fans"]
-        LVBusB --> DeckCrane["Electro-Hydraulic Cargo Deck Cranes"]
-        LVBusA --> ReeferFeeder["440 V Reefer Container Bay Sockets"]
-        
-        LVBusA -->|Shunt Trip Breaker| Galley440["440 V Galley Primary Board"]
-        ShuntRelay["SOLAS Ch. II-2 Emergency Remote Shunt Trip"] -.->|Trip Signal| Galley440
+        LVBusA --> CoolingPump["SW/FW Cooling Pumps (75 kW)"]
+        LVBusA --> Compressors["30 Bar Air Compressors (45 kW)"]
+        LVBusA --> ReeferA["Reefer Socket Rack A (384 kW)"]
+
+        LVBusB --> FirePump["SOLAS Main Fire Pump Skid"]
+        LVBusB --> BallastOWS["Ballast Pump & 15 ppm OWS Skid"]
+        LVBusB --> VentFans["Engine Room Axial Vent Fans (45 kW)"]
+        LVBusB --> DeckCrane["40 t Cargo Deck Crane"]
+        LVBusB --> ReeferB["Reefer Socket Rack B (384 kW)"]
+
+        LVBusA -->|Shunt Trip Breaker| GalleyBoard["440 V Galley Switchboard"]
+        ShuntRelay["SOLAS II-2 Remote Shunt Trip"] -.->|Emergency Signal| GalleyBoard
     end
 
-    subgraph HOTEL_SERVICE ["220 V Single and Three-Phase Services"]
+    subgraph HOTEL_DOMESTIC ["220 V Domestic & Automation Services"]
         LVBusA --> TxHotel["440 V / 220 V Hotel Transformer"]
-        TxHotel --> HotelBus["220 V Domestic Switchboard"]
-        HotelBus --> AccomLights["Accommodation Lighting and HVAC Controls"]
-        HotelBus --> AutomationPLC["PMS Automation and Sensor Racks"]
+        TxHotel --> HotelBus["220 V Sub-Distribution Board"]
+        HotelBus --> AccomLighting["Accommodation Lighting & HVAC"]
+        HotelBus --> PMS_PLC["PMS Automation & Sensor Racks"]
     end
 
-    subgraph EMERGENCY_SYSTEM ["SOLAS Chapter II-1/43 Emergency System"]
-        LVBusA -->|Normal Interlocked Feed| ABT["Automatic Bus Transfer ABT Switch"]
-        EDG["Emergency Diesel Generator 440 V / 350 kW"] -->|Emergency Incomer CB| ABT
-        ABT --> ESB["440 V Emergency Switchboard ESB"]
-        
-        ESB --> EFirePump["Emergency Fire Pump Set"]
-        ESB --> ESteering["Steering Gear Power Unit Feeder 2"]
-        ESB --> EmLighting["SOLAS Emergency Escape Lighting"]
-        
-        ESB --> StaticInverter["Dual Float Charger and Static Inverter UPS"]
-        BatteryBank["24 V DC Sealed Radio/Nav Battery Bank"] <--> StaticInverter
-        StaticInverter --> NavBus["Uninterruptible Navigation and Radio Bus"]
-        
+    subgraph SOLAS_EMERGENCY ["SOLAS Chapter II-1/43 Emergency System"]
+        LVBusA -->|Normal Interlocked Feed| ABT["Automatic Bus Transfer (ABT) Switch"]
+        EDG["Emergency Diesel Generator · 600 kW"] -->|Emergency Incomer CB| ABT
+        ABT --> ESB["440 V Emergency Switchboard (ESB)"]
+
+        ESB --> EmFirePump["Emergency Fire Pump Skid"]
+        ESB --> EmSteering["Steering Gear Power Unit No. 2"]
+        ESB --> EmEscapeLights["SOLAS Escape Lighting"]
+
+        ESB --> DualCharger["Dual Float/Boost Charger & Inverter"]
+        BatteryBank["24 V DC 600 Ah VRLA Battery Bank"] <--> DualCharger
+        DualCharger --> NavBus["Uninterruptible 24 V DC / 220 V AC Bridge Bus"]
+
         NavBus --> Radar["S-Band 24 RPM ARPA Radar"]
-        NavBus --> BridgeConsoles["ECDIS, Gyrocompass and Autopilot"]
-        NavBus --> GMDSS["GMDSS VHF/MF Radio and Distress Suite"]
+        NavBus --> Consoles["Integrated Bridge ECDIS & Gyro"]
+        NavBus --> GMDSS["GMDSS Radio Distress Suite"]
         NavBus --> NavLights["COLREG Navigation Lanterns"]
     end
 ```
 
-### Voltage Levels & Hierarchy Summary
+---
 
-| Voltage Level | System Topology | Nominal Frequency | Primary Function / Consumers |
-| :--- | :--- | :--- | :--- |
-| **`6.6 kV AC`** | 3-Phase 3-Wire, High-Resistance Earthed ($R_{\text{NER}} = 381\ \Omega$) or Unearthed IT | 60 Hz | Main generation (DG 1–4, 10 MVA total), 3,000 kW propulsion converter, 750 kW bow thruster, and 6.6 kV / 440 V distribution transformers. |
-| **`440 V AC`** | 3-Phase 3-Wire, Unearthed IT with Insulation Monitoring | 60 Hz | Essential machinery auxiliaries (cooling pumps, fire main, compressors, ballast, steering gear power units, ventilation fans, deck cranes, and reefer container sockets). |
-| **`440 V AC (Emergency)`** | 3-Phase 3-Wire, Autonomous Emergency Bus | 60 Hz | SOLAS emergency switchboard (ESB) fed by the 350 kW EDG or interlocked normal tie. Supplies emergency fire pump, secondary steering feed, and battery chargers. |
-| **`220 V AC`** | 3-Phase / 1-Phase 3-Wire Grounded Neutral | 60 Hz | Galley appliances, accommodation lighting, cabin services, and PMS automation power supplies. |
-| **`24 V DC`** | 2-Wire Isolated DC Battery System with Static Inverter | DC / Static AC | **Zero-break bridge navigation & communications** (SOLAS II-1/42 & 43). Supplies S-band radar, ECDIS, gyrocompass, GMDSS, GPS, and COLREG navigation lights. |
+## 🔬 Simulation Scenarios & Training Labs
 
-### Protection & Interlock Matrix
+The simulator comes pre-configured with 6 curated scenarios designed for classroom instruction, assessment, and self-paced ETO training:
 
-* **ANSI 25 / 25A Check-Synchronizing**: Prevents breaker closure unless voltage difference $|\Delta V| \le 5\%$, frequency slip $|\Delta f| \le 0.35\text{ Hz}$, and phase angle $|\Delta\theta| \le 15^\circ$.
-* **ANSI 32 Reverse Power**: Protects diesel engines against motoring damage ($P < -5\%$, timer $3.0\text{ s}$).
-* **ANSI 40 Loss of Field**: Detects generator rotor field failure or AVR collapse ($Q < -20\%$, voltage $< 85\%$, timer $1.5\text{ s}$).
-* **ANSI 51 IDMT Overcurrent**: Standard Inverse curve ($t = \frac{0.14}{(I/I_s)^{0.02} - 1}$) preventing spurious trips during large motor starting while guarding against thermal overloads.
-* **ANSI 67N Directional Earth Fault**: High-Resistance Earthing clamps single phase-to-ground fault current to $10.0\text{ A}$ via a $381\ \Omega$ neutral resistor, triggering an alarm without instantaneous trip.
-* **SOLAS Chapter II-2 Galley Shunt Trip**: Remote emergency pushbuttons trip the 440 V galley range breaker and exhaust dampers simultaneously in the event of a deep-fryer fire.
-* **Automatic Bus Transfer (ABT) Interlock**: Mechanical and electrical interlocks prevent simultaneous closure of the 440 V normal incomer and the Emergency Generator breaker, eliminating out-of-phase backfeeding.
-* **IEC 60092-503 5-Step LOTO**: Mandatory 5-stage procedure (Trip VCB $\rightarrow$ Rack Out Truck $\rightarrow$ Apply Padlock $\rightarrow$ Prove Dead with Test Wand $\rightarrow$ Close Earth Switch) before opening 6.6 kV enclosure doors.
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        CURATED SCENARIOS                               │
+├────────────────────────────────────────────────────────────────────────┤
+│ 01 · Symmetrical Dual-Bus Energization                                 │
+│      DG 1 online with 6.6 kV tie closed; symmetrical step-down via    │
+│      TX A & TX B energizing 440 V Bus A and Bus B.                     │
+│                                                                        │
+│ 02 · Propulsion & Sea Running                                          │
+│      Power flow through 6.6 kV Bus A → Propulsion VFD → 6,000 kW Motor │
+│      → Propeller, supported by seawater cooling and steering gear.     │
+│                                                                        │
+│ 03 · Split-Bus Operation (Open Bus Ties)                               │
+│      Isolates Port and Starboard grids (DP Class 2/3 requirement).     │
+│      DG 1 feeds Port; start DG 3 on Bus B for independent redundancy.  │
+│                                                                        │
+│ 04 · SOLAS Blackout Waterfall                                          │
+│      Complete loss of generation trips all feeders via UVR. The        │
+│      5-stage SOLAS recovery cascade starts the 600 kW EDG, transfers   │
+│      the ESB, and sequentially restores vital consumers.               │
+│                                                                        │
+│ 05 · Parallel & Sync DG 2 (ANSI 25 Lab)                                │
+│      DG 2 running on standby. Use the Synchroscope dial and governor   │
+│      speed controls to manually synchronize and close DG 2 breaker.    │
+│                                                                        │
+│ 06 · Heavy Sea Load & Symmetrical Redundancy                           │
+│      DG 1 and DG 3 paralleled across closed bus tie. High reefer cargo │
+│      load and full propulsion test preferential load shedding.         │
+└────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 📁 Repository Structure
+## 📁 Repository Directory Structure
 
 ```
-.
+marine-powersystem-project1/
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml            # Automated GitHub Actions Pages deployment
 ├── docs/
-│   ├── SKILL.md                  # Antigravity development skills & domain rules
-│   └── TUTORIAL.md               # Comprehensive ETO training manual & operating guide
+│   ├── SKILL.md                  # Marine CAD digital twin builder technical guide
+│   └── TUTORIAL.md               # In-depth maritime electrical training manual
 ├── public/
 │   ├── assemblies/
-│   │   ├── universal_viewer.html # Unified data-driven 3D CAD Twin Viewer
+│   │   ├── universal_viewer.html # Data-driven Three.js 3D CAD Twin Viewer
 │   │   ├── tutorial.html         # Interactive in-app visual operating guide
-│   │   └── *.html                # Clean URL redirect shims for legacy viewer links
+│   │   └── *.html                # Compatibility shims for legacy assembly links
 │   ├── manifests/
-│   │   └── equipment_catalog.json# Engineering metadata for 18 CAD assemblies
-│   ├── models/                   # All production 3D GLB equipment models
-│   │   ├── blender-hull-V7.glb   # High-detail container ship hull V7 model
-│   │   ├── marine_propeller_assembly.glb
+│   │   └── equipment_catalog.json# Technical catalog metadata for 3D equipment
+│   ├── models/                   # 25 production 3D GLB models (Hull V7, machinery)
+│   │   ├── blender-hull-V7.glb
 │   │   ├── marine_propulsion_motor.glb
+│   │   ├── marine_propeller_assembly.glb
 │   │   ├── marine_drive.glb
 │   │   ├── marine_transformer.glb
 │   │   ├── marine_steering_gear.glb
-│   │   ├── marine_cooling_pump.glb
-│   │   ├── vent_fan_assembly.glb
-│   │   ├── bridge_navcom_suite.glb
 │   │   └── *.glb
-│   └── tutorial/                 # Screenshot assets and diagram illustrations
+│   ├── teardowns/                # 22 interactive 3D CAD teardown simulators
+│   │   ├── dg.html               # 6.6 kV 2,500 kVA Marine Diesel Generator
+│   │   ├── vcb.html              # 3-Cubicle 6.6 kV Main Switchboard & VCB
+│   │   ├── lv_acb.html           # 440 V 3,200 A LV Switchboard & ACB
+│   │   ├── tx.html               # 6.6 kV / 440 V Cast-Resin Transformer
+│   │   ├── propulsion_vfd.html   # 6,000 kW Propulsion VFD Inverter
+│   │   ├── prop_motor.html       # 6,000 kW TEWAC Propulsion Motor
+│   │   ├── prop_shaft.html       # Propulsion Shaftline & Propeller
+│   │   ├── bow_thruster.html     # 1,200 kW Bow Tunnel Thruster
+│   │   ├── steering_gear.html    # Twin-Ram Steering Gear
+│   │   ├── edg.html              # 600 kW Emergency Diesel Generator
+│   │   ├── esb.html              # SOLAS Emergency Switchboard
+│   │   ├── shore_power.html      # 6.6 kV HVSC Shore Power Reel
+│   │   ├── air_compressor.html   # 30 Bar Air Compressor Skid
+│   │   ├── deck_crane.html       # 40 t Deck Crane
+│   │   ├── vent_fan.html         # 45 kW Engine Room Vent Fan
+│   │   ├── ballast_ows_pump.html # Ballast Pump & 15 ppm OWS Skid
+│   │   ├── centrifugal_pump.html # 75 kW Centrifugal Cooling Pump
+│   │   ├── galley.html           # 440 V Galley Board with Shunt Trip
+│   │   ├── nav_bridge.html       # Bridge Console & S-Band Radar
+│   │   ├── battery_24v.html      # 24 V DC Battery Bank & Charger
+│   │   ├── reefer_board.html     # 440 V Reefer Distribution Board
+│   │   └── reefer_container.html # 40 ft High-Cube ISO Reefer Container
+│   └── tutorial/                 # Tutorial screenshot assets & visual figures
 ├── scripts/
-│   ├── blender/                  # Python generator scripts for Blender 4.x/5.x
-│   │   ├── generate_hull.py      # Parametric container ship hull V7 generator
+│   ├── blender/                  # Parametric Python geometry generators
+│   │   ├── generate_hull.py      # Container ship hull V7 generator
 │   │   ├── generate_propeller.py
 │   │   ├── generate_propulsion_motor.py
-│   │   ├── generate_propulsion_drive.py
 │   │   ├── generate_transformer.py
 │   │   ├── generate_steering_gear.py
 │   │   ├── generate_pumps.py
-│   │   ├── generate_vent_fan.py
-│   │   ├── generate_bridge_navcom.py
 │   │   ├── generate_all_consumers.py
 │   │   └── kit.py                # Reusable Blender geometry & material kit
-│   └── qa/                       # Verification & automated test scripts
-│       ├── check-layout.mjs      # Clearance bounds & collision validator
-│       ├── shot.mjs              # Headless Chrome screenshot utility
-│       └── capture_tutorial_shots.mjs
+│   └── qa/                       # Automated layout & screenshot utilities
 ├── src/
-│   ├── core/                     # Core simulation logic
-│   │   ├── network.ts            # Electrical solver, equipment topology, PMS logic
-│   │   └── sim-engine.ts         # Quasi-steady-state electrical flow engine
-│   ├── vessel/                   # Vessel geometry, spatial layout & rendering
+│   ├── core/
+│   │   ├── network.ts            # Network graph, PMS logic & protective relays
+│   │   └── sim-engine.ts         # Electrical solver, load specs & telemetry
+│   ├── vessel/
 │   │   ├── scene.ts              # Three.js scene, lighting, camera controls
-│   │   ├── vessel.ts             # 3D hull, deck machinery, technical net floor
-│   │   ├── vessel-layout.ts      # Spatial coordinates & equipment bounding boxes
-│   │   └── assets.ts             # Asset path resolver for local and Pages hosting
-│   ├── assemblies/               # Equipment assembly controllers & models
-│   │   ├── propeller-assembly.ts
-│   │   ├── drive-assembly.ts
-│   │   ├── motor-assembly.ts
-│   │   ├── transformer-assembly.ts
-│   │   ├── steering-assembly.ts
-│   │   ├── pump-assembly.ts
-│   │   ├── reefer-assembly.ts
-│   │   ├── consumer-assemblies.ts
-│   │   ├── models.ts             # Procedural 3D models & LOTO step manager
-│   │   └── equipment-models.ts   # Reference-inspired genset & VCB assemblies
-│   ├── main.ts                   # Application entry point, UI binding, event loop
-│   └── style.css                 # Maritime theme, responsive layout & modal styles
-├── index.html                    # Main application HTML entry point
+│   │   ├── vessel.ts             # 3D hull, machinery foundations & animations
+│   │   ├── vessel-layout.ts      # Spatial coordinates & equipment placement
+│   │   └── assets.ts             # Dynamic URL resolution for Pages hosting
+│   ├── assemblies/               # Procedural assembly models & LOTO managers
+│   ├── main.ts                   # Application entry point & DOM event wiring
+│   └── style.css                 # Clean maritime styling & responsive layout
+├── index.html                    # Application main HTML host
 ├── package.json                  # Dependencies & npm scripts
-├── pyrightconfig.json            # Pyright configuration for Blender scripts
 ├── tsconfig.json                 # TypeScript compiler configuration
-└── vite.config.ts                # Vite build configuration with base-path support
+└── vite.config.ts                # Vite bundler configuration
 ```
 
 ---
 
-## 🛠️ Development & Local Setup
+## 🛠️ Installation & Local Development
 
-### Prerequisites
+### System Requirements
 * **Node.js**: v20.19.0 or v22.12.0+
 * **npm**: v10+
-* **Blender** (Optional, only needed to re-export `.glb` models): v4.2+ or v5.x
+* **Modern Web Browser**: Chrome, Edge, Firefox, or Safari with WebGL 2.0 support.
 
-### Installation & Run
-1. Clone the repository:
+### Setup Instructions
+1. **Clone the repository**:
    ```bash
    git clone https://github.com/jro-d/marine-powersystem-project1.git
    cd marine-powersystem-project1
    ```
-2. Install dependencies:
+
+2. **Install dependencies**:
    ```bash
    npm install
    ```
-3. Start local development server:
+
+3. **Start the local development server**:
    ```bash
    npm run dev
    ```
-   Open **http://localhost:5173/** in your browser.
+   Open **http://localhost:5173/** in your web browser.
 
-4. Verify 3D layout bounds and equipment clearances:
+4. **Verify layout bounds & equipment clearances**:
    ```bash
    npm run check:layout
    ```
 
-5. Build for production:
+5. **Compile for production**:
    ```bash
    npm run build
    npm run preview
@@ -277,22 +342,24 @@ flowchart TD
 
 ---
 
-## 🚀 Deployment & Live Site
+## 🚀 Deployment & Continuous Integration
 
-* **Production URL**: **[https://jro-d.github.io/marine-powersystem-project1/](https://jro-d.github.io/marine-powersystem-project1/)**
+* **Production Live Site**: **[https://jro-d.github.io/marine-powersystem-project1/](https://jro-d.github.io/marine-powersystem-project1/)**
 
-The project includes an automated deployment workflow via [GitHub Actions](.github/workflows/deploy.yml). Any push to the `main` branch automatically compiles and deploys the latest simulator build to GitHub Pages.
+The project includes an automated deployment pipeline via [GitHub Actions](.github/workflows/deploy.yml). Every push to the `main` branch automatically runs TypeScript typechecking, builds the optimized client bundle via Vite, and publishes the static artifacts to GitHub Pages with correct base path routing.
 
 ---
 
-## 📜 Regulatory & Design Standards
+## 📜 Regulatory Standards & Technical References
 
 * **IEC 60092-503**: Electrical installations in ships — Special features: AC supply systems with voltages in the range of 1 kV up to and including 15 kV.
 * **IEC 60092-302**: Low-voltage switchgear and controlgear assemblies.
-* **SOLAS Chapter II-1 / Part D**: Electrical installations — Regulations 40 to 45 (Main source, Emergency source, Starting arrangements, and Safety precautions).
-* **SOLAS Chapter II-2 / Regulation 5**: Fire safety measures — Remote emergency shutdown of galley fuel and ventilation.
+* **IEC 60255**: Measuring relays and protection equipment (Standard Inverse IDMT curves).
 * **IEC/ISO/IEEE 80005-1**: High Voltage Shore Connection (HVSC) Systems — Cold Ironing.
-* **IEC 60255**: Measuring relays and protection equipment (IDMT inverse-time characteristics).
+* **SOLAS Chapter II-1 / Part D**: Electrical installations — Regulations 40 to 45 (Main source, Emergency source, Starting arrangements, and Electrical precautions).
+* **SOLAS Chapter II-2 / Regulation 5**: Fire safety measures — Remote emergency shutdown of galley equipment and ventilation fans.
+* **IMO MEPC.107(49)**: Revised guidelines and specifications for pollution prevention equipment for machinery space bilges of ships.
+* **ISO 1496-2 / ISO 668**: Series 1 freight containers — Specification and testing for thermal containers.
 
 ---
 
@@ -300,4 +367,4 @@ The project includes an automated deployment workflow via [GitHub Actions](.gith
 
 * **Owner / Developer**: [jro-d](https://github.com/jro-d)
 * **Repository**: [https://github.com/jro-d/marine-powersystem-project1](https://github.com/jro-d/marine-powersystem-project1)
-* **License**: [GNU General Public License v3.0 (GPLv3)](LICENSE) — Free and open-source for educational and maritime training use.
+* **License**: [GNU General Public License v3.0 (GPLv3)](LICENSE) — Free and open-source for educational, research, and maritime training use.
