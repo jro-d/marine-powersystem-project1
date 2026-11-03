@@ -1423,17 +1423,20 @@ input[type=range] {
   position: absolute;
   pointer-events: none;
   transform: translate(-50%, -50%);
-  padding: 2px 5px;
+  padding: 1.5px 4.5px;
   border: 1px solid var(--line-strong);
-  border-radius: var(--r-sm);
-  background: rgba(255, 255, 255, 0.92);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.94);
   color: var(--text);
-  font: 500 10.5px/1.2 var(--font-sans);
+  font: 600 8.5px/1.15 var(--font-sans);
+  letter-spacing: 0.02em;
   white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(2px);
 }
 
 .vessel-label.is-live {
-  border-left: 3px solid var(--energized);
+  border-left: 2.5px solid var(--energized);
 }
 
 .vessel-label.is-selected {

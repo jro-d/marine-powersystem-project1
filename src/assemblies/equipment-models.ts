@@ -545,14 +545,18 @@ function boardGeometry(id:string,g:THREE.Group,hv:boolean){
       break;
     case 'doors':
       if(hv){
-        // Cubicle 1 open 115°
+        // Cubicle 1 open 115° - hinged flush at left frame upright with no gap
         const d1=new THREE.Group();
-        d1.position.set(-1.68,0,.72);
+        d1.position.set(-1.66,0,0);
         d1.rotation.y=-2.0;
-        box(d1,[1.07,1.15,.045],[.54,.7,0],pebbleGrey);
-        box(d1,[1.07,1.25,.045],[.54,-.58,0],pebbleGrey);
+        box(d1,[1.07,1.15,.045],[.535,.7,0],pebbleGrey);
+        box(d1,[1.07,1.25,.045],[.535,-.58,0],pebbleGrey);
         box(d1,[.045,.28,.1],[1.0,.45,.055],polishedSteel);
         box(d1,[.045,.28,.1],[1.0,-.65,.055],polishedSteel);
+        for(const hy of [-1.15,-.1,.6,1.15]){
+          cyl(d1,.022,.08,[0,hy,0],iron,'y');
+          box(d1,[.04,.035,.04],[-.015,hy,-.01],steel);
+        }
         g.add(d1);
         for(const x of [0,1.12]){
           box(g,[1.07,1.15,.045],[x,.7,0],pebbleGrey);

@@ -320,7 +320,7 @@ export class VesselView {
       const object = this.objects.get(id)!;
       const point = object.position.clone(); point.y += object.userData.height + .22; point.project(this.camera);
       const x = (point.x + 1) * this.host.clientWidth / 2, y = (-point.y + 1) * this.host.clientHeight / 2;
-      const occluded = occupied.some(p => Math.abs(p.x - x) < 57 && Math.abs(p.y - y) < 19);
+      const occluded = occupied.some(p => Math.abs(p.x - x) < 42 && Math.abs(p.y - y) < 14);
       const visible = point.z < 1 && x > 18 && x < this.host.clientWidth - 18 && y > 25 && y < this.host.clientHeight - 12 && !occluded;
       label.style.display = visible ? '' : 'none'; if (visible) occupied.push({ x, y });
       label.style.left = `${x}px`; label.style.top = `${y}px`;
