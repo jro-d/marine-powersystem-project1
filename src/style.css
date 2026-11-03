@@ -1438,6 +1438,78 @@ input[type=range] {
 .vessel-label.is-live {
   border-left: 2.5px solid var(--energized);
 }
+.vessel-label.is-live[data-tier="hv"] { border-left-color: #dc2626; }
+.vessel-label.is-live[data-tier="lv"] { border-left-color: #2563eb; }
+.vessel-label.is-live[data-tier="consumer"] { border-left-color: #16a34a; }
+.vessel-label.is-live[data-tier="emergency"] { border-left-color: #ea580c; }
+
+/* 3D Power Flow Filter & Voltage-Tier Legend Bar */
+.vessel-flow-bar {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: var(--shadow-pop);
+  backdrop-filter: blur(4px);
+  overflow: hidden;
+}
+
+.vessel-flow-title {
+  padding: 4px 8px;
+  font: 600 10.5px/1.2 var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+  background: var(--surface-2);
+  border-right: 1px solid var(--line);
+  user-select: none;
+}
+
+.flow-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-2);
+  font: 500 11.5px/1.2 var(--font-sans);
+  white-space: nowrap;
+}
+
+.flow-filter-btn:last-child {
+  border-right: 0;
+}
+
+.flow-filter-btn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.flow-filter-btn.active {
+  background: var(--accent-tint);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.flow-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.flow-dot.hv { background: #dc2626; }
+.flow-dot.lv { background: #2563eb; }
+.flow-dot.consumer { background: #16a34a; }
+.flow-dot.emergency { background: #ea580c; }
 
 .vessel-label.is-selected {
   background: var(--text);

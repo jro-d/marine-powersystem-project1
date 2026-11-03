@@ -1,7 +1,7 @@
 import './style.css';
 import { byId, connections, edgeById, equipment, initialState, powered, connectionState, scenarios, sourceIds, allSupplyIds, VOLTAGES, type SimState, type Equipment, type ModelType, type Connection, type EarthingArchitecture } from './core/network';
 import { modelParts, HV_LOTO_STEPS, HV_EQUIPMENT_VCB_MAP, hvLotoManager, PROTECTION_RELAY_CATALOG } from './assemblies/models';
-import { VesselView, ExplodedView } from './vessel/scene';
+import { VesselView, ExplodedView, type FlowFilterMode } from './vessel/scene';
 import { SOLAS_WATERFALL_STAGES } from './vessel/vessel-layout';
 import { propellerAssembly } from './assemblies/propeller-assembly';
 import { transformerAssembly } from './assemblies/transformer-assembly';
@@ -129,6 +129,15 @@ app.innerHTML=`
             <span id="arcFlashBannerText">Complete the 6.6 kV lockout / tagout steps in the inspector before opening or exploding an HV enclosure.</span>
           </div>
           <button type="button" class="arc-flash-dismiss" id="dismissArcFlashBanner" aria-label="Dismiss warning">${icon('close')}</button>
+        </div>
+        <div class="vessel-flow-bar" id="vesselFlowBar" role="toolbar" aria-label="3D power flow filter">
+          <span class="vessel-flow-title">Flow filter</span>
+          <button type="button" class="flow-filter-btn active" data-flow-filter="all" title="Show all voltage tiers">All</button>
+          <button type="button" class="flow-filter-btn" data-flow-filter="focus" title="Isolate active supply &amp; load circuit for selected equipment">Focus path</button>
+          <button type="button" class="flow-filter-btn" data-flow-filter="hv" title="Isolate 6.6 kV medium-voltage propulsion &amp; main feeders"><i class="flow-dot hv"></i>6.6 kV</button>
+          <button type="button" class="flow-filter-btn" data-flow-filter="lv" title="Isolate 440 V auxiliary machinery &amp; pump feeders"><i class="flow-dot lv"></i>440 V</button>
+          <button type="button" class="flow-filter-btn" data-flow-filter="consumer" title="Isolate 220 V domestic &amp; bridge sub-circuits"><i class="flow-dot consumer"></i>220 V</button>
+          <button type="button" class="flow-filter-btn" data-flow-filter="emergency" title="Isolate SOLAS 440 V / 24 V DC emergency circuits"><i class="flow-dot emergency"></i>SOLAS</button>
         </div>
         <div class="view-tools" id="viewTools">
           <button id="resetCamera" type="button">Reset view</button>
@@ -2628,11 +2637,19 @@ document.querySelector('#resetCamera')!.addEventListener('click',()=>vessel.rese
 document.querySelector('#focusEquipment')!.addEventListener('click',()=>vessel.focusSelection());
 document.querySelector('#toggleShell')!.addEventListener('click',e=>{showShell=!showShell;vessel.setShell(showShell);(e.currentTarget as HTMLElement).setAttribute('aria-pressed',String(showShell));});
 document.querySelector('#toggleLabels')!.addEventListener('click',e=>{showLabels=!showLabels;vessel.setLabels(showLabels);(e.currentTarget as HTMLElement).setAttribute('aria-pressed',String(showLabels));});
+document.querySelectorAll<HTMLButtonElement>('[data-flow-filter]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const mode = (btn.dataset.flowFilter || 'all') as FlowFilterMode;
+    vessel.setFlowFilter(mode);
+    document.querySelectorAll<HTMLButtonElement>('[data-flow-filter]').forEach(b=>b.classList.toggle('active', b===btn));
+  });
+});
 document.querySelectorAll<HTMLButtonElement>('[data-view]').forEach(b=>b.onclick=()=>{
   view=b.dataset.view as View;
   document.querySelector('#vesselHost')!.classList.toggle('hidden',view!=='vessel');
   document.querySelector('#schematicHost')!.classList.toggle('hidden',view!=='schematic');
   document.querySelector('#viewTools')!.classList.toggle('hidden',view!=='vessel');
+  document.querySelector('#vesselFlowBar')?.classList.toggle('hidden',view!=='vessel');
   document.querySelector('#schematicTools')?.classList.toggle('hidden',view!=='schematic');
   document.querySelector('#schematicLegendCard')?.classList.toggle('hidden',view!=='schematic');
   document.querySelector('#viewTitle')!.textContent=view==='vessel'?'Vessel overview':'Single-line diagram';
