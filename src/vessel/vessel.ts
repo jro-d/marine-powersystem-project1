@@ -21,6 +21,7 @@ import {
   bridgeNavComAssembly
 } from '../assemblies/consumer-assemblies';
 import { resolvePublicAsset } from './assets';
+import { HULL_VARIANTS, applyAppHullStyle, selectedHullVariant } from './hull-style';
 export { propellerAssembly } from '../assemblies/propeller-assembly';
 export { transformerAssembly } from '../assemblies/transformer-assembly';
 export { driveAssembly } from '../assemblies/drive-assembly';
@@ -110,118 +111,20 @@ export function createVessel(): THREE.Group {
   // Container stacks on weather deck
   cargo(ship);
 
-  // Load the upgraded Blender 3D ship hull model
+  // Load the Blender ship hull (choose a variant with ?hull=v7|v8a|v8b|v8c, see hull-style.ts)
   const loader = new GLTFLoader();
-  const modelUrl = resolvePublicAsset('blender-hull-V7.glb');
+  const hullFile = HULL_VARIANTS[selectedHullVariant()].file;
+  const modelUrl = resolvePublicAsset(hullFile);
 
   loader.load(
     modelUrl,
     (gltf) => {
-      gltf.scene.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          const materials = Array.isArray(child.material) ? child.material : [child.material];
-          materials.forEach((mat) => {
-            // Disable transmission if present so standard alpha blending works reliably
-            if ('transmission' in mat) {
-              (mat as THREE.MeshPhysicalMaterial).transmission = 0;
-            }
-
-            const matName = mat.name || '';
-            const meshName = child.name || '';
-
-            // 1. Translucent hull plating (underwater red oxide, navy cyan topsides, rudder blade, bossings)
-            if (
-              matName.includes('Hull_Under') ||
-              matName.includes('Hull_Topsides') ||
-              matName.includes('Topsides') ||
-              (meshName === 'ShipHull' && (matName.includes('RedOxide') || matName.includes('NavyCyan'))) ||
-              meshName.includes('Bossing') ||
-              meshName.includes('Boss_Fairing') ||
-              meshName === 'SemiBalanced_Rudder'
-            ) {
-              mat.transparent = true;
-              mat.opacity = 0.32;
-              mat.depthWrite = false;
-              mat.side = THREE.DoubleSide;
-              child.renderOrder = 3;
-            }
-            // 2. Waterline stripe (crisp boot-topping band)
-            else if (matName.includes('Waterline')) {
-              mat.transparent = true;
-              mat.opacity = 0.40;
-              mat.depthWrite = false;
-              mat.side = THREE.DoubleSide;
-              child.renderOrder = 3;
-            }
-            // 3. Superstructure & accommodation house (translucent so interior switchboards/generators are visible)
-            else if (matName.includes('Superstructure') || meshName.includes('Accommodation')) {
-              mat.transparent = true;
-              mat.opacity = 0.32;
-              mat.depthWrite = false;
-              mat.side = THREE.DoubleSide;
-              child.renderOrder = 3;
-            }
-            // 4. Equipment foundation pads (solid & clearly legible under machinery)
-            else if (matName.includes('Equipment_Foundation_Pad') || meshName.startsWith('Pad_')) {
-              mat.transparent = false;
-              mat.opacity = 1.0;
-              mat.depthWrite = true;
-            }
-            // 5. Decks and cargo bay pads (clearly legible)
-            else if (
-              matName.includes('Deck_Marine_Slate') ||
-              meshName.includes('CargoBay_Pad') ||
-              meshName.includes('House_Deck')
-            ) {
-              mat.transparent = true;
-              mat.opacity = 0.40;
-              mat.depthWrite = false;
-              mat.side = THREE.DoubleSide;
-              child.renderOrder = 1;
-            }
-            // 6. Internal deck flats and watertight bulkheads (machinery platforms)
-            else if (
-              matName.includes('Internal_Deck_Bulkhead') ||
-              meshName.includes('TankTop') ||
-              meshName.includes('Mezzanine') ||
-              meshName.includes('Bulkhead')
-            ) {
-              mat.transparent = true;
-              mat.opacity = 0.35;
-              mat.depthWrite = false;
-              mat.side = THREE.DoubleSide;
-              child.renderOrder = 1;
-            }
-            // 7. Navigation bridge windows
-            else if (matName.includes('Window') || meshName.includes('Window')) {
-              mat.transparent = true;
-              mat.opacity = 0.35;
-              mat.depthWrite = false;
-              child.renderOrder = 3;
-            }
-            // 8. Funnel casing & accents
-            else if (matName.includes('Funnel') || meshName.includes('Funnel')) {
-              mat.transparent = true;
-              mat.opacity = 0.40;
-              mat.depthWrite = false;
-              mat.side = THREE.DoubleSide;
-              child.renderOrder = 3;
-            }
-            // 9. Deck hardware, winches, bollards, rails & thruster grates
-            else {
-              mat.transparent = true;
-              mat.opacity = matName.includes('Rail') ? 0.45 : 0.55;
-              mat.depthWrite = false;
-              child.renderOrder = 4;
-            }
-          });
-        }
-      });
+      applyAppHullStyle(gltf.scene);
       ship.add(gltf.scene);
     },
     undefined,
     (error) => {
-      console.error('Failed to load 3D ship hull model (/blender-hull-V7.glb):', error);
+      console.error(`Failed to load 3D ship hull model (/${hullFile}):`, error);
     }
   );
 

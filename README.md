@@ -243,6 +243,9 @@ marine-powersystem-project1/
 │   │   └── equipment_catalog.json# Technical catalog metadata for 3D equipment
 │   ├── models/                   # 25 production 3D GLB models (Hull V7, machinery)
 │   │   ├── blender-hull-V7.glb
+│   │   ├── blender-hull-V8A.glb  # Hull variants; V8C is the default (switch with ?hull=v7|v8a|v8b)
+│   │   ├── blender-hull-V8B.glb
+│   │   ├── blender-hull-V8C.glb
 │   │   ├── marine_propulsion_motor.glb
 │   │   ├── marine_propeller_assembly.glb
 │   │   ├── marine_drive.glb
@@ -276,6 +279,12 @@ marine-powersystem-project1/
 ├── scripts/
 │   ├── blender/                  # Parametric Python geometry generators
 │   │   ├── generate_hull.py      # Container ship hull V7 generator
+│   │   ├── hull_lib.py           # V8 hull family: form, textures, structure, outfit
+│   │   ├── generate_hull_v8a.py  # V8-A Classic Refined
+│   │   ├── generate_hull_v8b.py  # V8-B Structural / engineering cutaway
+│   │   ├── generate_hull_v8c.py  # V8-C Modern feeder (high detail, weathered)
+│   │   ├── render_hull_preview.py# Headless EEVEE preview stills of any hull GLB
+│   │   ├── run-blender.mjs       # Finds Blender and runs generators (npm run build:hulls)
 │   │   ├── generate_propeller.py
 │   │   ├── generate_propulsion_motor.py
 │   │   ├── generate_transformer.py
