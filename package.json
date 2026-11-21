@@ -5,6 +5,10 @@
   "type": "module",
   "scripts": {
     "build:hull": "blender --background --python scripts/blender/generate_hull.py",
+    "build:hull:v8a": "node scripts/blender/run-blender.mjs generate_hull_v8a.py",
+    "build:hull:v8b": "node scripts/blender/run-blender.mjs generate_hull_v8b.py",
+    "build:hull:v8c": "node scripts/blender/run-blender.mjs generate_hull_v8c.py",
+    "build:hulls": "node scripts/blender/run-blender.mjs generate_hull_v8a.py generate_hull_v8b.py generate_hull_v8c.py",
     "build:prop": "blender --background --python scripts/blender/generate_propeller.py",
     "build:tx": "blender --background --python scripts/blender/generate_transformer.py",
     "build:pumps": "blender --background --python scripts/blender/generate_pumps.py",
