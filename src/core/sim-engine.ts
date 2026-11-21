@@ -370,22 +370,6 @@ export interface BusTelemetry {
   insulationKohm: number;
 }
 
-export interface SyncTelemetry {
-  targetGenId: 'dg1' | 'dg2' | 'dg3' | 'dg4';
-  busLive: boolean;
-  genReady: boolean;
-  alreadyClosed: boolean;
-  busFreqHz: number;
-  genFreqHz: number;
-  slipHz: number;
-  busVoltageKv: number;
-  genVoltageKv: number;
-  voltageDiffPercent: number;
-  phaseAngleDeg: number; // -180 to +180 (0 = 12 o'clock in-phase)
-  inSyncWindow: boolean;
-  autoSyncActive: boolean;
-}
-
 export interface SimAlarm {
   id: string;
   time: string;
@@ -400,10 +384,7 @@ export class MarinePowerSimEngine {
   public pmsAutoStandby = true;
   public pmsAutoLoadShed = true;
   public pmsAutoEmergency = true;
-  public checkSyncInterlock = true;
 
-  public syncTargetGen: 'dg1' | 'dg2' | 'dg3' | 'dg4' = 'dg2';
-  public autoSyncGen: string | null = null;
   public recoveryStage: string | null = null;
   public waterfall: SolasWaterfallStatus = createInitialWaterfallStatus();
 
@@ -425,7 +406,6 @@ export class MarinePowerSimEngine {
   public generators: Record<string, GeneratorTelemetry> = {};
   public feederRelays: Record<string, FeederRelayState> = {};
   public buses: Record<BusKey, BusTelemetry>;
-  public sync: SyncTelemetry;
   public alarms: SimAlarm[] = [];
 
   // Dual redundant transformers at every voltage transformation tier
@@ -451,11 +431,11 @@ export class MarinePowerSimEngine {
   }
 
   private inrushTimers: Record<string, { extraKw: number; extraKvar: number; decay: number }> = {};
+  private pendingAutoSync = new Set<string>();
   private standbyStartCooldown = 0;
   private blackoutDetected = false;
   private recoveryTimer = 0;
   private recoveryStepIdx = 0;
-  private phaseAngleRad = Math.PI * 0.65; // Start away from 0 so synchroscope movement is visible
 
   constructor() {
     const initGen = (
@@ -482,10 +462,10 @@ export class MarinePowerSimEngine {
         ratedCurrentAmps: Number(ratedCurrentAmps.toFixed(1)),
         pickupCurrentAmps: Number((ratedCurrentAmps * 1.05).toFixed(1)), // 105% I_rated IDMT pickup I_s
         running,
-        breakerClosed: id === 'dg1',
+        breakerClosed: id === 'dg1' || id === 'dg2',
         runupProgress: running ? 1 : 0,
-        govSetpointHz: id === 'dg2' ? 60.65 : 60.8,
-        avrSetpointPu: 1.012,
+        govSetpointHz: 60.8,
+        avrSetpointPu: 1.015,
         frequencyHz: running ? 60.0 : 0,
         voltageV: running ? nominalVoltageV : 0,
         kw: 0,
@@ -500,9 +480,10 @@ export class MarinePowerSimEngine {
     };
 
     // 4x 3.5 MW Generators + 1x 600 kW Emergency Generator per single-line diagram
+    // Container ship normal sea configuration: 2 generators (DG 1 & DG 2) online in parallel
     this.generators = {
       dg1: initGen('dg1', 'DG 1', 'gb1', 'busA', 6600, 3500, true),
-      dg2: initGen('dg2', 'DG 2', 'gb2', 'busA', 6600, 3500, false),
+      dg2: initGen('dg2', 'DG 2', 'gb2', 'busA', 6600, 3500, true),
       dg3: initGen('dg3', 'DG 3', 'gb3', 'busB', 6600, 3500, false),
       dg4: initGen('dg4', 'DG 4', 'gb4', 'busB', 6600, 3500, false),
       eg: initGen('eg', 'EM GEN', 'egBreaker', 'eBus', 440, 600, false)
@@ -560,23 +541,70 @@ export class MarinePowerSimEngine {
       eBus: initBus('eBus', '440 V Emergency Bus (ESB)', 440)
     };
 
-    this.sync = {
-      targetGenId: 'dg2',
-      busLive: true,
-      genReady: false,
-      alreadyClosed: false,
-      busFreqHz: 60.0,
-      genFreqHz: 0,
-      slipHz: 0,
-      busVoltageKv: 6.6,
-      genVoltageKv: 0,
-      voltageDiffPercent: 0,
-      phaseAngleDeg: 117,
-      inSyncWindow: false,
-      autoSyncActive: false
-    };
+    this.pushAlarm('INFO', 'PMS-INIT', 'Marine Power Management System initialized. DG 1 & DG 2 online in parallel on 6.6 kV Bus.');
+  }
 
-    this.pushAlarm('INFO', 'PMS-INIT', 'Marine Power Management System V2 initialized. DG 1 online on 6.6 kV Bus A.');
+  public queueAutoSync(genId: string): void {
+    this.pendingAutoSync.add(genId);
+  }
+
+  public cancelAutoSync(genId: string): void {
+    this.pendingAutoSync.delete(genId);
+  }
+
+  public reset(): void {
+    this.propulsionThrottle = 0.55;
+    this.pmsAutoStandby = true;
+    this.pmsAutoLoadShed = true;
+    this.pmsAutoEmergency = true;
+    this.earthFaultHv = false;
+    this.earthFaultLv = false;
+    this.earthingArchitecture = 'HRE';
+    this.hvEarthing = calculateHvEarthingState('HRE', false, true);
+    this.galleyShuntTripped = false;
+    this.upsBatterySoc = 100.0;
+    this.upsMode = 'FLOAT_CHARGE';
+    this.upsDischargeAmps = 0;
+    this.upsAutonomyMin = 35.0;
+    this.navAbtState = 'NORMAL';
+    this.blackoutDetected = false;
+    this.inrushTimers = {};
+    this.pendingAutoSync.clear();
+    this.standbyStartCooldown = 0;
+    this.recoveryStage = null;
+    this.recoveryTimer = 0;
+    this.recoveryStepIdx = 0;
+    this.waterfall = createInitialWaterfallStatus();
+    this.alarms = [];
+
+    for (const g of Object.values(this.generators)) {
+      const isDefaultRunning = g.id === 'dg1' || g.id === 'dg2';
+      g.running = isDefaultRunning;
+      g.breakerClosed = isDefaultRunning;
+      g.runupProgress = isDefaultRunning ? 1 : 0;
+      g.avrSetpointPu = 1.015;
+      g.govSetpointHz = 60.8;
+      g.frequencyHz = isDefaultRunning ? 60.0 : 0;
+      g.voltageV = isDefaultRunning ? g.nominalVoltageV : 0;
+      g.kw = 0;
+      g.kvar = 0;
+      g.kva = 0;
+      g.currentAmps = 0;
+      g.loadPercent = 0;
+      g.relays = createInitialRelayState();
+      g.status = isDefaultRunning ? 'ONLINE' : 'STOPPED';
+    }
+
+    for (const fr of Object.values(this.feederRelays)) {
+      fr.currentAmps = 0;
+      fr.overcurrentTimer = 0;
+      fr.idmtTripTimeSec = null;
+      fr.idmtProgress = 0;
+      fr.overcurrentInjected = false;
+      fr.lastTripReason = null;
+    }
+
+    this.pushAlarm('INFO', 'PMS-INIT', 'Marine Power Management System initialized. DG 1 & DG 2 online in parallel on 6.6 kV Bus.');
   }
 
   public pushAlarm(severity: SimAlarm['severity'], code: string, message: string): void {
@@ -602,16 +630,21 @@ export class MarinePowerSimEngine {
   }
 
   /**
-   * Validate breaker operation against ETO safety interlocks (Shore Power interlock & ANSI 25 Check-Sync).
+   * Validate breaker operation against ETO safety interlocks (Shore Power, ESB Walking-Beam, Galley Shunt).
    */
   public validateBreakerToggle(
     breakerId: string,
     state: SimState,
-    live: Set<string>
+    _live: Set<string>
   ): { allowed: boolean; reason?: string } {
     const isCurrentlyClosed = !!state.closed[breakerId];
     // Opening a breaker is always permitted
-    if (isCurrentlyClosed) return { allowed: true };
+    if (isCurrentlyClosed) {
+      if (['gb1', 'gb2', 'gb3', 'gb4'].includes(breakerId)) {
+        this.pendingAutoSync.delete(`dg${breakerId.slice(2)}`);
+      }
+      return { allowed: true };
+    }
 
     // 1. Shore connection interlock: cannot close shoreBreaker if any main DG breaker is closed on connected bus
     if (breakerId === 'shoreBreaker') {
@@ -635,7 +668,7 @@ export class MarinePowerSimEngine {
       return { allowed: true };
     }
 
-    // Prevent closing main DG breaker while shore power is feeding the same bus
+    // 2. Main DG breakers: auto-start & auto-synchronize onto the bus
     if (['gb1', 'gb2', 'gb3', 'gb4'].includes(breakerId)) {
       const shoreOnThisBus =
         state.closed.shoreBreaker && (breakerId === 'gb1' || breakerId === 'gb2' || state.closed.tie);
@@ -653,55 +686,61 @@ export class MarinePowerSimEngine {
 
       const genId = `dg${breakerId.slice(2)}` as 'dg1' | 'dg2' | 'dg3' | 'dg4';
       const gen = this.generators[genId];
-      if (gen && state.running[genId] && gen.runupProgress < 0.95) {
+      if (!state.running[genId]) {
+        state.running[genId] = true;
+        this.pendingAutoSync.add(genId);
         this.pushAlarm(
-          'WARNING',
+          'INFO',
+          'AUTO-START-SYNC',
+          `${gen.short} starting — PMS will auto-synchronize and close breaker automatically.`
+        );
+        return {
+          allowed: false,
+          reason: `${gen.short} starting — PMS will auto-synchronize and close breaker automatically.`
+        };
+      }
+      if (gen && gen.runupProgress < 0.95) {
+        this.pendingAutoSync.add(genId);
+        this.pushAlarm(
+          'INFO',
           'GEN-RUNUP',
-          `${gen.short} is still ramping up (${Math.round(gen.runupProgress * 100)}%). Wait for rated voltage & frequency.`
+          `${gen.short} ramping up (${Math.round(gen.runupProgress * 100)}%) — will auto-sync and close at rated V/Hz.`
         );
         return {
           allowed: false,
-          reason: `${gen.short} is still ramping up to 6.6 kV / 60 Hz.`
+          reason: `${gen.short} ramping up (${Math.round(gen.runupProgress * 100)}%) — auto-synchronizing shortly.`
         };
       }
-
-      // Check-Sync (ANSI 25) interlock when closing onto an ALREADY LIVE bus
-      const targetBus = gen.busId;
-      if (this.checkSyncInterlock && live.has(targetBus) && state.running[genId]) {
-        // Select this generator on the synchroscope
-        this.syncTargetGen = genId;
-        this.updateSynchroscope(0, state, live);
-        if (!this.sync.inSyncWindow) {
-          this.pushAlarm(
-            'CRITICAL',
-            'ANSI-25-BLOCK',
-            `Check-Sync Relay (ANSI 25) blocked ${gen.short} breaker! Phase Δθ=${Math.round(this.sync.phaseAngleDeg)}°, Δf=${this.sync.slipHz.toFixed(2)} Hz. Use Synchroscope or click Auto-Sync.`
-          );
-          return {
-            allowed: false,
-            reason: `ANSI 25 CHECK-SYNC BLOCKED: ${gen.short} is out of phase (Δθ = ${Math.round(this.sync.phaseAngleDeg)}°). Use Auto-Sync or close at 12 o'clock.`
-          };
-        }
-      }
+      // Automatic synchronization when running at rated speed/voltage
+      this.pendingAutoSync.delete(genId);
+      return { allowed: true };
     }
 
-    // Check-sync across Bus Tie if both Bus A and Bus B are independently energized
-    if (breakerId === 'tie' && this.checkSyncInterlock && live.has('busA') && live.has('busB')) {
-      const df = Math.abs(this.buses.busA.frequencyHz - this.buses.busB.frequencyHz);
-      if (df > 0.45) {
-        this.pushAlarm(
-          'WARNING',
-          'ANSI-25-TIE',
-          `Bus-Tie Check-Sync blocked: Bus A (${this.buses.busA.frequencyHz.toFixed(2)} Hz) and Bus B (${this.buses.busB.frequencyHz.toFixed(2)} Hz) frequency mismatch.`
-        );
-        return {
-          allowed: false,
-          reason: `ANSI 25 TIE BLOCKED: Match Bus A and Bus B frequencies before closing the bus tie.`
-        };
-      }
+    // 3. ESB Walking-Beam Interlock: Normal ESB Tie and Emergency DG Breaker cannot both be closed
+    if (breakerId === 'esbTieFeed' && state.closed.egBreaker) {
+      this.pushAlarm(
+        'WARNING',
+        'INTLK-ESB',
+        'ESB Tie Breaker blocked: Open Emergency DG breaker (EDG CB) first (Walking-Beam Interlock).'
+      );
+      return {
+        allowed: false,
+        reason: 'INTERLOCK BLOCKED: Open Emergency DG breaker (EDG CB) before closing ESB Tie Breaker.'
+      };
+    }
+    if (breakerId === 'egBreaker' && state.closed.esbTieFeed) {
+      this.pushAlarm(
+        'WARNING',
+        'INTLK-ESB',
+        'Emergency DG breaker blocked: Open ESB Tie Breaker first (Walking-Beam Interlock).'
+      );
+      return {
+        allowed: false,
+        reason: 'INTERLOCK BLOCKED: Open ESB Tie Breaker before closing Emergency DG breaker.'
+      };
     }
 
-    // Shunt Trip Interlock: Prevent closing 440 V Galley ACB if Emergency Shunt Trip is active
+    // 4. Shunt Trip Interlock: Prevent closing 440 V Galley ACB if Emergency Shunt Trip is active
     if (breakerId === 'galley440Feed' && this.galleyShuntTripped) {
       this.pushAlarm(
         'WARNING',
@@ -770,36 +809,6 @@ export class MarinePowerSimEngine {
     }
   }
 
-  public nudgeGovernor(genId: string, deltaHz: number): void {
-    const g = this.generators[genId];
-    if (!g) return;
-    g.govSetpointHz = Math.max(58.5, Math.min(62.5, Number((g.govSetpointHz + deltaHz).toFixed(2))));
-  }
-
-  public nudgeAvr(genId: string, deltaPu: number): void {
-    const g = this.generators[genId];
-    if (!g) return;
-    g.avrSetpointPu = Math.max(0.75, Math.min(1.10, Number((g.avrSetpointPu + deltaPu).toFixed(3))));
-  }
-
-  public toggleFieldLoss(genId: string): string {
-    const g = this.generators[genId];
-    if (!g) return '';
-    g.relays.fieldLossInjected = !g.relays.fieldLossInjected;
-    if (g.relays.fieldLossInjected) {
-      this.pushAlarm(
-        'WARNING',
-        'AVR-FAULT-INJ',
-        `AVR Field Collapse simulated on ${g.short}: Reactive power Q dropping < -20% Q_rated & terminal voltage sagging < 85% (5.61 kV). ANSI 40 timer active (1.5s).`
-      );
-      return `Simulated Loss of Excitation (AVR failure) on ${g.short}. ANSI 40 will trip breaker after 1.5s.`;
-    } else {
-      g.relays.lossOfFieldTimer = 0;
-      this.pushAlarm('INFO', 'AVR-RESTORED', `AVR Excitation restored to normal on ${g.short}.`);
-      return `AVR Excitation restored on ${g.short}.`;
-    }
-  }
-
   public toggleFeederOvercurrent(breakerId: string): string {
     const fr = this.feederRelays[breakerId];
     if (!fr) return '';
@@ -818,16 +827,6 @@ export class MarinePowerSimEngine {
     }
   }
 
-  public startAutoSync(genId: 'dg1' | 'dg2' | 'dg3' | 'dg4', state: SimState): string {
-    this.syncTargetGen = genId;
-    if (!state.running[genId]) {
-      state.running[genId] = true;
-    }
-    this.autoSyncGen = genId;
-    this.pushAlarm('INFO', 'AUTO-SYNC', `Auto-Synchronizer (ANSI 25A) engaged for ${byId[genId].short}. Matching speed & phase...`);
-    return `Auto-Synchronizer engaged for ${byId[genId].short}. Needle will lock to 12 o'clock and close breaker automatically.`;
-  }
-
   public triggerBlackout(state: SimState): string {
     for (const id of ['dg1', 'dg2', 'dg3', 'dg4']) {
       state.running[id] = false;
@@ -837,9 +836,11 @@ export class MarinePowerSimEngine {
     for (const b of MAIN_BLACKOUT_SHED_BREAKERS) {
       state.closed[b] = false;
     }
+    // Open normal ESB tie via UVR before Emergency DG auto-starts
+    state.closed.esbTieFeed = false;
     state.running.shore = false;
     state.closed.shoreBreaker = false;
-    this.autoSyncGen = null;
+    this.pendingAutoSync.clear();
     this.recoveryStage = null;
     this.waterfall = createInitialWaterfallStatus();
     this.blackoutDetected = true;
@@ -857,20 +858,21 @@ export class MarinePowerSimEngine {
       'UPS-0MS-BRIDGE',
       'SOLAS II-1/42 & 43: 24 V DC UPS Battery Bank active (0 ms transfer). Navigation Bridge Electronics & GMDSS powered seamlessly while EDG auto-starts.'
     );
-    return 'BLACKOUT SIMULATED: Main bus dead & shed. Navigation Electronics & GMDSS bridged by 24V UPS battery (0 ms break). Click "PMS Auto-Recovery" or Scenario 04.';
+    return 'BLACKOUT SIMULATED: Main bus dead & shed. Navigation Electronics & GMDSS bridged by 24V UPS battery (0 ms break). Click "Run SOLAS recovery" to restore.';
   }
 
   public testUpsSwitchover(state: SimState): string {
     state.closed.navFeed = false;
+    state.closed.navEmFeed = false;
     this.navAbtState = 'UPS_BATTERY';
     this.upsMode = 'DISCHARGING_BATTERY';
     this.upsDischargeAmps = 58.3;
     this.pushAlarm(
       'INFO',
       'UPS-TEST',
-      'SOLAS II-1/43 UPS Switchover Test: 220 V Normal feed isolated. 24 V DC battery inverter seamlessly maintained Bridge Navigation with 0 ms interruption!'
+      'SOLAS II-1/43 UPS Switchover Test: Both 220 V Normal & ESB ABT feeds isolated. 24 V DC battery inverter seamlessly maintained Bridge Navigation with 0 ms interruption!'
     );
-    return 'UPS Switchover Test: 24 V DC Battery instantly carried Bridge Navigation (0 ms break, no reboot).';
+    return 'UPS Switchover Test: Both AC feeds isolated; 24 V DC Battery carrying Bridge Navigation (0 ms break). Close Navigation Bridge MCB to restore mains.';
   }
 
   public startPmsRecovery(state: SimState, startAtSec = 0): string {
@@ -1203,6 +1205,16 @@ export class MarinePowerSimEngine {
       this.transformerLoading.txReeferB = { kva: 0, ratedKva: 1500, percent: 0 };
     }
 
+    // 4b-bis. Emergency Switchboard (440 V) -> 440 V Bus A when supplied via normal ESB Tie
+    const egSupplyingEBus =
+      this.generators.eg.running && this.generators.eg.breakerClosed && this.generators.eg.runupProgress >= 0.9;
+    if (!egSupplyingEBus && state.closed.esbTieFeed && live.has('lvBusA')) {
+      busLoads.lvBusA.kw += busLoads.eBus.kw;
+      busLoads.lvBusA.kvar += busLoads.eBus.kvar;
+      busLoads.lvBusA.essKw += busLoads.eBus.essKw;
+      busLoads.lvBusA.nonEssKw += busLoads.eBus.nonEssKw;
+    }
+
     // 4c. Main 440 V Buses -> 6.6 kV Buses through Main Transformers TX A & TX B (2.5 MVA each)
     const txAFeeding = live.has('busA') && state.closed.txAFeed && live.has('lvBusA');
     const txBFeeding = live.has('busB') && state.closed.txBFeed && live.has('lvBusB');
@@ -1468,10 +1480,6 @@ export class MarinePowerSimEngine {
         this.buses.consumerA.live = true;
         this.buses.consumerA.frequencyHz = upLv.frequencyHz;
         this.buses.consumerA.voltageV = 220 * (upLv.voltageV / 440) * (1 - (this.transformerLoading.txConA.percent / 100) * 0.015);
-      } else if (state.closed.txConAEsbTie && this.buses.eBus.live) {
-        this.buses.consumerA.live = true;
-        this.buses.consumerA.frequencyHz = this.buses.eBus.frequencyHz;
-        this.buses.consumerA.voltageV = 220;
       }
     } else {
       this.buses.consumerA.live = false;
@@ -1530,95 +1538,46 @@ export class MarinePowerSimEngine {
       this.buses.busA.live || this.buses.busB.live
     );
 
-    // 7. Update Synchroscope & Auto-Synchronizer
-    this.updateSynchroscope(clampedDt, state, live, onStateMutated);
+    // 7. Process Automatic Synchronization (PMS Auto-Sync)
+    this.processAutoSync(state, onStateMutated);
 
     // 8. Run Protection Relays & PMS Automation (Standby Start, Load Shedding, Blackout & Recovery)
     this.runProtectionAndPms(clampedDt, state, live, onStateMutated);
   }
 
-  private updateSynchroscope(
-    dt: number,
+  private processAutoSync(
     state: SimState,
-    live: Set<string>,
     onStateMutated?: (msg: string) => void
   ): void {
-    // Auto-select a running standby generator if current syncTargetGen is not in standby
-    const standbyCandidate = (['dg1', 'dg2', 'dg3', 'dg4'] as const).find(
-      (id) => state.running[id] && !state.closed[`gb${id.slice(2)}`]
-    );
-    if (standbyCandidate && (!state.running[this.syncTargetGen] || state.closed[`gb${this.syncTargetGen.slice(2)}`])) {
-      this.syncTargetGen = standbyCandidate;
-    }
-
-    const gen = this.generators[this.syncTargetGen];
-    const targetBus = this.buses[gen.busId];
-    const busLive = targetBus.live;
-    const genReady = gen.running && gen.runupProgress >= 0.95;
-    const alreadyClosed = gen.breakerClosed;
-
-    // Auto-Sync Governor Trim & Automatic Breaker Close at 12 o'clock
-    if (this.autoSyncGen === this.syncTargetGen && genReady && !alreadyClosed) {
-      if (!busLive) {
-        // Dead bus: close immediately
+    for (const genId of [...this.pendingAutoSync]) {
+      const gen = this.generators[genId];
+      if (!gen || !state.running[genId]) {
+        this.pendingAutoSync.delete(genId);
+        continue;
+      }
+      if (state.closed[gen.breakerId]) {
+        this.pendingAutoSync.delete(genId);
+        continue;
+      }
+      const shoreOnThisBus =
+        state.closed.shoreBreaker && (genId === 'dg1' || genId === 'dg2' || state.closed.tie);
+      if (shoreOnThisBus) {
+        continue;
+      }
+      if (gen.runupProgress >= 0.95) {
+        gen.govSetpointHz = 60.8;
+        gen.avrSetpointPu = 1.015;
         state.closed[gen.breakerId] = true;
-        this.autoSyncGen = null;
-        this.pushAlarm('INFO', 'DEAD-BUS-CLS', `${gen.short} breaker closed onto dead ${targetBus.label}.`);
-        onStateMutated?.(`${gen.short} breaker closed onto dead ${targetBus.label}.`);
-      } else {
-        // Trim incoming generator frequency to busFreq + 0.12 Hz for smooth clockwise rotation
-        const desiredFreq = targetBus.frequencyHz + 0.12;
-        gen.govSetpointHz += (desiredFreq - gen.frequencyHz) * Math.min(1, dt * 2.5);
+        this.pendingAutoSync.delete(genId);
+        const targetBus = this.buses[gen.busId];
+        this.pushAlarm(
+          'INFO',
+          'AUTO-SYNC',
+          `PMS Auto-Synchronizer closed ${gen.short} breaker onto ${targetBus.label}. Load sharing active.`
+        );
+        onStateMutated?.(`${gen.short} auto-synchronized and paralleled onto ${targetBus.label}.`);
       }
     }
-
-    const slipHz = genReady && busLive ? gen.frequencyHz - targetBus.frequencyHz : 0;
-    if (genReady && busLive && !alreadyClosed) {
-      this.phaseAngleRad += 2 * Math.PI * slipHz * dt;
-      // Wrap between -PI and +PI
-      this.phaseAngleRad = ((this.phaseAngleRad + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
-    } else if (alreadyClosed) {
-      this.phaseAngleRad = 0;
-    }
-
-    const phaseAngleDeg = (this.phaseAngleRad * 180) / Math.PI;
-    const voltageDiffPercent =
-      busLive && genReady
-        ? Math.abs(((gen.voltageV - targetBus.voltageV) / 6600) * 100)
-        : 0;
-
-    const inSyncWindow =
-      genReady &&
-      (!busLive ||
-        (Math.abs(phaseAngleDeg) <= 18 && Math.abs(slipHz) <= 0.35 && voltageDiffPercent <= 5.0));
-
-    if (this.autoSyncGen === this.syncTargetGen && inSyncWindow && busLive && Math.abs(phaseAngleDeg) <= 8) {
-      state.closed[gen.breakerId] = true;
-      this.autoSyncGen = null;
-      this.phaseAngleRad = 0;
-      this.pushAlarm(
-        'INFO',
-        'SYNC-CLOSED',
-        `ANSI 25A Auto-Synchronizer closed ${gen.short} breaker at Δθ=${Math.round(phaseAngleDeg)}°, Δf=${slipHz.toFixed(2)} Hz. Load sharing active.`
-      );
-      onStateMutated?.(`${gen.short} synchronized and paralleled onto ${targetBus.label}!`);
-    }
-
-    this.sync = {
-      targetGenId: this.syncTargetGen,
-      busLive,
-      genReady,
-      alreadyClosed,
-      busFreqHz: targetBus.frequencyHz,
-      genFreqHz: gen.frequencyHz,
-      slipHz,
-      busVoltageKv: targetBus.voltageV / 1000,
-      genVoltageKv: gen.voltageV / 1000,
-      voltageDiffPercent,
-      phaseAngleDeg,
-      inSyncWindow,
-      autoSyncActive: this.autoSyncGen === this.syncTargetGen
-    };
   }
 
   private runProtectionAndPms(
@@ -1668,7 +1627,7 @@ export class MarinePowerSimEngine {
       });
     }
 
-    // 2. PMS Preferential Trip (Load Shedding) when any online DG exceeds 92% load
+    // 2. PMS Preferential Trip (Load Shedding) when any online DG exceeds 94% load
     const maxGenLoad = Math.max(
       ...(['dg1', 'dg2', 'dg3', 'dg4'] as const)
         .map((id) => this.generators[id])
@@ -1693,28 +1652,48 @@ export class MarinePowerSimEngine {
       }
     }
 
-    // 3. PMS Automatic Standby Generator Start & Parallel when load >= 82%
-    if (this.pmsAutoStandby && maxGenLoad >= 82 && this.standbyStartCooldown <= 0 && !this.autoSyncGen) {
-      const nextStandby = (['dg2', 'dg3', 'dg4', 'dg1'] as const).find(
-        (id) => !state.closed[`gb${id.slice(2)}`] && (state.closed.tie || this.generators[id].busId === 'busA')
-      );
-      if (nextStandby) {
-        this.standbyStartCooldown = 5.0;
-        state.running[nextStandby] = true;
-        this.syncTargetGen = nextStandby;
-        this.autoSyncGen = nextStandby;
-        this.pushAlarm(
-          'INFO',
-          'PMS-STBY-START',
-          `PMS Load-Dependent Start: High load (${maxGenLoad}%) detected. Auto-starting & synchronizing ${byId[nextStandby].short}.`
+    // 3. PMS Automatic Standby Generator Start & Parallel when island load >= 82%
+    if (this.pmsAutoStandby && this.standbyStartCooldown <= 0 && this.pendingAutoSync.size === 0) {
+      const islands: { genIds: ('dg1' | 'dg2' | 'dg3' | 'dg4')[]; hasShore: boolean }[] = state.closed.tie
+        ? [{ genIds: ['dg1', 'dg2', 'dg3', 'dg4'], hasShore: !!(state.running.shore && state.closed.shoreBreaker) }]
+        : [
+            { genIds: ['dg1', 'dg2'], hasShore: !!(state.running.shore && state.closed.shoreBreaker) },
+            { genIds: ['dg3', 'dg4'], hasShore: false }
+          ];
+
+      for (const island of islands) {
+        if (island.hasShore) continue;
+        const islandMaxLoad = Math.max(
+          ...island.genIds
+            .map((id) => this.generators[id])
+            .filter((g) => g.running && g.breakerClosed)
+            .map((g) => g.loadPercent),
+          0
         );
-        onStateMutated?.(`PMS Auto-Standby started ${byId[nextStandby].short} (Load ${maxGenLoad}% > 82%).`);
+        if (islandMaxLoad >= 82) {
+          const nextStandby = island.genIds.find((id) => !state.closed[`gb${id.slice(2)}`]);
+          if (nextStandby) {
+            this.standbyStartCooldown = 5.0;
+            state.running[nextStandby] = true;
+            this.pendingAutoSync.add(nextStandby);
+            this.pushAlarm(
+              'INFO',
+              'PMS-STBY-START',
+              `PMS Load-Dependent Start: High load (${islandMaxLoad}%) detected. Auto-starting & synchronizing ${byId[nextStandby].short}.`
+            );
+            onStateMutated?.(`PMS Auto-Standby started ${byId[nextStandby].short} (Load ${islandMaxLoad}% >= 82%).`);
+            break;
+          }
+        }
       }
     }
 
     // 4. Blackout Detection & Automatic Emergency Generator Start
     const isMainBlackout = !live.has('busA') && !live.has('busB');
     if (isMainBlackout && this.pmsAutoEmergency) {
+      if (state.closed.esbTieFeed) {
+        state.closed.esbTieFeed = false;
+      }
       if (!state.running.eg) {
         state.running.eg = true;
         this.pushAlarm('WARNING', 'EM-GEN-START', 'Main bus dead: Emergency Generator (EM GEN) auto-started.');

@@ -1,25 +1,7 @@
 import './style.css';
-import { byId, connections, edgeById, equipment, initialState, powered, connectionState, scenarios, sourceIds, allSupplyIds, VOLTAGES, type SimState, type Equipment, type ModelType, type Connection, type EarthingArchitecture } from './core/network';
-import { modelParts, HV_LOTO_STEPS, HV_EQUIPMENT_VCB_MAP, hvLotoManager, PROTECTION_RELAY_CATALOG } from './assemblies/models';
-import { VesselView, ExplodedView, type FlowFilterMode } from './vessel/scene';
+import { byId, connections, edgeById, equipment, initialState, powered, connectionState, allSupplyIds, VOLTAGES, type SimState, type Equipment, type ModelType, type Connection, type EarthingArchitecture } from './core/network';
+import { VesselView, type FlowFilterMode } from './vessel/scene';
 import { SOLAS_WATERFALL_STAGES } from './vessel/vessel-layout';
-import { propellerAssembly } from './assemblies/propeller-assembly';
-import { transformerAssembly } from './assemblies/transformer-assembly';
-import { driveAssembly } from './assemblies/drive-assembly';
-import { motorAssembly } from './assemblies/motor-assembly';
-import { steeringAssembly } from './assemblies/steering-assembly';
-import { reeferAssembly } from './assemblies/reefer-assembly';
-import { pumpAssembly } from './assemblies/pump-assembly';
-import {
-  esbCubicleAssembly,
-  batterySystemAssembly,
-  airCompressorAssembly,
-  ventFanAssembly,
-  ballastOwsAssembly,
-  galleyBoardAssembly,
-  shorePowerAssembly,
-  bridgeNavComAssembly
-} from './assemblies/consumer-assemblies';
 import { resolveAssemblyUrl, resolveTeardownUrl } from './vessel/assets';
 import { simEngine, LOAD_SPECS } from './core/sim-engine';
 
@@ -47,14 +29,13 @@ let state:SimState=initialState();
 let live=powered(state);
 let selected='busA';
 let view:View='vessel';
-let activeScenario='main';
-let selectedPart:string|undefined;
-let message='DG 1 is running. Follow its energized path through the closed bus tie.';
+let message='DG 1 and DG 2 are running in parallel. Additional DGs auto-start on high load demand.';
 let showShell=true,showLabels=true;
-let explodedExpanded=false;
 let leftPanelOpen=true;
 let leftPanelExpanded=false;
 let rightPanelOpen=true;
+let feedersDropdownOpen=false;
+const openFeederGroups=new Set<string>(['hv']);
 
 const app=document.querySelector<HTMLDivElement>('#app')!;
 app.innerHTML=`
@@ -70,11 +51,11 @@ app.innerHTML=`
       </div>
     </div>
     <div class="top-telemetry" id="topTelemetry" aria-label="Plant summary">
-      <div class="telemetry-pill"><span class="telemetry-label">Generators</span><strong id="topGenCount">1 / 4</strong></div>
+      <div class="telemetry-pill"><span class="telemetry-label">Generators</span><strong id="topGenCount">2 / 4 ONLINE</strong></div>
       <div class="telemetry-pill"><span class="telemetry-label">6.6 kV bus</span><strong id="topBusFreq">60.00 Hz · 6.56 kV</strong></div>
       <div class="telemetry-pill"><span class="telemetry-label">Total load</span><strong id="topTotalKw">0 kW · PF 0.89</strong></div>
       <div class="telemetry-pill"><span class="telemetry-label">Bus tie</span><strong id="topTieState" class="is-closed">CLOSED</strong></div>
-      <div class="telemetry-pill"><span class="telemetry-label">Earthing / IMD</span><strong id="topImdState" class="is-closed">IT · 15.0 MΩ OK</strong></div>
+      <div class="telemetry-pill"><span class="telemetry-label">Earthing / IMD</span><strong id="topImdState" class="is-closed">HRE · 15.0 MΩ OK</strong></div>
     </div>
     <div class="top-actions">
       <button class="button button-quiet" id="openTutorialBtn" type="button" title="Open the tutorial">${icon('book')}<span class="button-label">Tutorial</span></button>
@@ -87,23 +68,28 @@ app.innerHTML=`
     </div>
   </header>
   <main class="workspace" id="workspace">
-    <aside class="left-panel panel" id="leftPanel" aria-label="Scenarios and switchboard controls">
+    <aside class="left-panel panel" id="leftPanel" aria-label="Switchboard controls">
       <div class="panel-heading">
-        <h2>Scenarios</h2>
+        <h2>Controls</h2>
         <div class="panel-heading-right">
-          <span class="small-index">01 / 06</span>
           <button class="panel-expand-btn" id="expandLeftPanel" type="button" title="Widen to two columns (E)" aria-expanded="false">${icon('maximize')}<span>Widen</span></button>
           <button class="panel-collapse-btn" id="closeLeftPanel" type="button" title="Hide controls ([)" aria-label="Hide controls">${icon('chevronLeft')}</button>
         </div>
       </div>
-      <div class="scenario-list" id="scenarios"></div>
-      <section class="control-section" id="secGenerators"><div class="section-heading"><h3>Generation and shore</h3><span class="subtle">${VOLTAGES.hv} · droop</span></div><div id="generators"></div></section>
-      <section class="control-section" id="secSync"><div class="section-heading"><h3>Synchroscope</h3><span class="subtle">ANSI 25</span></div><div id="synchroscopeSection"></div></section>
+      <section class="control-section" id="secGenerators"><div class="section-heading"><h3>Generation and shore</h3><span class="subtle">${VOLTAGES.hv} · auto-sync</span></div><div id="generators"></div></section>
       <section class="control-section" id="secThrottle"><div class="section-heading"><h3>Propulsion load</h3><span class="subtle">VFD order</span></div><div id="throttleSection"></div></section>
       <section class="control-section" id="secPms"><div class="section-heading"><h3>PMS, earthing and faults</h3><span class="subtle">ANSI 67N</span></div><div id="pmsSection"></div></section>
       <section class="control-section" id="secTie"><div class="section-heading"><h3>Bus ties</h3><span class="subtle">A ↔ B</span></div><div id="tieControl"></div></section>
       <section class="control-section" id="secEmergency"><div class="section-heading"><h3>Emergency supply</h3><span class="subtle">SOLAS 440 V</span></div><div id="emergencyControls"></div></section>
-      <section class="control-section" id="secFeeders"><div class="section-heading"><h3>Feeders</h3><span class="subtle">Click a state to switch</span></div><div id="feeders"></div></section>
+      <section class="control-section" id="secFeeders">
+        <details class="feeders-dropdown" id="feedersDropdown">
+          <summary class="feeders-summary">
+            <span class="feeders-summary-title">Feeders</span>
+            <span class="subtle" id="feedersTotalSummary">0/0 closed</span>
+          </summary>
+          <div id="feeders"></div>
+        </details>
+      </section>
     </aside>
     <section class="center-panel">
       <button class="left-edge-handle" id="leftEdgeHandle" type="button" title="Show controls ([)" aria-label="Show controls">
@@ -122,14 +108,6 @@ app.innerHTML=`
       <div class="visual-stage" id="visualStage">
         <div class="vessel-host" id="vesselHost" aria-label="Interactive 3D vessel view"></div>
         <div class="schematic-host hidden" id="schematicHost" aria-label="Interactive single-line diagram"></div>
-        <div class="arc-flash-stage-banner hidden" id="arcFlashBanner" role="alert">
-          <span class="arc-flash-icon">${icon('warning')}</span>
-          <div class="arc-flash-copy">
-            <strong>HV panel not isolated</strong>
-            <span id="arcFlashBannerText">Complete the 6.6 kV lockout / tagout steps in the inspector before opening or exploding an HV enclosure.</span>
-          </div>
-          <button type="button" class="arc-flash-dismiss" id="dismissArcFlashBanner" aria-label="Dismiss warning">${icon('close')}</button>
-        </div>
         <div class="vessel-flow-bar" id="vesselFlowBar" role="toolbar" aria-label="3D power flow filter">
           <span class="vessel-flow-title">Flow filter</span>
           <button type="button" class="flow-filter-btn active" data-flow-filter="all" title="Show all voltage tiers">All</button>
@@ -198,13 +176,6 @@ app.innerHTML=`
           <div class="status-count" id="statusCount"></div>
         </div>
         <div class="hud-cards-row">
-          <div class="lesson-banner">
-            <span class="lesson-icon"></span>
-            <div>
-              <strong id="lessonTitle">Current lesson</strong>
-              <p id="lessonText"></p>
-            </div>
-          </div>
           <div class="notice-card">
             <span class="notice-tag">Last event</span>
             <div class="notice" id="notice" role="status" aria-live="polite"></div>
@@ -237,53 +208,25 @@ app.innerHTML=`
         <iframe id="assemblyFrame" src="about:blank" title="Equipment assembly viewer" allow="fullscreen"></iframe>
       </div>
     </div>
-  </div>
-  <div id="lotoModal" class="loto-modal hidden" role="dialog" aria-modal="true" aria-labelledby="lotoModalTitle">
-    <div class="loto-modal-backdrop" id="lotoModalBackdrop"></div>
-    <div class="loto-modal-dialog">
-      <div class="loto-modal-header">
-        <div class="loto-modal-title-group">
-          <div class="loto-modal-badge" id="lotoModalBadge">6.6 kV permit to work</div>
-          <h2 id="lotoModalTitle" class="loto-modal-title">Lockout / tagout</h2>
-          <p id="lotoModalSubtitle" class="loto-modal-subtitle"></p>
-        </div>
-        <div class="loto-modal-actions">
-          <button id="lotoModalClose" type="button" class="loto-modal-close-btn" aria-label="Close">
-            ${icon('close')}Close
-          </button>
-        </div>
-      </div>
-      <div class="loto-modal-body" id="lotoModalBody"></div>
-    </div>
   </div>`;
 
 const vessel=new VesselView(document.querySelector('#vesselHost')!);
-const exploded=new ExplodedView(document.createElement('div'));
-// The viewer is attached to the inspector after its first render.
 vessel.onSelect=id=>select(id);
-exploded.onPart=id=>{selectedPart=id;const model=modelForSelection();if(model)updatePartDescription(model);};
 
-document.querySelector('#dismissArcFlashBanner')?.addEventListener('click',()=>{
-  document.querySelector('#arcFlashBanner')?.classList.add('hidden');
-});
+document.querySelector('#secFeeders')?.addEventListener('toggle', (ev) => {
+  const target = ev.target;
+  if (!(target instanceof HTMLDetailsElement)) return;
+  if (target.id === 'feedersDropdown') {
+    feedersDropdownOpen = target.open;
+  } else if (target.dataset.feederGroup) {
+    if (target.open) openFeederGroups.add(target.dataset.feederGroup);
+    else openFeederGroups.delete(target.dataset.feederGroup);
+  }
+}, { capture: true });
 
 function setMessage(text:string){message=text;document.querySelector('#notice')!.textContent=text;}
 function statusText(id:string){return live.has(id)?'POWERED':'NOT POWERED';}
 function toggleBreaker(id:string){
-  // Prevent closing a breaker if its HV equipment has an active LOTO lock (racked out / padlocked / earthed)
-  if(!state.closed[id]){
-    for(const [eqId,map] of Object.entries(HV_EQUIPMENT_VCB_MAP)){
-      if(map.vcbIds.includes(id)){
-        const rec=hvLotoManager.getRecord(eqId);
-        if(rec.completedSteps>=2){
-          const msg=`LOTO Interlock Blocked: Cannot close ${edgeById[id]?.name||id} while ${map.label} is racked out / padlocked / earthed under ${rec.ptwNumber}. Reset LOTO in Inspector first.`;
-          setMessage(msg);
-          refresh();
-          return;
-        }
-      }
-    }
-  }
   const check=simEngine.validateBreakerToggle(id,state,live);
   if(!check.allowed){
     setMessage(check.reason||'Breaker operation blocked by safety interlock.');
@@ -291,31 +234,35 @@ function toggleBreaker(id:string){
     return;
   }
   state.closed[id]=!state.closed[id];
-  activeScenario='';
   const c=edgeById[id];
   const nextLive=powered(state);
   simEngine.notifyBreakerChanged(id,state.closed[id],nextLive,state);
-  // If user closed a VCB that was at Step 1 LOTO, reset its LOTO step to 0
-  if(state.closed[id]){
-    for(const [eqId,map] of Object.entries(HV_EQUIPMENT_VCB_MAP)){
-      if(map.vcbIds.includes(id) && hvLotoManager.getRecord(eqId).completedSteps===1){
-        hvLotoManager.resetEquipmentLoto(eqId);
-      }
-    }
-  }
   setMessage(`${c.name} ${state.closed[id]?'closed':'opened'}. ${state.closed[id]?'The path can carry power if its upstream source is active.':'The downstream path is isolated unless another route supplies it.'}`);
   refresh();
 }
 function toggleSource(id:string){
   state.running[id]=!state.running[id];
-  activeScenario='';
   if(id==='shore'&&!state.running.shore){
     state.closed.shoreBreaker=false;
   }
-  if(['dg1','dg2','dg3','dg4'].includes(id)&&state.running[id]&&!state.closed[`gb${id.slice(2)}`]){
-    simEngine.syncTargetGen=id as 'dg1'|'dg2'|'dg3'|'dg4';
+  if(['dg1','dg2','dg3','dg4'].includes(id)){
+    const breakerId=`gb${id.slice(2)}`;
+    if(state.running[id]){
+      const shoreOnThisBus=state.closed.shoreBreaker&&(id==='dg1'||id==='dg2'||state.closed.tie);
+      if(!shoreOnThisBus){
+        simEngine.queueAutoSync(id);
+        setMessage(`${byId[id].short} starting — PMS will auto-synchronize and close breaker automatically.`);
+      }else{
+        setMessage(`${byId[id].short} started in standby (Shore Power is feeding the bus).`);
+      }
+    }else{
+      state.closed[breakerId]=false;
+      simEngine.cancelAutoSync(id);
+      setMessage(`${byId[id].short} stopped and generator breaker opened.`);
+    }
+  }else{
+    setMessage(`${byId[id].name} ${state.running[id]?'started':'stopped'}.`);
   }
-  setMessage(`${byId[id].name} ${state.running[id]?'started':'stopped'}. ${id==='shore'?'Close the Shore Connection breaker when main generator breakers are open.':'A running generator supplies its bus only through a closed generator breaker.'}`);
   refresh();
 }
 let lastInspectorSelected: string | undefined = undefined;
@@ -324,71 +271,25 @@ function select(id:string){
   if(!byId[id]&&!edgeById[id])return;
   if(selected !== id){
     selected=id;
-    selectedPart=undefined;
     lastInspectorSelected=undefined;
   }
   renderInspector();
   renderSchematic();
   vessel.update(state,live,selected);
 }
-function scenario(id:string){
-  const item=scenarios.find(s=>s.id===id);
-  if(!item)return;
-  state=item.apply();
-  activeScenario=id;
-  selected=item.focus;
-  selectedPart=undefined;
-  simEngine.waterfall.active=false;
-  simEngine.waterfall.completed=false;
-  simEngine.recoveryStage=null;
-  if(id==='parallel'){
-    simEngine.syncTargetGen='dg2';
-    simEngine.propulsionThrottle=0.60;
-  } else if(id==='overload'){
-    simEngine.propulsionThrottle=0.82;
-  } else if(id==='emergency'){
-    simEngine.propulsionThrottle=0.55;
-    // Start the SOLAS 5-stage sequential blackout restoration waterfall
-    simEngine.startPmsRecovery(state,0);
-  } else {
-    simEngine.propulsionThrottle=0.55;
-  }
-  setMessage(item.instruction);
-  refresh();
-}
 function reset(){
-  simEngine.propulsionThrottle=0.55;
-  simEngine.earthFaultHv=false;
-  simEngine.earthFaultLv=false;
-  simEngine.earthingArchitecture='IT';
-  simEngine.autoSyncGen=null;
-  simEngine.recoveryStage=null;
-  simEngine.waterfall.active=false;
-  simEngine.waterfall.completed=false;
-  hvLotoManager.resetAll();
-  for(const g of Object.values(simEngine.generators)){
-    g.relays.fieldLossInjected=false;
-    g.relays.lastTripCode=null;
-    g.relays.lastTripReason=null;
-    g.avrSetpointPu=1.015;
-    g.govSetpointHz=60.8;
-  }
-  for(const fr of Object.values(simEngine.feederRelays)){
-    fr.overcurrentInjected=false;
-    fr.idmtProgress=0;
-    fr.lastTripReason=null;
-  }
-  document.querySelector('#arcFlashBanner')?.classList.add('hidden');
-  scenario('main');
+  simEngine.reset();
+  state=initialState();
+  selected='busA';
+  lastInspectorSelected=undefined;
+  refresh();
   vessel.resetCamera();
-  setMessage('Simulation reset. DG 1 and the main bus are energized.');
+  setMessage('Simulation reset. DG 1 and DG 2 are running in parallel.');
 }
 
-function renderScenarios(){const el=document.querySelector('#scenarios')!;el.innerHTML=scenarios.map(s=>`<button type="button" class="scenario ${activeScenario===s.id?'active':''}" data-scenario="${s.id}"><span class="scenario-number">${s.title.slice(0,2)}</span><span>${s.title.slice(5)}</span></button>`).join('');el.querySelectorAll<HTMLButtonElement>('[data-scenario]').forEach(b=>b.onclick=()=>scenario(b.dataset.scenario!));}
 function sourceRow(id:string){
   const e=byId[id],breaker=id==='eg'?'egBreaker':id==='shore'?'shoreBreaker':`gb${id.slice(2)}`;
   const g=simEngine.generators[id];
-  const isMainDg=['dg1','dg2','dg3','dg4'].includes(id);
   return `<div class="generator-card" data-gen-card="${id}">
     <div class="generator-row">
       <button class="item-name" data-select="${id}" type="button"><span class="state-dot ${state.running[id]?'on':''}"></span>${e.short}</button>
@@ -399,11 +300,6 @@ function sourceRow(id:string){
       <div class="gen-load-bar-track"><div class="gen-load-bar-fill" id="genBar-${id}" style="width:${Math.min(100,Math.max(0,g.loadPercent))}%"></div></div>
       <div class="gen-meta-line">
         <span class="gen-metrics-text" id="genMetrics-${id}">${g.status} · ${Math.round(g.kw)} kW (${g.loadPercent}%) · ${g.frequencyHz.toFixed(1)} Hz</span>
-        ${isMainDg?`<span class="gov-trim-group" title="Adjust governor speed reference (ANSI 32 reverse power) or inject AVR field loss (ANSI 40)">
-          <button type="button" class="gov-btn" data-gov-id="${id}" data-gov-delta="-0.15" title="Decrease Governor Speed Reference (Motorize / Test ANSI 32 Reverse Power)">Gov −</button>
-          <button type="button" class="gov-btn" data-gov-id="${id}" data-gov-delta="0.15" title="Increase Governor Speed Reference">Gov +</button>
-          <button type="button" class="gov-btn ${g.relays.fieldLossInjected?'fault-active':''}" data-field-loss="${id}" title="Simulate Loss of Excitation / Field (ANSI 40)">AVR 40</button>
-        </span>`:''}
       </div>
       <div class="gen-relay-line hidden" id="genRelay-${id}"></div>
     </div>`:`<div class="gen-telemetry-subrow"><span class="gen-metrics-text">Port 6.6 kV Cold Ironing · Interlocked with Main DGs</span></div>`}
@@ -411,44 +307,6 @@ function sourceRow(id:string){
 }
 function renderControls(){
   document.querySelector('#generators')!.innerHTML=['dg1','dg2','dg3','dg4','shore'].map(sourceRow).join('');
-
-  // Synchroscope & Paralleling card
-  const s=simEngine.sync;
-  document.querySelector('#synchroscopeSection')!.innerHTML=`
-    <div class="sync-card">
-      <div class="sync-target-tabs">
-        ${(['dg1','dg2','dg3','dg4'] as const).map(id=>`<button type="button" class="sync-tab ${s.targetGenId===id?'active':''}" data-sync-target="${id}">${byId[id].short}</button>`).join('')}
-      </div>
-      <div class="sync-main-grid">
-        <div class="sync-dial-wrap">
-          <svg viewBox="0 0 120 120" class="sync-dial-svg" id="syncDialSvg">
-            <circle cx="60" cy="60" r="52" class="sync-dial-bg"/>
-            <path d="M 44 10.5 A 52 52 0 0 1 76 10.5" class="sync-window-arc"/>
-            <line x1="60" y1="6" x2="60" y2="16" class="sync-twelve-mark"/>
-            <text x="24" y="26" class="sync-dir-label">Slow</text>
-            <text x="96" y="26" text-anchor="end" class="sync-dir-label">Fast</text>
-            <text x="60" y="100" text-anchor="middle" class="sync-twelve-label">In phase at 12</text>
-            <g id="syncNeedleGroup" transform="rotate(${s.phaseAngleDeg.toFixed(1)} 60 60)">
-              <line x1="60" y1="66" x2="60" y2="15" class="sync-needle"/>
-              <polygon points="60,10 56,20 64,20" class="sync-needle-tip"/>
-            </g>
-            <circle cx="60" cy="60" r="6" id="syncCenterDot" class="sync-center-dot ${s.inSyncWindow?'ok':''}"/>
-          </svg>
-        </div>
-        <div class="sync-readouts">
-          <div class="sync-stat-row"><span>Bus</span><strong id="syncBusVal">${s.busFreqHz.toFixed(2)} Hz · ${s.busVoltageKv.toFixed(2)} kV</strong></div>
-          <div class="sync-stat-row"><span>${byId[s.targetGenId].short}</span><strong id="syncGenVal">${s.genFreqHz.toFixed(2)} Hz · ${s.genVoltageKv.toFixed(2)} kV</strong></div>
-          <div class="sync-stat-row"><span>Slip / Δθ</span><strong id="syncSlipVal">${s.slipHz>=0?'+':''}${s.slipHz.toFixed(2)} Hz · ${Math.round(s.phaseAngleDeg)}°</strong></div>
-          <div class="sync-badge ${s.alreadyClosed?'online':s.inSyncWindow?'ok':'wait'}" id="syncStatusBadge">
-            ${s.alreadyClosed?'PARALLELED ON BUS':s.inSyncWindow?'ANSI 25 PERMISSIVE OK':'OUT OF SYNC WINDOW'}
-          </div>
-        </div>
-      </div>
-      <div class="sync-actions">
-        <button type="button" class="button button-primary sync-auto-btn" id="btnAutoSync">${s.autoSyncActive?'Synchronizing…':'Auto-sync and close'}</button>
-        <button type="button" class="mini-toggle ${simEngine.checkSyncInterlock?'closed':''}" id="btnCheckSyncToggle" title="Toggle ANSI 25 Check-Synchronizer Interlock">ANSI 25 ${simEngine.checkSyncInterlock?'ON':'BYPASS'}</button>
-      </div>
-    </div>`;
 
   // Propulsion & Heavy Load Throttle
   const pct=Math.round(simEngine.propulsionThrottle*100);
@@ -541,29 +399,44 @@ function renderControls(){
       </div>
     </div>`;
 
-  const groups = [
-    [
-      `${VOLTAGES.hv} feeders`,
-      'propFeed', 'reeferAFeed', 'txAFeed', 'txBFeed', 'reeferBFeed', 'bowFeed'
-    ],
-    [
-      `${VOLTAGES.lv} bus A (port)`,
-      'galley440Feed', 'fire1Feed', 'cooling1Feed', 'craneFeed', 'conAAcb', 'esbTieFeed'
-    ],
-    [
-      `${VOLTAGES.lv} bus B (starboard)`,
-      'conBAcb', 'fire2Feed', 'cooling2Feed', 'ballastFeed', 'bilgeFeed'
-    ],
-    [
-      `${VOLTAGES.consumer} accommodation and bridge`,
-      'lightAFeed', 'galleySmallFeed', 'navFeed'
-    ],
-    [
-      '440 V emergency switchboard',
-      'eSteerFeed', 'eFireFeed', 'eLightFeed', 'eRadioFeed', 'navEmFeed'
-    ]
+  const groups: { key: string; title: string; ids: string[] }[] = [
+    {
+      key: 'hv',
+      title: `${VOLTAGES.hv} feeders`,
+      ids: ['propFeed', 'reeferAFeed', 'txAFeed', 'txBFeed', 'reeferBFeed', 'bowFeed']
+    },
+    {
+      key: 'lvA',
+      title: `${VOLTAGES.lv} bus A (port)`,
+      ids: ['galley440Feed', 'fire1Feed', 'cooling1Feed', 'airCompFeed', 'craneFeed', 'conAAcb', 'esbTieFeed']
+    },
+    {
+      key: 'lvB',
+      title: `${VOLTAGES.lv} bus B (starboard)`,
+      ids: ['conBAcb', 'fire2Feed', 'cooling2Feed', 'ventFanFeed', 'ballastFeed', 'bilgeFeed']
+    },
+    {
+      key: 'consumer',
+      title: `${VOLTAGES.consumer} accommodation and bridge`,
+      ids: ['lightAFeed', 'galleySmallFeed', 'navFeed']
+    },
+    {
+      key: 'esb',
+      title: '440 V emergency switchboard',
+      ids: ['eSteerFeed', 'eFireFeed', 'eLightFeed', 'eRadioFeed', 'navEmFeed']
+    }
   ];
-  document.querySelector('#feeders')!.innerHTML=groups.map(([title,...ids])=>{const closedCount=ids.filter(id=>state.closed[id]).length;return `<div class="feeder-group"><div class="feeder-label"><span>${title}</span><span class="feeder-count">${closedCount}/${ids.length} closed</span></div>${ids.map(id=>{const c=edgeById[id];const spec=Object.values(LOAD_SPECS).find(ls=>ls.breakerId===id);return `<div class="feeder-row"><button class="feeder-name" data-select="${id}" type="button">${c.name.replace(' feeder breaker','').replace(' breaker','')}${spec?` <small class="feeder-kw-tag">${spec.ratedKw} kW</small>`:''}</button><button class="feeder-state ${state.closed[id]?'closed':''}" data-breaker="${id}" type="button" aria-label="${state.closed[id]?'Open':'Close'} ${c.name}">${state.closed[id]?'CLOSED':'OPEN'}</button></div>`;}).join('')}</div>`;}).join('');
+  const allFeederIds=groups.flatMap(g=>g.ids);
+  const totalClosed=allFeederIds.filter(id=>state.closed[id]).length;
+  const feedersDropdownEl=document.querySelector<HTMLDetailsElement>('#feedersDropdown');
+  if(feedersDropdownEl)feedersDropdownEl.open=feedersDropdownOpen;
+  const feedersTotalEl=document.querySelector('#feedersTotalSummary');
+  if(feedersTotalEl)feedersTotalEl.textContent=`${totalClosed}/${allFeederIds.length} closed`;
+  document.querySelector('#feeders')!.innerHTML=groups.map(({key,title,ids})=>{
+    const closedCount=ids.filter(id=>state.closed[id]).length;
+    const isOpen=openFeederGroups.has(key);
+    return `<details class="feeder-group" data-feeder-group="${key}" ${isOpen?'open':''}><summary class="feeder-label"><span class="feeder-label-title">${title}</span><span class="feeder-count">${closedCount}/${ids.length} closed</span></summary><div class="feeder-rows">${ids.map(id=>{const c=edgeById[id];const spec=Object.values(LOAD_SPECS).find(ls=>ls.breakerId===id);return `<div class="feeder-row"><button class="feeder-name" data-select="${id}" type="button">${c.name.replace(' feeder breaker','').replace(' breaker','')}${spec?` <small class="feeder-kw-tag">${spec.ratedKw} kW</small>`:''}</button><button class="feeder-state ${state.closed[id]?'closed':''}" data-breaker="${id}" type="button" aria-label="${state.closed[id]?'Open':'Close'} ${c.name}">${state.closed[id]?'CLOSED':'OPEN'}</button></div>`;}).join('')}</div></details>`;
+  }).join('');
   document.querySelector('#emergencyControls')!.innerHTML=sourceRow('eg')+`
     <div class="ups-test-box">
       <div class="ups-test-info">
@@ -594,36 +467,11 @@ function renderControls(){
   document.querySelectorAll<HTMLButtonElement>('[data-source]').forEach(b=>b.onclick=()=>toggleSource(b.dataset.source!));
   document.querySelectorAll<HTMLButtonElement>('[data-breaker]').forEach(b=>b.onclick=()=>toggleBreaker(b.dataset.breaker!));
   document.querySelectorAll<HTMLButtonElement>('[data-select]').forEach(b=>b.onclick=()=>select(b.dataset.select!));
-  document.querySelectorAll<HTMLButtonElement>('[data-gov-id]').forEach(b=>b.onclick=()=>{
-    const id=b.dataset.govId!;
-    const delta=parseFloat(b.dataset.govDelta||'0');
-    simEngine.nudgeGovernor(id,delta);
-    setMessage(`Adjusted ${byId[id].short} governor speed reference to ${simEngine.generators[id].govSetpointHz.toFixed(2)} Hz.`);
-  });
-  document.querySelectorAll<HTMLButtonElement>('[data-field-loss]').forEach(b=>b.onclick=()=>{
-    const id=b.dataset.fieldLoss!;
-    setMessage(simEngine.toggleFieldLoss(id));
-    renderControls();
-    if(selected===id)renderInspector();
-  });
   document.querySelectorAll<HTMLButtonElement>('[data-earthing-arch]').forEach(b=>b.onclick=()=>{
     const arch=b.dataset.earthingArch as EarthingArchitecture;
     setMessage(simEngine.setEarthingArchitecture(arch));
     renderControls();
     renderInspector();
-  });
-  document.querySelectorAll<HTMLButtonElement>('[data-sync-target]').forEach(b=>b.onclick=()=>{
-    simEngine.syncTargetGen=b.dataset.syncTarget as 'dg1'|'dg2'|'dg3'|'dg4';
-    renderControls();
-  });
-  document.querySelector<HTMLButtonElement>('#btnAutoSync')?.addEventListener('click',()=>{
-    setMessage(simEngine.startAutoSync(simEngine.syncTargetGen,state));
-    refresh();
-  });
-  document.querySelector<HTMLButtonElement>('#btnCheckSyncToggle')?.addEventListener('click',()=>{
-    simEngine.checkSyncInterlock=!simEngine.checkSyncInterlock;
-    setMessage(`ANSI 25 Check-Synchronizer interlock ${simEngine.checkSyncInterlock?'ENABLED':'BYPASSED'}.`);
-    renderControls();
   });
   const propSlider=document.querySelector<HTMLInputElement>('#propThrottleSlider');
   propSlider?.addEventListener('input',ev=>{
@@ -791,6 +639,10 @@ const ORTHOGONAL_ROUTES: Record<string, RouteDef> = {
     points: [[350, 440], [350, 514]],
     breaker: { pos: [350, 478], orientation: 'v' }
   },
+  airCompFeed: {
+    points: [[290, 440], [290, 600], [274, 600]],
+    breaker: { pos: [290, 478], orientation: 'v' }
+  },
   craneFeed: {
     points: [[470, 440], [470, 514]],
     breaker: { pos: [470, 478], orientation: 'v' }
@@ -822,6 +674,10 @@ const ORTHOGONAL_ROUTES: Record<string, RouteDef> = {
   cooling2Feed: {
     points: [[1150, 440], [1150, 514]],
     breaker: { pos: [1150, 478], orientation: 'v' }
+  },
+  ventFanFeed: {
+    points: [[1090, 440], [1090, 600], [1074, 600]],
+    breaker: { pos: [1090, 478], orientation: 'v' }
   },
   ballastFeed: {
     points: [[1270, 440], [1270, 514]],
@@ -1719,227 +1575,7 @@ function closeAssemblyModal() {
 document.querySelector('#assemblyClose')?.addEventListener('click', closeAssemblyModal);
 document.querySelector('#assemblyBackdrop')?.addEventListener('click', closeAssemblyModal);
 
-let lotoModalTarget: string | null = null;
-
-function renderLotoModalContent(targetId: string) {
-  const modal = document.querySelector<HTMLElement>('#lotoModal');
-  if (!modal || modal.classList.contains('hidden')) return;
-
-  const body = document.querySelector<HTMLElement>('#lotoModalBody');
-  const subtitle = document.querySelector<HTMLElement>('#lotoModalSubtitle');
-  const badge = document.querySelector<HTMLElement>('#lotoModalBadge');
-  if (!body || !subtitle || !badge) return;
-
-  const prevModalScroll = body.scrollTop;
-
-  const e = byId[targetId];
-  const map = HV_EQUIPMENT_VCB_MAP[targetId];
-  if (!map) return;
-
-  const lotoRec = hvLotoManager.getRecord(targetId);
-  const vcbIds = map.vcbIds;
-  const anyVcbClosed = vcbIds.some(id => !!state.closed[id]);
-  const vcbNames = vcbIds.map(id => edgeById[id]?.name || id).join(', ');
-  const isIsolated = hvLotoManager.isFullyIsolated(targetId, state.closed);
-
-  subtitle.textContent = `${map.label} (${e?.name || targetId}) · interlocked with ${vcbNames}`;
-  badge.textContent = `Permit ${lotoRec.ptwNumber} · ${isIsolated ? 'isolated and earthed, safe to work' : `step ${lotoRec.completedSteps} of 5`}`;
-
-  body.innerHTML = `
-    <div class="loto-status-strip">
-      <div><span>Feeder VCB (${vcbIds.join('/')})</span><strong class="${anyVcbClosed ? 'is-live' : 'is-safe'}">${anyVcbClosed ? 'CLOSED · LIVE' : 'OPEN / TRIPPED'}</strong></div>
-      <div><span>VCB truck</span><strong>${lotoRec.completedSteps >= 2 ? 'TEST / ISOLATED' : 'SERVICE'}</strong></div>
-      <div><span>Voltage test</span><strong class="${lotoRec.completedSteps >= 4 ? 'is-safe' : 'is-warn'}">${lotoRec.completedSteps >= 4 ? '0.00 kV · DEAD' : 'NOT PROVEN'}</strong></div>
-      <div><span>Circuit main earth</span><strong class="${lotoRec.completedSteps >= 5 ? 'is-safe' : ''}">${lotoRec.completedSteps >= 5 ? 'EARTHED TO HULL' : 'OPEN'}</strong></div>
-    </div>
-
-    ${lotoRec.arcFlashViolation ? `
-      <div class="arc-flash-violation-badge">
-        <span class="arc-flash-badge-icon">${icon('warning')}</span>
-        <div>
-          <strong>Enclosure not isolated</strong>
-          <p>${lotoRec.violationMessage || 'Complete all five LOTO steps before opening or exploding a 6.6 kV enclosure.'}</p>
-        </div>
-      </div>
-    ` : ''}
-
-    <div class="loto-modal-steps-grid">
-      ${HV_LOTO_STEPS.map(st => {
-        const done = lotoRec.completedSteps >= st.stepNumber;
-        const isNext = lotoRec.completedSteps === st.stepNumber - 1;
-        return `
-          <div class="loto-modal-step-card ${done ? 'done' : isNext ? 'next' : 'locked'}">
-            <div class="loto-modal-step-left">
-              <span class="loto-modal-step-num">${done ? icon('check') : st.stepNumber}</span>
-              <div>
-                <h4 class="loto-modal-step-title">${st.shortLabel}</h4>
-                <p class="loto-modal-step-desc">${st.detail}</p>
-              </div>
-            </div>
-            <div class="loto-modal-step-action">
-              <button type="button" class="loto-step-btn ${done ? 'done' : isNext ? 'primary' : ''}" data-modal-loto-step="${st.stepNumber}" ${done ? 'disabled' : ''}>
-                ${done ? 'Completed' : st.actionLabel}
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('')}
-    </div>
-
-    <div class="loto-card-footer">
-      <span class="loto-vcb-ref">Interlocked: ${vcbNames}</span>
-      <button type="button" class="button button-quiet" id="btnModalResetLoto">Reset permit</button>
-    </div>
-  `;
-
-  body.querySelectorAll<HTMLButtonElement>('[data-modal-loto-step]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const stepNum = parseInt(btn.dataset.modalLotoStep || '0', 10);
-      const res = hvLotoManager.executeStep(targetId, stepNum, state.closed);
-      if (res.success) {
-        document.querySelector('#arcFlashBanner')?.classList.add('hidden');
-        simEngine.pushAlarm('INFO', 'HV LOTO', res.message);
-      } else {
-        simEngine.pushAlarm('WARNING', 'HV LOTO', res.message);
-      }
-      setMessage(res.message);
-      refresh();
-      renderLotoModalContent(targetId);
-    });
-  });
-
-  body.querySelector<HTMLButtonElement>('#btnModalResetLoto')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    const msg = hvLotoManager.resetEquipmentLoto(targetId);
-    document.querySelector('#arcFlashBanner')?.classList.add('hidden');
-    const model = modelForSelection();
-    if (['txA', 'txB', 'txReeferA', 'txReeferB', 'txConA', 'txConB'].includes(targetId) || model === 'transformer') transformerAssembly.setExplosionFactor(0);
-    if (targetId === 'drive' || model === 'drive') driveAssembly.setExplosionFactor(0);
-    if (targetId === 'motor' || model === 'motor') motorAssembly.setExplosionFactor(0);
-    if (targetId === 'shore') shorePowerAssembly.setExplosionFactor(0);
-    if (exploded.isExploded()) exploded.setExploded(false);
-    setMessage(msg);
-    refresh();
-    renderLotoModalContent(targetId);
-  });
-
-  if (prevModalScroll > 0) {
-    body.scrollTop = prevModalScroll;
-    requestAnimationFrame(() => {
-      body.scrollTop = prevModalScroll;
-    });
-  }
-}
-
-function openLotoModal(targetId: string) {
-  lotoModalTarget = targetId;
-  const modal = document.querySelector<HTMLElement>('#lotoModal');
-  if (modal) {
-    modal.classList.remove('hidden');
-    document.body.classList.add('has-loto-modal');
-    renderLotoModalContent(targetId);
-  }
-}
-
-function closeLotoModal() {
-  const modal = document.querySelector<HTMLElement>('#lotoModal');
-  if (modal) {
-    modal.classList.add('hidden');
-    document.body.classList.remove('has-loto-modal');
-    lotoModalTarget = null;
-  }
-}
-
-document.querySelector('#lotoModalClose')?.addEventListener('click', closeLotoModal);
-document.querySelector('#lotoModalBackdrop')?.addEventListener('click', closeLotoModal);
-
 function modelForSelection():ModelType|undefined {return byId[selected]?.model||edgeById[selected]?.model;}
-
-function verifyHvIsolationOrWarn(equipmentId: string): boolean {
-  const access = hvLotoManager.verify3dInspectAccess(equipmentId, state.closed);
-  const banner = document.querySelector<HTMLElement>('#arcFlashBanner');
-  const bannerText = document.querySelector<HTMLElement>('#arcFlashBannerText');
-  if (!access.allowed) {
-    const warnMsg = access.violationMessage || 'Complete the five-step 6.6 kV lockout / tagout before opening or exploding an HV panel.';
-    simEngine.pushAlarm('CRITICAL', 'ARC-FLASH', warnMsg);
-    if (banner && bannerText) {
-      bannerText.textContent = warnMsg;
-      banner.classList.remove('hidden');
-    }
-    setMessage(warnMsg);
-    renderInspector();
-    updateLiveTelemetryDOM();
-    return false;
-  }
-  banner?.classList.add('hidden');
-  return true;
-}
-
-function renderAssemblyControlsCard(
-  title: string,
-  microCopy: string,
-  targetFactor: number,
-  prefix: string,
-  isHv: boolean = false
-): string {
-  const pct = Math.round(targetFactor * 100);
-  return `
-    <div class="cad-card ${prefix}-controls-card">
-      <div class="card-header">
-        <div>
-          <div class="eyebrow">3D assembly${isHv ? ' · LOTO required to explode' : ''}</div>
-          <h4>${title}</h4>
-        </div>
-        <span id="${prefix}-explosion-val" class="cad-val">${pct}%</span>
-      </div>
-      <p class="micro-copy">${microCopy}</p>
-      <div class="cad-slider-row">
-        <label for="${prefix}-explosion-slider">Explode</label>
-        <input type="range" id="${prefix}-explosion-slider" min="0" max="1" step="0.01" value="${targetFactor}">
-      </div>
-      <div class="cad-presets">
-        <button type="button" class="preset-btn" data-${prefix}-preset="0">Assembled</button>
-        <button type="button" class="preset-btn" data-${prefix}-preset="0.45">Partial</button>
-        <button type="button" class="preset-btn" data-${prefix}-preset="1.0">Exploded</button>
-      </div>
-    </div>`;
-}
-
-function wireAssemblyControls(
-  pane: Element,
-  prefix: string,
-  assembly: { setExplosionFactor: (f: number) => void; targetExplosionFactor: number },
-  isHv: boolean = false,
-  selectedId: string = ''
-) {
-  const slider = pane.querySelector<HTMLInputElement>(`#${prefix}-explosion-slider`);
-  const label = pane.querySelector<HTMLElement>(`#${prefix}-explosion-val`);
-  slider?.addEventListener('input', (ev) => {
-    const factor = parseFloat((ev.target as HTMLInputElement).value);
-    if (isHv && factor > 0 && !verifyHvIsolationOrWarn(selectedId)) {
-      slider.value = '0';
-      assembly.setExplosionFactor(0);
-      return;
-    }
-    assembly.setExplosionFactor(factor);
-    if (label) label.textContent = `${Math.round(factor * 100)}%`;
-  });
-
-  pane.querySelectorAll<HTMLButtonElement>(`[data-${prefix}-preset]`).forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const factor = parseFloat(btn.getAttribute(`data-${prefix}-preset`) || '0');
-      if (isHv && factor > 0 && !verifyHvIsolationOrWarn(selectedId)) {
-        if (slider) slider.value = '0';
-        assembly.setExplosionFactor(0);
-        return;
-      }
-      assembly.setExplosionFactor(factor);
-      if (slider) slider.value = String(factor);
-      if (label) label.textContent = `${Math.round(factor * 100)}%`;
-    });
-  });
-}
 
 function renderInspector(){
   const pane=document.querySelector('#inspector')!;
@@ -1989,7 +1625,7 @@ function renderInspector(){
           <div><span>Rating</span><strong>${genSpec.ratedKw} kW / ${genSpec.ratedKva} kVA</strong></div>
           <div><span>Output</span><strong>${Math.round(genSpec.kw)} kW · ${Math.round(genSpec.kvar)} kVAr (${genSpec.loadPercent}%)</strong></div>
           <div><span>Terminal V / Hz</span><strong>${Math.round(genSpec.voltageV)} V · ${genSpec.frequencyHz.toFixed(2)} Hz</strong></div>
-          <div><span>Governor / AVR reference</span><strong>Gov ${genSpec.govSetpointHz.toFixed(2)} Hz · AVR ${genSpec.relays.fieldLossInjected?'FIELD LOSS':`${Math.round(genSpec.avrSetpointPu*100)}%`}</strong></div>
+          <div><span>PMS control</span><strong>Auto-sync · 4% Gov / 2.5% AVR droop</strong></div>
         </div>
       </div>`;
   } else if(busSpec){
@@ -2041,10 +1677,6 @@ function renderInspector(){
             <div class="relay-fn-sub">IEC Standard Inverse: t = 0.14 / ((I / I_s)^0.02 − 1) · Live I: ${Math.round(genSpec.currentAmps)} A</div>
           </div>
         </div>
-        <div class="relay-test-actions">
-          <button type="button" class="button button-secondary relay-test-btn ${r.fieldLossInjected?'fault-active':''}" id="btnInspectorFieldLoss">${r.fieldLossInjected?'Restore field':'Inject field loss (40)'}</button>
-          <button type="button" class="button button-secondary relay-test-btn" id="btnInspectorMotorize">Lower governor 0.4 Hz (32)</button>
-        </div>
       </div>`;
   } else if(feederRelay && c){
     const fTripped=Boolean(feederRelay.lastTripReason);
@@ -2066,71 +1698,14 @@ function renderInspector(){
       </div>`;
   }
 
-  // Phase 4: Interactive 5-Step LOTO & High Voltage Permit to Work (PTW) Card
-  let hvLotoCard='';
-  const needsLoto=hvLotoManager.requiresHvLoto(selected);
-  if(needsLoto){
-    const lotoRec=hvLotoManager.getRecord(selected);
-    const map=HV_EQUIPMENT_VCB_MAP[selected];
-    const vcbIds=map.vcbIds;
-    const anyVcbClosed=vcbIds.some(id=>!!state.closed[id]);
-    const vcbNames=vcbIds.map(id=>edgeById[id]?.name||id).join(', ');
-    const isIsolated=hvLotoManager.isFullyIsolated(selected,state.closed);
-    hvLotoCard=`
-      <div class="hv-loto-card ${isIsolated?'is-safe':lotoRec.arcFlashViolation?'is-violation':''}" id="hvLotoCard">
-        <div class="hv-loto-header">
-          <h4>Lockout / tagout</h4>
-          <div class="hv-loto-meta">
-            <span class="ptw-badge ${isIsolated?'safe':'live'}">${lotoRec.ptwNumber} · ${isIsolated?'isolated and earthed':`step ${lotoRec.completedSteps} of 5`}</span>
-            <button type="button" class="btn-expand-ptw" id="btnExpandLoto" title="Open the full permit-to-work view">${icon('maximize')}Full view</button>
-          </div>
-        </div>
-        <div class="arc-flash-violation-badge ${lotoRec.arcFlashViolation?'':'hidden'}" id="inspectorArcFlashBadge" role="alert">
-          <span class="arc-flash-badge-icon">${icon('warning')}</span>
-          <div>
-            <strong>Enclosure not isolated</strong>
-            <p>${lotoRec.violationMessage||'Complete all five LOTO steps before opening or exploding a 6.6 kV enclosure.'}</p>
-          </div>
-        </div>
-        <div class="loto-status-strip">
-          <div><span>Feeder VCB (${vcbIds.join('/')})</span><strong class="${anyVcbClosed?'is-live':'is-safe'}">${anyVcbClosed?'CLOSED · LIVE':'OPEN'}</strong></div>
-          <div><span>VCB truck</span><strong>${lotoRec.completedSteps>=2?'TEST / ISOLATED':'SERVICE'}</strong></div>
-          <div><span>Voltage test</span><strong class="${lotoRec.completedSteps>=4?'is-safe':'is-warn'}">${lotoRec.completedSteps>=4?'0.0 kV · DEAD':'NOT PROVEN'}</strong></div>
-          <div><span>Circuit main earth</span><strong class="${lotoRec.completedSteps>=5?'is-safe':''}">${lotoRec.completedSteps>=5?'EARTHED':'OPEN'}</strong></div>
-        </div>
-        <div class="loto-steps-list">
-          ${HV_LOTO_STEPS.map(st=>{
-            const done=lotoRec.completedSteps>=st.stepNumber;
-            const isNext=lotoRec.completedSteps===st.stepNumber-1;
-            return `<div class="loto-step-row ${done?'done':isNext?'next':'locked'}">
-              <div class="loto-step-info">
-                <span class="loto-step-num">${done?icon('check'):st.stepNumber}</span>
-                <div>
-                  <strong>${st.shortLabel}</strong>
-                  <p>${st.detail}</p>
-                </div>
-              </div>
-              <button type="button" class="loto-step-btn ${done?'done':isNext?'primary':''}" data-loto-step="${st.stepNumber}" ${done?'disabled':''}>
-                ${done?'Completed':st.actionLabel}
-              </button>
-            </div>`;
-          }).join('')}
-        </div>
-        <div class="loto-card-footer">
-          <span class="loto-vcb-ref">Interlocked: ${vcbNames}</span>
-          <button type="button" class="button button-quiet loto-reset-btn" id="btnResetLoto">Reset permit</button>
-        </div>
-      </div>`;
-  }
-
   // Galley 440 V Emergency Remote Shunt Trip Pushbutton Card (SOLAS II-2 Reg 9.2)
   let galleyShuntCard = '';
   if (selected === 'galley440' || selected === 'galley440Feed') {
     galleyShuntCard = `
       <div class="galley-shunt-card ${simEngine.galleyShuntTripped ? 'is-tripped' : 'is-armed'}">
-        <div class="hv-loto-header">
+        <div class="galley-shunt-card-header">
           <h4>Galley remote shunt trip</h4>
-          <span class="ptw-badge ${simEngine.galleyShuntTripped ? 'live' : 'safe'}">SOLAS II-2 Reg 9.2 · ${simEngine.galleyShuntTripped ? 'TRIPPED' : 'ARMED'}</span>
+          <span class="galley-shunt-badge ${simEngine.galleyShuntTripped ? 'live' : 'safe'}">SOLAS II-2 Reg 9.2 · ${simEngine.galleyShuntTripped ? 'TRIPPED' : 'ARMED'}</span>
         </div>
         <p class="micro-copy">
           A trip station at the galley entrance de-energizes cooking appliances, fryers and exhaust ventilation in a fire (SOLAS II-2 Reg 9.2, BV NR467).
@@ -2181,7 +1756,6 @@ function renderInspector(){
     <div class="inspector-scroll"><div class="facts"><div><span>Voltage / type</span><strong>${e?.voltage||'Vacuum circuit breaker'}</strong></div><div><span>Normal state</span><strong>${normal}</strong></div></div>
     ${electricalSpecCard}
     ${protectionRelayCard}
-    ${hvLotoCard}
     ${galleyShuntCard}
     ${upsBridgeCard}
     <div class="detail-copy"><h3>Purpose</h3><p>${purpose}</p><h3>Power path</h3><p>${path}</p><h3>How it works</h3><p>${lesson}</p></div>
@@ -2195,18 +1769,6 @@ function renderInspector(){
   pane.querySelectorAll<HTMLButtonElement>('[data-breaker]').forEach(b=>b.onclick=()=>toggleBreaker(b.dataset.breaker!));
   pane.querySelectorAll<HTMLButtonElement>('[data-select]').forEach(b=>b.onclick=()=>select(b.dataset.select!));
 
-  // Wire Phase 1 Relay Test Buttons in Inspector
-  pane.querySelector<HTMLButtonElement>('#btnInspectorFieldLoss')?.addEventListener('click',()=>{
-    setMessage(simEngine.toggleFieldLoss(selected));
-    renderControls();
-    renderInspector();
-  });
-  pane.querySelector<HTMLButtonElement>('#btnInspectorMotorize')?.addEventListener('click',()=>{
-    simEngine.nudgeGovernor(selected,-0.4);
-    setMessage(`Lowered ${byId[selected]?.short||selected} governor reference to ${simEngine.generators[selected].govSetpointHz.toFixed(2)} Hz to test ANSI 32 Reverse Power protection.`);
-    renderControls();
-    renderInspector();
-  });
   pane.querySelector<HTMLButtonElement>('#btnInspectorFeederOverload')?.addEventListener('click',()=>{
     if(c){
       setMessage(simEngine.toggleFeederOvercurrent(c.id));
@@ -2217,38 +1779,6 @@ function renderInspector(){
     setMessage(simEngine.testUpsSwitchover(state));
     renderControls();
     renderInspector();
-  });
-
-  // Wire Phase 4 LOTO Step Buttons in Inspector
-  pane.querySelectorAll<HTMLButtonElement>('[data-loto-step]').forEach(btn=>{
-    btn.addEventListener('click',(e)=>{
-      e.preventDefault();
-      const stepNum=parseInt(btn.dataset.lotoStep||'1',10) as 1|2|3|4|5;
-      const res=hvLotoManager.executeStep(selected,stepNum,state.closed);
-      if(res.success){
-        document.querySelector('#arcFlashBanner')?.classList.add('hidden');
-        simEngine.pushAlarm('INFO','HV LOTO',res.message);
-      } else {
-        simEngine.pushAlarm('WARNING','HV LOTO',res.message);
-      }
-      setMessage(res.message);
-      refresh();
-    });
-  });
-  pane.querySelector<HTMLButtonElement>('#btnResetLoto')?.addEventListener('click',(e)=>{
-    e.preventDefault();
-    const msg=hvLotoManager.resetEquipmentLoto(selected);
-    document.querySelector('#arcFlashBanner')?.classList.add('hidden');
-    if(['txA','txB','txReeferA','txReeferB','txConA','txConB'].includes(selected)||model==='transformer')transformerAssembly.setExplosionFactor(0);
-    if(selected==='drive'||model==='drive')driveAssembly.setExplosionFactor(0);
-    if(selected==='motor'||model==='motor')motorAssembly.setExplosionFactor(0);
-    if(selected==='shore')shorePowerAssembly.setExplosionFactor(0);
-    if(exploded.isExploded())exploded.setExploded(false);
-    setMessage(msg);
-    refresh();
-  });
-  pane.querySelector<HTMLButtonElement>('#btnExpandLoto')?.addEventListener('click',()=>{
-    openLotoModal(selected);
   });
 
   pane.querySelector<HTMLButtonElement>('#btnInspectorGalleyTrip')?.addEventListener('click',()=>{
@@ -2268,26 +1798,6 @@ function renderInspector(){
     }
   });
 
-  wireAssemblyControls(pane, 'propeller', propellerAssembly);
-  wireAssemblyControls(pane, 'transformer', transformerAssembly, true, selected);
-  wireAssemblyControls(pane, 'drive', driveAssembly, true, selected);
-  wireAssemblyControls(pane, 'motor', motorAssembly, true, selected);
-  wireAssemblyControls(pane, 'steering', steeringAssembly);
-  wireAssemblyControls(pane, 'reefer', reeferAssembly);
-  wireAssemblyControls(pane, 'pump', pumpAssembly);
-  wireAssemblyControls(pane, 'esb', esbCubicleAssembly);
-  wireAssemblyControls(pane, 'battery', batterySystemAssembly);
-  wireAssemblyControls(pane, 'aircomp', airCompressorAssembly);
-  wireAssemblyControls(pane, 'ventfan', ventFanAssembly);
-  wireAssemblyControls(pane, 'ballastows', ballastOwsAssembly);
-  wireAssemblyControls(pane, 'galleyboard', galleyBoardAssembly);
-  wireAssemblyControls(pane, 'shorereel', shorePowerAssembly, true, selected);
-  wireAssemblyControls(pane, 'bridgenav', bridgeNavComAssembly);
-
-  exploded.setModel(undefined);
-  explodedExpanded = false;
-  document.body.classList.remove('has-expanded-viewer');
-
   if (prevScroll > 0) {
     const newScrollEl = pane.querySelector<HTMLElement>('.inspector-scroll');
     if (newScrollEl) {
@@ -2298,23 +1808,6 @@ function renderInspector(){
     }
   }
 }
-
-function setExpanded(value:boolean){
-  explodedExpanded=value;
-  document.body.classList.toggle('has-expanded-viewer',value);
-  document.querySelector('.exploded-section')?.classList.toggle('expanded',value);
-  const button=document.querySelector<HTMLButtonElement>('#explodeExpand');
-  if(button){
-    button.textContent=value?'Close':'Enlarge';
-    button.setAttribute('aria-expanded',String(value));
-    button.setAttribute('aria-label',value?'Close the enlarged equipment viewer':'Enlarge the equipment viewer');
-  }
-}
-
-const viewerBackdrop=document.createElement('div');
-viewerBackdrop.className='exploded-backdrop';
-viewerBackdrop.addEventListener('click',()=>setExpanded(false));
-document.body.appendChild(viewerBackdrop);
 
 function setLeftPanel(open:boolean){
   leftPanelOpen=open;
@@ -2361,8 +1854,6 @@ document.addEventListener('keydown',e=>{
   const isInput=['INPUT','TEXTAREA'].includes((e.target as HTMLElement)?.tagName);
   if(e.key==='Escape'){
     closeAssemblyModal();
-    closeLotoModal();
-    if(explodedExpanded)setExpanded(false);
   } else if(e.key==='['&&!isInput){
     setLeftPanel(!leftPanelOpen);
   } else if((e.key==='e'||e.key==='E')&&!isInput){
@@ -2371,18 +1862,6 @@ document.addEventListener('keydown',e=>{
     setRightPanel(!rightPanelOpen);
   }
 });
-
-function explodedElement():HTMLElement{return explodedHostRef;}
-const explodedHostRef=exploded.element();
-explodedHostRef.className='exploded-canvas';
-
-function updatePartDescription(model:ModelType){
-  const focusButton=document.querySelector<HTMLButtonElement>('#focusPart');
-  if(focusButton)focusButton.disabled=!selectedPart;
-  document.querySelectorAll<HTMLButtonElement>('.part-chip').forEach(b=>b.classList.toggle('active',b.dataset.part===selectedPart));
-  const part=modelParts[model].find(p=>p.id===selectedPart);
-  const descEl = document.querySelector('#partDescription'); if (descEl) descEl.innerHTML=part?`<strong>${part.name}</strong><p>${part.description}</p>`:'Select a part to see what it does.';
-}
 
 function updateLiveTelemetryDOM(){
   // 1. Update generator telemetry bars, text, and Phase 1 protective relay timers
@@ -2417,27 +1896,7 @@ function updateLiveTelemetryDOM(){
     }
   }
 
-  // 2. Update Synchroscope needle & digital readouts
-  const s=simEngine.sync;
-  const needle=document.getElementById('syncNeedleGroup');
-  if(needle)needle.setAttribute('transform',`rotate(${s.phaseAngleDeg.toFixed(1)} 60 60)`);
-  const dot=document.getElementById('syncCenterDot');
-  if(dot)dot.setAttribute('class',`sync-center-dot ${s.inSyncWindow?'ok':''}`);
-  const busVal=document.getElementById('syncBusVal');
-  if(busVal)busVal.textContent=`${s.busFreqHz.toFixed(2)} Hz · ${s.busVoltageKv.toFixed(2)} kV`;
-  const genVal=document.getElementById('syncGenVal');
-  if(genVal)genVal.textContent=`${s.genFreqHz.toFixed(2)} Hz · ${s.genVoltageKv.toFixed(2)} kV`;
-  const slipVal=document.getElementById('syncSlipVal');
-  if(slipVal)slipVal.textContent=`${s.slipHz>=0?'+':''}${s.slipHz.toFixed(2)} Hz · ${Math.round(s.phaseAngleDeg)}°`;
-  const badge=document.getElementById('syncStatusBadge');
-  if(badge){
-    badge.className=`sync-badge ${s.alreadyClosed?'online':s.inSyncWindow?'ok':'wait'}`;
-    badge.textContent=s.alreadyClosed?'PARALLELED ON BUS':s.inSyncWindow?'ANSI 25 PERMISSIVE OK':'OUT OF SYNC WINDOW';
-  }
-  const autoBtn=document.getElementById('btnAutoSync');
-  if(autoBtn)autoBtn.textContent=s.autoSyncActive?'Synchronizing…':'Auto-sync and close';
-
-  // 3. Update PMS Recovery Banner, HRE Telemetry & Alarm Logbook
+  // 2. Update PMS Recovery Banner, HRE Telemetry & Alarm Logbook
   const recBanner=document.getElementById('pmsRecoveryBanner');
   if(recBanner){
     recBanner.classList.toggle('hidden',!simEngine.recoveryStage);
@@ -2459,7 +1918,7 @@ function updateLiveTelemetryDOM(){
   const wfHud=document.getElementById('solasWaterfallHud');
   const wf=simEngine.waterfall;
   if(wfHud){
-    const showWf=wf.active || wf.completed || activeScenario==='emergency';
+    const showWf=wf.active || wf.completed;
     wfHud.classList.toggle('hidden',!showWf);
     if(showWf){
       const curTitle=wf.currentStage?`Stage ${wf.currentStage.stageNumber}: ${wf.currentStage.shortTitle}`:(wf.completed?'All five stages restored':'Waiting to start');
@@ -2565,8 +2024,11 @@ function updateLiveTelemetryDOM(){
   }
   const topTotalKw=document.querySelector('#topTotalKw');
   if(topTotalKw){
-    const totalKw=simEngine.buses.busA.kw+simEngine.buses.busB.kw+simEngine.buses.eBus.kw;
-    const totalKva=Math.hypot(totalKw,simEngine.buses.busA.kvar+simEngine.buses.busB.kvar+simEngine.buses.eBus.kvar);
+    const egIslanded=simEngine.generators.eg.running && simEngine.generators.eg.breakerClosed;
+    const extraEBusKw=egIslanded?simEngine.buses.eBus.kw:0;
+    const extraEBusKvar=egIslanded?simEngine.buses.eBus.kvar:0;
+    const totalKw=simEngine.buses.busA.kw+simEngine.buses.busB.kw+extraEBusKw;
+    const totalKva=Math.hypot(totalKw,simEngine.buses.busA.kvar+simEngine.buses.busB.kvar+extraEBusKvar);
     const pf=totalKva>1?(totalKw/totalKva).toFixed(2):'1.00';
     topTotalKw.textContent=`${totalKw.toLocaleString()} kW · PF ${pf}`;
   }
@@ -2594,20 +2056,14 @@ function updateLiveTelemetryDOM(){
 function refresh(){
   live=powered(state);
   simEngine.step(0.05,state);
-  renderScenarios();
   renderControls();
   renderSchematic();
   renderInspector();
   vessel.update(state,live,selected);
   updateLiveTelemetryDOM();
-  if(lotoModalTarget)renderLotoModalContent(lotoModalTarget);
-  const s=scenarios.find(s=>s.id===activeScenario);
-  document.querySelector('#lessonTitle')!.textContent=s?.title||'Free exploration';
-  document.querySelector('#lessonText')!.textContent=s?.instruction||'Change a source or breaker and trace which loads remain connected to an active source.';
   const runningSources=allSupplyIds.filter(id=>state.running[id]).length;
   const suppliedLoads=equipment.filter(e=>['load','pump','thruster','motor','propeller'].includes(e.kind)&&live.has(e.id)).length;
   document.querySelector('#statusCount')!.textContent=`${runningSources} sources active · ${suppliedLoads} load groups supplied`;
-  document.querySelector('.small-index')!.textContent=s?`${String(scenarios.indexOf(s)+1).padStart(2,'0')} / ${String(scenarios.length).padStart(2,'0')}`:'Free mode';
   setMessage(message);
 }
 
@@ -2615,7 +2071,7 @@ document.querySelector('#openTutorialBtn')?.addEventListener('click',()=>{
   openAssemblyModal({
     url: resolveAssemblyUrl('tutorial.html'),
     title: 'Tutorial',
-    subtitle: 'Paralleling and synchroscope · PMS load sharing · blackout recovery · earth faults',
+    subtitle: 'Switchboard control · PMS load sharing · blackout recovery · earth faults',
     tag: 'Guide'
   });
 });
@@ -2670,4 +2126,4 @@ setInterval(()=>{
   updateLiveTelemetryDOM();
 },100);
 
-(window as any).app = { vessel, exploded, simEngine, hvLotoManager, scenario, select, toggleBreaker, toggleSource, reset, refresh, setLeftPanel, setLeftPanelExpanded, setRightPanel, getState: () => state, getLive: () => live };
+(window as any).app = { vessel, simEngine, select, toggleBreaker, toggleSource, reset, refresh, setLeftPanel, setLeftPanelExpanded, setRightPanel, getState: () => state, getLive: () => live };

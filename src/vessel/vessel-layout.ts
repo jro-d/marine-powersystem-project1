@@ -207,10 +207,10 @@ export const SOLAS_WATERFALL_STAGES: SolasWaterfallStage[] = [
     timeWindowLabel: 'T = 10s – 20s',
     startSec: 10,
     endSec: 20,
-    shortTitle: 'Main DG & Stage 1 Aux',
-    description: 'T = 10s–20s: Primary DG start → 6.6 kV Bus A & B → TX A & TX B → Stage 1 Auxiliaries (SW Cooling Pumps 1 & 2)',
-    sourcesToStart: ['dg1'],
-    breakersToClose: ['gb1', 'tie', 'txAFeed', 'txAOut', 'txBFeed', 'txBOut', 'cooling1Feed', 'cooling2Feed']
+    shortTitle: 'Main DGs & Stage 1 Aux',
+    description: 'T = 10s–20s: Primary DGs (DG 1 & DG 2) auto-sync → 6.6 kV Bus A & B → TX A & TX B → Stage 1 Auxiliaries (SW Cooling Pumps 1 & 2)',
+    sourcesToStart: ['dg1', 'dg2'],
+    breakersToClose: ['gb1', 'gb2', 'tie', 'txAFeed', 'txAOut', 'txBFeed', 'txBOut', 'cooling1Feed', 'cooling2Feed']
   },
   {
     stageNumber: 3,
