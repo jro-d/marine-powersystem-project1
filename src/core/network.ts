@@ -312,13 +312,13 @@ const n = (id: string, name: string, short: string, kind: NodeKind, voltage: str
 export const equipment: Equipment[] = [
   // --- 6.6 kV Generation Sources (Level 1: Y = 110) ---
   n('dg1','Diesel-generator 1 (Port)','DG 1','generator',VOLTAGES.hv,'Engine room','6.6 kV / 3.5 MW main synchronous diesel generator supplying Port Bus A.','Source → generator breaker gb1 → main bus A','Running; breaker closed','The prime mover provides mechanical energy; the 6.6 kV alternator produces medium-voltage electricity.',110,110,'generator',true),
-  n('dg2','Diesel-generator 2 (Port)','DG 2','generator',VOLTAGES.hv,'Engine room','6.6 kV / 3.5 MW second main electrical source for Port Bus A.','Source → generator breaker gb2 → main bus A','Standby; breaker open','Any available generator can feed its bus section when synchronized and closed.',240,110,'generator',true),
+  n('dg2','Diesel-generator 2 (Port)','DG 2','generator',VOLTAGES.hv,'Engine room','6.6 kV / 3.5 MW second main electrical source for Port Bus A.','Source → generator breaker gb2 → main bus A','Running; breaker closed','Runs in parallel with DG 1 to share normal sea load; additional generators auto-start on high demand.',240,110,'generator',true),
   n('shore','High Voltage Shore Power Connection (6.6 kV)','SHORE POWER','future',VOLTAGES.hv,'Port deck','6.6 kV port cold-ironing shore connection box with phase-sequence and interlock protection.','Shore box → shore breaker → main bus A','Disconnected at sea; interlocked with DGs','In port, shore power can supply Main Bus A once generator breakers are open (black transfer) or synchronized.',380,110,undefined,true),
   n('dg3','Diesel-generator 3 (Starboard)','DG 3','generator',VOLTAGES.hv,'Engine room','6.6 kV / 3.5 MW third main electrical source supplying Starboard Bus B.','Source → generator breaker gb3 → main bus B','Standby; breaker open','Bus B can be supplied independently of Bus A when the bus tie is open.',1190,110,'generator',true),
   n('dg4','Diesel-generator 4 (Starboard)','DG 4','generator',VOLTAGES.hv,'Engine room','6.6 kV / 3.5 MW fourth main electrical source for Starboard Bus B.','Source → generator breaker gb4 → main bus B','Standby; breaker open','Symmetrical 4-generator dual-bus redundancy ensures high vessel availability.',1320,110,'generator',true),
 
   // --- 6.6 kV Main High-Voltage Switchboards (Level 1 Busbars: Y = 180) ---
-  n('busA','6.6 kV Main Switchboard · Bus A (Port)','6.6 kV BUS A (PORT)','bus',VOLTAGES.hv,'Engine control room','Receives DG 1/2 and shore supply; distributes 6.6 kV power to Port machinery.','DG 1/2 → Bus A → TX A, TX REEFER A, Propulsion VFD Drive 1','Energized when DG 1 feeds it','Medium-voltage switchgear busbar feeding transformers and heavy propulsion.',395,180,'hv-board',true),
+  n('busA','6.6 kV Main Switchboard · Bus A (Port)','6.6 kV BUS A (PORT)','bus',VOLTAGES.hv,'Engine control room','Receives DG 1/2 and shore supply; distributes 6.6 kV power to Port machinery.','DG 1/2 → Bus A → TX A, TX REEFER A, Propulsion VFD Drive 1','Energized by DG 1 and DG 2','Medium-voltage switchgear busbar feeding transformers and heavy propulsion.',395,180,'hv-board',true),
   n('busB','6.6 kV Main Switchboard · Bus B (Starboard)','6.6 kV BUS B (STARBOARD)','bus',VOLTAGES.hv,'Engine control room','Receives DG 3/4; distributes 6.6 kV power to Starboard machinery and Bow Thruster.','DG 3/4 → Bus B → TX B, TX REEFER B, Bow Thruster VFD Drive 2','Joined to Bus A by 6.6 kV Bus Tie','Opening the 6.6 kV Bus Tie separates the grid into two isolated islands.',1105,180,'hv-board',true),
 
   // --- 6.6 kV Feeders & Heavy Machinery (Level 1 Drops) ---
@@ -385,7 +385,7 @@ const edge = (id: string, from: string, to: string, name: string, breaker = fals
 export const connections: Connection[] = [
   // --- 6.6 kV Generation Circuit Breakers ---
   edge('gb1','dg1','busA','DG 1 breaker',true,true,'breaker'),
-  edge('gb2','dg2','busA','DG 2 breaker',true,false,'breaker'),
+  edge('gb2','dg2','busA','DG 2 breaker',true,true,'breaker'),
   edge('shoreBreaker','shore','busA','Shore-connection breaker',true,false,'breaker','Connects 6.6 kV port cold-ironing supply to Main Bus A when main generators are isolated.','Interlocked with main generator breakers so ship generators and shore supply are not inadvertently cross-connected out of phase.'),
   edge('gb3','dg3','busB','DG 3 breaker',true,false,'breaker'),
   edge('gb4','dg4','busB','DG 4 breaker',true,false,'breaker'),
@@ -462,7 +462,7 @@ export const allSupplyIds = ['dg1','dg2','dg3','dg4','eg','shore'];
 
 export function initialState(): SimState {
   return {
-    running: Object.fromEntries(allSupplyIds.map(id => [id, id === 'dg1'])),
+    running: Object.fromEntries(allSupplyIds.map(id => [id, id === 'dg1' || id === 'dg2'])),
     closed: Object.fromEntries(connections.filter(c => c.breaker).map(c => [c.id, !!c.normalClosed])),
     upsBatteryLive: true,
     upsBatterySoc: 100
@@ -505,108 +505,5 @@ export function connectionState(c: Connection, state: SimState, live: Set<string
   return live.has(c.from) && live.has(c.to) ? 'live' : 'dead';
 }
 
-export const scenarios = [
-  {
-    id: 'main',
-    title: '01 · Symmetrical Dual-Bus Energization',
-    instruction: 'DG 1 is online with 6.6 kV Bus Tie closed, energizing both 6.6 kV Bus A & B. TX A & TX B step power down to 440 V Bus A & B, with dual reefer and control transformers active.',
-    apply: (): SimState => initialState(),
-    focus: 'busA'
-  },
-  {
-    id: 'propulsion',
-    title: '02 · Propulsion & Sea Running',
-    instruction: 'Trace DG 1 → 6.6 kV Bus A → PROPULSION VFD 1 VCB → Drive 1 → Propulsion Motor → Propeller, supported by SW Cooling 1 and Steering Gear.',
-    apply: (): SimState => {
-      const s = initialState();
-      s.closed.propFeed = true;
-      s.closed.cooling1Feed = true;
-      s.closed.cooling2Feed = true;
-      s.closed.eSteerFeed = true;
-      return s;
-    },
-    focus: 'drive'
-  },
-  {
-    id: 'tie',
-    title: '03 · Split-Bus Operation (Open Bus Ties)',
-    instruction: 'Opening the 6.6 kV Bus Tie isolates Port and Starboard grids. Start DG 3 on Bus B to maintain independent dual-bus operation (DP Class 2/3 requirement).',
-    apply: (): SimState => {
-      const s = initialState();
-      s.closed.tie = false;
-      s.closed.lvTie = false;
-      s.closed.consumerTie = false;
-      return s;
-    },
-    focus: 'tie'
-  },
-  {
-    id: 'emergency',
-    title: '04 · SOLAS Blackout Waterfall',
-    instruction: 'Total blackout: all main feeders shed via UVR so loads do NOT energize simultaneously. The 5-stage SOLAS sequential waterfall restores ESB (0–10s), Main DG & Aux 1 (10–20s), Aux 2 (20–30s), Essential (30–45s), and Heavy Loads (>45s).',
-    apply: (): SimState => {
-      const s = initialState();
-      for (const id of ['dg1', 'dg2', 'dg3', 'dg4']) {
-        s.running[id] = false;
-        s.closed[`gb${id.slice(2)}`] = false;
-      }
-      for (const b of [
-        'propFeed', 'bowFeed', 'txAFeed', 'txAOut', 'txBFeed', 'txBOut', 'reeferAFeed', 'reeferBFeed',
-        'conAAcb', 'conBAcb', 'fire1Feed', 'fire2Feed', 'cooling1Feed', 'cooling2Feed',
-        'craneFeed', 'ballastFeed', 'bilgeFeed', 'galley440Feed', 'navFeed',
-        'lightAFeed', 'galleySmallFeed'
-      ]) {
-        s.closed[b] = false;
-      }
-      s.running.eg = true;
-      s.closed.egBreaker = true;
-      s.closed.navEmFeed = true;
-      return s;
-    },
-    focus: 'eBus'
-  },
-  {
-    id: 'parallel',
-    title: '05 · Parallel & Sync DG 2',
-    instruction: 'DG 2 is running on standby while DG 1 feeds Bus A. Use the Synchroscope (Auto-Sync or manual 12 o’clock close) to parallel DG 2 and share kW load.',
-    apply: (): SimState => {
-      const s = initialState();
-      s.running.dg2 = true;
-      s.closed.gb2 = false;
-      s.closed.propFeed = true;
-      s.closed.cooling1Feed = true;
-      return s;
-    },
-    focus: 'dg2'
-  },
-  {
-    id: 'heavyload',
-    title: '06 · Heavy Sea Load & Symmetrical Redundancy',
-    instruction: 'DG 1 and DG 3 are paralleled across the bus tie supplying both Port and Starboard propulsion, reefers, pumps, and accommodation loads. Test PMS load shedding.',
-    apply: (): SimState => {
-      const s = initialState();
-      s.running.dg1 = true;
-      s.closed.gb1 = true;
-      s.running.dg3 = true;
-      s.closed.gb3 = true;
-      s.closed.propFeed = true;
-      s.closed.cooling1Feed = true;
-      s.closed.cooling2Feed = true;
-      s.closed.eSteerFeed = true;
-      s.closed.fire1Feed = true;
-      s.closed.craneFeed = false;
-      s.closed.ballastFeed = true;
-      s.closed.reeferAFeed = true;
-      s.closed.reeferBFeed = true;
-      s.closed.conAAcb = true;
-      s.closed.conBAcb = true;
-      s.closed.lightAFeed = true;
-      s.closed.galleySmallFeed = true;
-      s.closed.galley440Feed = true;
-      return s;
-    },
-    focus: 'busA'
-  }
-] as const;
 
 
