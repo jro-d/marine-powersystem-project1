@@ -76,6 +76,10 @@ views = {
     "xray":    (Vector((-2.0, -30.0, 14.0)), Vector((-2.0, 0.0, -1.0)), 'PERSP'),
     "bow_close": (Vector((30.0, -9.0, 1.5)), Vector((21.0, 0.0, -0.4)), 'PERSP'),
     "house":   (Vector((-1.0, -12.0, 6.5)), Vector((-11.0, 0.0, 2.5)), 'PERSP'),
+    "bt_close": (Vector((21.8, -7.5, -1.3)), Vector((18.3, 0.0, -2.3)), 'PERSP'),
+    "bt_below": (Vector((20.1, -2.5, -9.0)), Vector((20.1, 0.0, -2.2)), 'PERSP'),
+    "lifeboat": (Vector((-22.0, -9.0, 5.5)), Vector((-14.5, 0.0, 2.2)), 'PERSP'),
+    "lifeboat_side": (Vector((-15.0, -16.0, 2.6)), Vector((-14.8, 0.0, 2.3)), 'PERSP'),
 }
 only = argv[3].split(",") if len(argv) > 3 else list(views.keys())
 for name, (eye, look, kind) in views.items():
