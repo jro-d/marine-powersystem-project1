@@ -80,6 +80,9 @@ views = {
     "bt_below": (Vector((20.1, -2.5, -9.0)), Vector((20.1, 0.0, -2.2)), 'PERSP'),
     "lifeboat": (Vector((-22.0, -9.0, 5.5)), Vector((-14.5, 0.0, 2.2)), 'PERSP'),
     "lifeboat_side": (Vector((-15.0, -16.0, 2.6)), Vector((-14.8, 0.0, 2.3)), 'PERSP'),
+    # steering gear room: render with "ShipHull,Main_Deck" hidden to look inside
+    "steering": (Vector((-14.6, -6.0, 1.6)), Vector((-17.4, 0.0, -0.6)), 'PERSP'),
+    "steering_scuttle": (Vector((-16.2, -5.2, 3.0)), Vector((-15.5, 0.0, 0.95)), 'PERSP'),
 }
 only = argv[3].split(",") if len(argv) > 3 else list(views.keys())
 for name, (eye, look, kind) in views.items():

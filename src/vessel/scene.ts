@@ -167,7 +167,8 @@ function buildCableWaypoints(c: Connection, a: THREE.Vector3, b: THREE.Vector3):
     case 'esbTieFeed':
       return [a, V(a.x, a.y, -1.35), V(b.x, a.y, -1.35), b];
     case 'eSteerFeed':
-      return [a, V(b.x, 2.35, -1.35), V(b.x, b.y, -1.35), b];
+      // down through the house, aft under the main deck, then down to the steering gear on the rudder stock
+      return [a, V(a.x, .72, a.z), V(b.x, .72, a.z), V(b.x, b.y, a.z), b];
     case 'eFireFeed':
       return [a, V(a.x, -1.55, -1.35), V(a.x, -1.55, 0.95), V(b.x, -1.55, 0.95), b];
     case 'eLightFeed':

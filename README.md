@@ -340,7 +340,8 @@ marine-powersystem-project1/
    npm run check:layout
    ```
    It checks every equipment model against the real shell of the default hull, read from
-   `public/models/blender-hull-V8C.sections.json`. `npm run build:hull:v8c` rewrites that file and runs its own
+   `public/models/blender-hull-V8C.sections.json`, and that each machinery item stands in the compartment
+   `src/vessel/general-arrangement.json` names for it, clear of the bulkheads. `npm run build:hull:v8c` rewrites that file and runs its own
    geometry QA (parts poking through the shell, floating parts, propeller/rudder/thruster clearances); it fails on
    any problem unless `HULL_QA=warn` is set.
 

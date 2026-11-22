@@ -21,6 +21,18 @@ try {
   assert.equal(vesselLayout.prop.position[1], GA.propulsion.shaftY, 'propeller slot must sit on the shaft line (propulsion.shaftY)');
   for (const b of GA.bulkheads) assert(b.x > hull.extent.xMin && b.x < hull.extent.xMax, `bulkhead ${b.name} outside the hull`);
   for (const b of GA.bulkheads) assert(hull.halfBreadth(b.x, GA.hull.tankTop) > 0, `bulkhead ${b.name}: no hull at the tank top`);
+  // Steering gear: on the rudder stock, standing on the steering flat, in the room aft of the aft-peak bulkhead.
+  const steer = vesselLayout.eSteer.position;
+  assert.equal(steer[0], GA.propulsion.rudderStockX, 'eSteer must stand on the rudder stock (propulsion.rudderStockX)');
+  assert.equal(steer[2], 0, 'eSteer must stand on the centreline (rudder stock)');
+  assert(Math.abs(steer[1] - (GA.steeringGear.flatY + .033)) < .002, 'eSteer must stand on the steering flat (steeringGear.flatY)');
+  assert(GA.steeringGear.accessX < GA.bulkheads[0].x && hull.deck(GA.steeringGear.accessX) !== null, 'steering gear access must be aft of the aft-peak bulkhead');
+  // Compartments run transom -> bulkheads -> stem; each 'hull' slot names the one it stands in.
+  const bulkheadXs = GA.bulkheads.map(b => b.x);
+  assert.equal(GA.compartments.order.length, bulkheadXs.length + 1, 'compartments.order needs one entry per space between bulkheads');
+  const compartmentAt = x => GA.compartments.order[bulkheadXs.filter(b => x > b).length];
+  const BULKHEAD_CLEAR = .10;
+  const inCompartment = {};
 
   const { createVesselEquipment } = await server.ssrLoadModule('/src/vessel/vessel.ts');
   const tolerance = .015;
@@ -77,6 +89,16 @@ try {
       }
       assert(worst.excess <= tolerance, `${item.id}: protrudes ${worst.excess.toFixed(3)} through the hull at x=${worst.v?.x.toFixed(2)} y=${worst.v?.y.toFixed(2)}`);
     }
+    if (placement.space === 'hull') {
+      const declared = GA.equipment[item.id].compartment, actual = compartmentAt(box.getCenter(new THREE.Vector3()).x);
+      assert(GA.compartments.names[declared], `${item.id}: unknown compartment '${declared}'`);
+      assert.equal(actual, declared, `${item.id}: stands in ${actual}, but general-arrangement.json says ${declared}`);
+      for (const bx of bulkheadXs) {
+        const gap = Math.max(box.min.x - bx, bx - box.max.x);
+        assert(gap >= BULKHEAD_CLEAR, `${item.id}: ${gap < 0 ? 'crosses' : `only ${gap.toFixed(3)} from`} the bulkhead at x=${bx}`);
+      }
+      (inCompartment[declared] ??= []).push(item.id);
+    }
     if (placement.space === 'deck') {
       const halfWidth = (CARGO.rows - 1) * CARGO.rowPitch / 2 + CARGO.width / 2;
       for (const x of CARGO.bays) {
@@ -94,6 +116,7 @@ try {
     const overlap = bounds[i].box.clone().intersect(bounds[j].box).getSize(new THREE.Vector3());
     assert(!(overlap.x > .025 && overlap.y > .025 && overlap.z > .025), `${bounds[i].id} overlaps ${bounds[j].id}`);
   }
+  for (const id of GA.compartments.order) console.log(`  ${GA.compartments.names[id].padEnd(48)} ${(inCompartment[id] ?? []).join(', ') || '-'}`);
   console.log(`Layout passed against the real ${HULL_VARIANTS[DEFAULT_HULL].label} hull (${hull.x.length} frames x ${hull.y.length} waterlines): ` +
     `${equipment.length} equipment models checked; all internal equipment fits its space and no equipment overlaps.`);
 } finally {
