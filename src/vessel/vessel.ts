@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { CARGO, vesselLayout } from './vessel-layout';
+import { CARGO, GENERAL_ARRANGEMENT as GA, equipmentScale, vesselLayout } from './vessel-layout';
 import { createModel } from '../assemblies/models';
 import type { Equipment } from '../core/network';
 import { propellerAssembly } from '../assemblies/propeller-assembly';
@@ -76,8 +76,9 @@ function cargo(parent: THREE.Group) {
   const instances: {x:number; y:number; z:number; color:number}[] = [];
   const colors = [0x397982, 0x53748d, 0x8c745b, 0x66897b];
   for (let b = 0; b < bays.length; b++) {
-    box(parent, [3.14, 0.09, 5.45], [bays[b], 0.955, 0], 0x7b99a8, 0.2);
-    outlineBox(parent, [3.14, 0.09, 5.45], [bays[b], 0.955, 0], 0x70a8b1, 0.35);
+    const hatch: [number, number, number] = [GA.cargo.hatchLength, 0.09, 2 * GA.cargo.hatchHalfWidth];
+    box(parent, hatch, [bays[b], 0.955, 0], 0x7b99a8, 0.2);
+    outlineBox(parent, hatch, [bays[b], 0.955, 0], 0x70a8b1, 0.35);
     for (let row = 0; row < CARGO.rows; row++) for (let tier = 0; tier < (b === 3 ? 2 : 3); tier++) {
       // Dedicated slots for Port (reeferUnitA, row 0) and Starboard (reeferUnitB, row 7) reefer containers
       if (b === 3 && (row === 0 || row === 7) && tier === 0) continue;
@@ -295,8 +296,8 @@ function loadModel(e:Equipment):THREE.Group {
   return g;
 }
 
-/** Diameter of the bow-thruster tunnel built into the hull GLB (2 × BT_R in scripts/blender/hull_lib.py). */
-const HULL_BOW_TUNNEL_DIAMETER = 0.90;
+/** Diameter of the bow-thruster tunnel built into the hull GLB (bowThruster.diameter in general-arrangement.json). */
+const HULL_BOW_TUNNEL_DIAMETER = GA.bowThruster.diameter;
 
 /**
  * In the vessel view the hull owns the bow-thruster tunnel. Drop the assembly's own smaller tunnel so there is only
@@ -321,17 +322,17 @@ function fitThrusterToHullTunnel(root:THREE.Group){
 export function createVesselEquipment(e:Equipment):THREE.Group {
   const placement=vesselLayout[e.id];
   const root=new THREE.Group();root.position.set(...placement.position);root.userData.eqId=e.id;
-  const EQ_SCALE = 0.75;
+  const EQ_SCALE = GA.equipmentScale.default;
   const isReeferUnit = e.id === 'reeferUnit' || e.id === 'reeferUnitA' || e.id === 'reeferUnitB';
   const isPropeller = e.id === 'prop' || e.kind === 'propeller';
-  const itemScale = isReeferUnit ? 1.0 : (isPropeller ? 0.90 : EQ_SCALE);
+  const itemScale = isReeferUnit ? equipmentScale(e.id) : (isPropeller ? equipmentScale('prop') : EQ_SCALE);
   const size: [number, number, number] = [
     placement.size[0] * itemScale,
     placement.size[1] * itemScale,
     placement.size[2] * itemScale
   ];
   if(e.id==='prop'||e.kind==='propeller'){
-    const PROP_SCALE = EQ_SCALE * 1.20; // 20% size increase for propeller in 3D vessel view (0.90)
+    const PROP_SCALE = equipmentScale('prop'); // propeller shown 20% larger than the default equipment scale
     propellerAssembly.group.scale.setScalar(PROP_SCALE);
     root.add(propellerAssembly.group);
     root.userData.height=placement.size[1] * PROP_SCALE;

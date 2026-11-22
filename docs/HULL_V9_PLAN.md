@@ -1,6 +1,14 @@
 # Vessel model: scan findings, implementation plan and roadmap
 
-Status: **M1 done** (branch `feat/hull-m1-fixes`). Measurements were taken on `main` at `b8ea922` (V8-C default hull),
+Status: **M1 and M2 done.**
+- M1 was merged in #9.
+- M2 is on `feat/hull-m2-ga-spec`: `src/vessel/general-arrangement.json` is now the single spec. Both
+  `vessel-layout.ts` and `hull_lib.py` read it, and the old regex parse of the TypeScript and the duplicated
+  constants are gone.
+- Verified unchanged:
+  - the app's layout and all 44 equipment bounding boxes;
+  - the V8-C geometry (36 objects) rebuilt from the spec.
+- `check:layout` now asserts that the thruster and propeller slots sit on the spec's tunnel and shaft axes. Measurements were taken on `main` at `b8ea922` (V8-C default hull),
 using the Blender build, the exported GLBs and the running app.
 
 Decisions taken:
