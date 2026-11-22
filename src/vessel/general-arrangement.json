@@ -46,7 +46,9 @@
   "propulsion": {
     "propellerX": -17.38,
     "shaftY": -2.22,
-    "rudderStockX": -18.05
+    "rudderStockX": -18.12,
+    "propellerDiameter": 0.9,
+    "propellerLength": 0.58
   },
   "bowThruster": {
     "x": 18.3,

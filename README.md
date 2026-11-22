@@ -288,7 +288,7 @@ marine-powersystem-project1/
 │   │   ├── generate_pumps.py
 │   │   ├── generate_all_consumers.py
 │   │   └── kit.py                # Reusable Blender geometry & material kit
-│   └── qa/                       # Automated layout & screenshot utilities
+│   └── qa/                       # Layout check against the real hull sections, screenshot utilities
 ├── src/
 │   ├── core/
 │   │   ├── network.ts            # Network graph, PMS logic & protective relays
@@ -339,6 +339,10 @@ marine-powersystem-project1/
    ```bash
    npm run check:layout
    ```
+   It checks every equipment model against the real shell of the default hull, read from
+   `public/models/blender-hull-V8C.sections.json`. `npm run build:hull:v8c` rewrites that file and runs its own
+   geometry QA (parts poking through the shell, floating parts, propeller/rudder/thruster clearances); it fails on
+   any problem unless `HULL_QA=warn` is set.
 
 5. **Compile for production**:
    ```bash
