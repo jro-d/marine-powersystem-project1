@@ -1,0 +1,338 @@
+{
+  "$comment": "General arrangement: the single source of truth for where things are on the ship. Read by src/vessel/vessel-layout.ts (app) and scripts/blender/hull_lib.py (hull GLB). Coordinates are three.js scene units: x stern->bow, y up, z port(-)/starboard(+). Equipment position = centre in plan, bottom in height; size = max assembled extent before equipmentScale.",
+  "hull": {
+    "mainDeck": 0.9,
+    "waterline": -1.25,
+    "keel": -3.15,
+    "transomX": -19.7,
+    "tankTop": -1.76
+  },
+  "bulkheads": [
+    {
+      "x": -15.2,
+      "name": "Aft peak"
+    },
+    {
+      "x": -3.0,
+      "name": "Engine room forward"
+    },
+    {
+      "x": 11.0,
+      "name": "Hold forward / aux machinery aft"
+    },
+    {
+      "x": 17.2,
+      "name": "Collision"
+    }
+  ],
+  "house": {
+    "minX": -13.5,
+    "maxX": -7.3,
+    "halfWidth": 2.65,
+    "decks": [1.0, 2.33, 3.43],
+    "wheelhouseRoof": 4.5,
+    "roofLimit": 4.7
+  },
+  "cargo": {
+    "bays": [-4.4, -1.15, 2.1, 9.9],
+    "length": 3.04,
+    "width": 0.61,
+    "height": 0.65,
+    "rowPitch": 0.66,
+    "rows": 8,
+    "hatchLength": 3.14,
+    "hatchHalfWidth": 2.725
+  },
+  "propulsion": {
+    "propellerX": -17.38,
+    "shaftY": -2.22,
+    "rudderStockX": -18.05
+  },
+  "bowThruster": {
+    "x": 18.3,
+    "y": -2.3,
+    "diameter": 0.9
+  },
+  "equipmentScale": {
+    "default": 0.75,
+    "overrides": {
+      "reeferUnit": 1.0,
+      "reeferUnitA": 1.0,
+      "reeferUnitB": 1.0,
+      "prop": 0.9
+    }
+  },
+  "equipment": {
+    "dg1": {
+      "position": [-8.8, -1.72, -1.25],
+      "size": [2.05, 1.12, 0.98],
+      "space": "hull",
+      "group": "6.6 kV main diesel generators (engine room tank top)"
+    },
+    "dg2": {
+      "position": [-5.9, -1.72, -1.25],
+      "size": [2.05, 1.12, 0.98],
+      "space": "hull",
+      "group": "6.6 kV main diesel generators (engine room tank top)"
+    },
+    "dg3": {
+      "position": [-8.8, -1.72, 1.25],
+      "size": [2.05, 1.12, 0.98],
+      "space": "hull",
+      "group": "6.6 kV main diesel generators (engine room tank top)"
+    },
+    "dg4": {
+      "position": [-5.9, -1.72, 1.25],
+      "size": [2.05, 1.12, 0.98],
+      "space": "hull",
+      "group": "6.6 kV main diesel generators (engine room tank top)"
+    },
+    "busA": {
+      "position": [-8.7, -0.3, -0.7],
+      "size": [1.35, 0.86, 0.58],
+      "space": "hull",
+      "group": "6.6 kV main switchboards (engine room mezzanine)"
+    },
+    "busB": {
+      "position": [-6.8, -0.3, 0.7],
+      "size": [1.35, 0.86, 0.58],
+      "space": "hull",
+      "group": "6.6 kV main switchboards (engine room mezzanine)"
+    },
+    "drive": {
+      "position": [-11.3, -1.7, -1.25],
+      "size": [1.4, 1.15, 0.65],
+      "rotationDeg": 180.0,
+      "space": "hull",
+      "group": "Propulsion VFD"
+    },
+    "motor": {
+      "position": [-13.5, -2.599, 0],
+      "size": [1.55, 0.85, 0.8],
+      "rotationDeg": 180.0,
+      "space": "hull",
+      "group": "Propulsion motor (in the tank-top well)"
+    },
+    "prop": {
+      "position": [-17.38, -2.22, 0],
+      "size": [0.65, 1, 1],
+      "space": "external",
+      "group": "Propeller (outside the hull, on the shaft line)"
+    },
+    "bow": {
+      "position": [18.3, -2.55, 0],
+      "size": [0.95, 1.72, 2.55],
+      "rotationDeg": 90.0,
+      "space": "hull",
+      "group": "Bow thruster: impeller hub on the hull tunnel axis (bowThruster.x / bowThruster.y)"
+    },
+    "txA": {
+      "position": [-4, -1.72, -1.25],
+      "size": [1.08, 1, 0.85],
+      "space": "hull",
+      "group": "Symmetrical Dual Main Step-Down Transformers (6.6 kV / 440 V, 2.5 MVA) Port machinery flat (Bus A) & Starboard machinery flat (Bus B)"
+    },
+    "txB": {
+      "position": [-4, -1.72, 1.25],
+      "size": [1.08, 1, 0.85],
+      "space": "hull",
+      "group": "Symmetrical Dual Main Step-Down Transformers (6.6 kV / 440 V, 2.5 MVA) Port machinery flat (Bus A) & Starboard machinery flat (Bus B)"
+    },
+    "txReeferA": {
+      "position": [3.5, -0.3, -1.25],
+      "size": [1, 0.95, 0.8],
+      "space": "hull",
+      "group": "Symmetrical Dual Reefer Distribution Transformers (6.6 kV / 440 V, 1.5 MVA)"
+    },
+    "txReeferB": {
+      "position": [3.5, -0.3, 1.25],
+      "size": [1, 0.95, 0.8],
+      "space": "hull",
+      "group": "Symmetrical Dual Reefer Distribution Transformers (6.6 kV / 440 V, 1.5 MVA)"
+    },
+    "lvBusA": {
+      "position": [-4.25, -0.3, -0.9],
+      "size": [1.35, 0.86, 0.58],
+      "space": "hull",
+      "group": "Dual 440 V Main Switchboards"
+    },
+    "lvBusB": {
+      "position": [-4.25, -0.3, 0.9],
+      "size": [1.35, 0.86, 0.58],
+      "space": "hull",
+      "group": "Dual 440 V Main Switchboards"
+    },
+    "reeferA": {
+      "position": [7.75, 0.94, -2.3],
+      "size": [0.62, 0.67, 0.39],
+      "rotationDeg": 180.0,
+      "space": "deck",
+      "group": "Dual Reefer Distribution Boards"
+    },
+    "reeferB": {
+      "position": [7.75, 0.94, 2.3],
+      "size": [0.62, 0.67, 0.39],
+      "rotationDeg": 180.0,
+      "space": "deck",
+      "group": "Dual Reefer Distribution Boards"
+    },
+    "reeferUnitA": {
+      "position": [9.9, 1.025, -2.31],
+      "size": [3.04, 0.65, 0.61],
+      "rotationDeg": 180.0,
+      "space": "cargo",
+      "group": "Reefer Container Loads (Bay 4, 40-foot integral refrigerated units) Port container faces aft toward Reefer Board A; Starboard container faces aft toward Reefer Board B"
+    },
+    "reeferUnitB": {
+      "position": [9.9, 1.025, 2.31],
+      "size": [3.04, 0.65, 0.61],
+      "rotationDeg": 180.0,
+      "space": "cargo",
+      "group": "Reefer Container Loads (Bay 4, 40-foot integral refrigerated units) Port container faces aft toward Reefer Board A; Starboard container faces aft toward Reefer Board B"
+    },
+    "txConA": {
+      "position": [-10.5, 1.02, -1.45],
+      "size": [0.56, 0.55, 0.4],
+      "space": "house",
+      "group": "Dual Auxiliary / Control Transformers (440 V / 220 V, 500 kVA)"
+    },
+    "txConB": {
+      "position": [-10.5, 1.02, 1.45],
+      "size": [0.56, 0.55, 0.4],
+      "space": "house",
+      "group": "Dual Auxiliary / Control Transformers (440 V / 220 V, 500 kVA)"
+    },
+    "consumerA": {
+      "position": [-9.4, 1.02, -1.45],
+      "size": [0.72, 0.63, 0.34],
+      "space": "house",
+      "group": "Dual 220 V Sub-Boards"
+    },
+    "consumerB": {
+      "position": [-9.4, 1.02, 1.45],
+      "size": [0.72, 0.63, 0.34],
+      "space": "house",
+      "group": "Dual 220 V Sub-Boards"
+    },
+    "galley440": {
+      "position": [-12.2, 1.02, -0.85],
+      "size": [0.76, 0.62, 0.38],
+      "space": "house",
+      "group": "440 V Galley Primary Board"
+    },
+    "fire1": {
+      "position": [-1.85, -1.72, -1.8],
+      "size": [0.7, 0.48, 0.45],
+      "space": "hull",
+      "group": "Auxiliary machinery on the tank top (pump room, forward of the engine room)"
+    },
+    "cooling1": {
+      "position": [-0.15, -1.72, -1.8],
+      "size": [0.7, 0.48, 0.45],
+      "space": "hull",
+      "group": "Auxiliary machinery on the tank top (pump room, forward of the engine room)"
+    },
+    "airCompressor": {
+      "position": [1.15, -1.72, -1.8],
+      "size": [0.66, 0.46, 0.42],
+      "space": "hull",
+      "group": "Auxiliary machinery on the tank top (pump room, forward of the engine room)"
+    },
+    "crane": {
+      "position": [6.6, 0.96, -0.9],
+      "size": [3.2, 3, 0.9],
+      "space": "deck",
+      "group": "Deck crane between cargo bays 3 and 4"
+    },
+    "fire2": {
+      "position": [-1.85, -1.72, 1.8],
+      "size": [0.7, 0.48, 0.45],
+      "space": "hull",
+      "group": "Auxiliary machinery on the tank top (pump room, forward of the engine room)"
+    },
+    "cooling2": {
+      "position": [-0.15, -1.72, 1.8],
+      "size": [0.7, 0.48, 0.45],
+      "space": "hull",
+      "group": "Auxiliary machinery on the tank top (pump room, forward of the engine room)"
+    },
+    "ballast": {
+      "position": [1.15, -1.72, 1.8],
+      "size": [0.66, 0.46, 0.42],
+      "space": "hull",
+      "group": "Auxiliary machinery on the tank top (pump room, forward of the engine room)"
+    },
+    "bilge": {
+      "position": [2.45, -1.72, 1.8],
+      "size": [0.61, 0.42, 0.4],
+      "space": "hull",
+      "group": "Auxiliary machinery on the tank top (pump room, forward of the engine room)"
+    },
+    "lightsA": {
+      "position": [-11.4, 3.15, -1],
+      "size": [1.6, 0.16, 0.18],
+      "space": "house",
+      "group": "220 V Domestic & Service Loads"
+    },
+    "galleySmall": {
+      "position": [-12.2, 1.02, -0.3],
+      "size": [0.65, 0.45, 0.45],
+      "space": "house",
+      "group": "220 V Domestic & Service Loads"
+    },
+    "nav": {
+      "position": [-8.5, 3.45, 0],
+      "size": [0.76, 0.48, 0.48],
+      "space": "house",
+      "group": "220 V Domestic & Service Loads"
+    },
+    "eg": {
+      "position": [-12, 2.35, -1.35],
+      "size": [1.34, 0.68, 0.65],
+      "space": "house",
+      "group": "440 V SOLAS Emergency Switchboard & Emergency Loads (Located above bulkhead deck)"
+    },
+    "eBus": {
+      "position": [-9.7, 2.35, -1.35],
+      "size": [0.72, 0.63, 0.34],
+      "space": "house",
+      "group": "440 V SOLAS Emergency Switchboard & Emergency Loads (Located above bulkhead deck)"
+    },
+    "ventFan": {
+      "position": [-8, 2.35, 1.15],
+      "size": [0.54, 0.48, 0.42],
+      "space": "house",
+      "group": "440 V SOLAS Emergency Switchboard & Emergency Loads (Located above bulkhead deck)"
+    },
+    "eSteer": {
+      "position": [-14.65, -0.35, 0],
+      "size": [0.85, 0.55, 0.6],
+      "space": "hull",
+      "group": "440 V SOLAS Emergency Switchboard & Emergency Loads (Located above bulkhead deck)"
+    },
+    "eFire": {
+      "position": [11.75, -1.72, 0.95],
+      "size": [0.67, 0.48, 0.43],
+      "space": "hull",
+      "group": "440 V SOLAS Emergency Switchboard & Emergency Loads (Located above bulkhead deck)"
+    },
+    "eLights": {
+      "position": [-12.7, 3.2, -0.05],
+      "size": [0.58, 0.13, 0.16],
+      "space": "house",
+      "group": "440 V SOLAS Emergency Switchboard & Emergency Loads (Located above bulkhead deck)"
+    },
+    "eRadio": {
+      "position": [-8.8, 3.45, 1.25],
+      "size": [0.64, 0.46, 0.38],
+      "space": "house",
+      "group": "440 V SOLAS Emergency Switchboard & Emergency Loads (Located above bulkhead deck)"
+    },
+    "shore": {
+      "position": [6.7, 0.94, -2.55],
+      "size": [0.58, 0.5, 0.36],
+      "space": "deck",
+      "group": "Shore power connection"
+    }
+  }
+}

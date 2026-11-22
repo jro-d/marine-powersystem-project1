@@ -1,25 +1,23 @@
 """
-hull_lib.py - shared generator for the V8 family of vessel hull GLBs.
+hull_lib.py - generator for the V8 vessel hull GLB.
 
-The three variant scripts (generate_hull_v8a/b/c.py) only hold a config dict and call build(config).
+The variant script (generate_hull_v8c.py) only holds a config dict and calls build(config).
 Everything else lives here: the hull form, procedural textures, internal structure, outfitting and export.
 
 Axes (Blender):  X = stern -> bow,  Y = +port / -starboard,  Z = up.
 Exported with export_yup=True, so in Three.js:  x = X,  y = Z,  z = -Y.
 That matches src/vessel/vessel-layout.ts (x stern->bow, y up, z port(-) / starboard(+)).
 
-Fixed interfaces with the app (do not move without updating vessel-layout.ts):
-  * main deck 0.90, design waterline -1.25, keel -3.15, transom at deck X = -19.70
-  * cargo bays at X = -4.4, -1.15, 2.1, 9.9 (3.14 x 5.45), container bottoms at 1.025
-  * accommodation footprint X -13.5..-7.3, half width 2.65, decks at 1.00 / 2.33 / 3.43
-  * propeller hub X = -17.38, shaft centreline Z = -2.22, bow thruster tunnel X = 20.1, Z = -2.15
-  * object / material names carry the keywords src/vessel/hull-style.ts uses to pick the translucency
+Every position shared with the app (decks, waterline, keel, bulkheads, house, cargo bays, shaft line, rudder stock,
+bow thruster tunnel, equipment slots and their display scale) comes from src/vessel/general-arrangement.json, the same
+file the app reads. Change the ship there, not here. That file uses three.js axes; the constants below convert them.
+Object / material names carry the keywords src/vessel/hull-style.ts uses to pick the translucency.
 """
 import bpy  # type: ignore
 import bmesh  # type: ignore
+import json
 import math
 import os
-import re
 import sys
 import time
 import numpy as np
@@ -29,18 +27,27 @@ from mathutils.bvhtree import BVHTree  # type: ignore
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
 MODELS_DIR = os.path.join(PROJECT_ROOT, "public", "models")
-LAYOUT_TS = os.path.join(PROJECT_ROOT, "src", "vessel", "vessel-layout.ts")
+GA_JSON = os.path.join(PROJECT_ROOT, "src", "vessel", "general-arrangement.json")
+with open(GA_JSON, encoding="utf-8") as _f:
+    GA = json.load(_f)
 
-DECK_Z = 0.90
-WL_Z = -1.25
-KEEL_Z = -3.15
-HOUSE = dict(x0=-13.5, x1=-7.3, hw=2.65, d1=1.00, d2=2.33, d3=3.43, roof=4.50)
-BAYS = [-4.4, -1.15, 2.1, 9.9]
-BAY_LEN, BAY_HW = 3.14, 2.725
-PROP_X, SHAFT_Z = -17.38, -2.22
-# Bow thruster: forward of the collision bulkhead (17.2) where the bow is still nearly wall-sided, ~1 D below the
-# waterline. Must match the 'bow' slot in vessel-layout.ts (its impeller hub sits on this axis).
-BT_X, BT_Z, BT_R = 18.3, -2.30, 0.45
+# three.js heights (y) are Blender Z; three.js x is Blender X.
+DECK_Z = GA["hull"]["mainDeck"]
+WL_Z = GA["hull"]["waterline"]
+KEEL_Z = GA["hull"]["keel"]
+TANKTOP_Z = GA["hull"]["tankTop"]
+BULKHEADS = [b["x"] for b in GA["bulkheads"]]
+_H = GA["house"]
+HOUSE = dict(x0=_H["minX"], x1=_H["maxX"], hw=_H["halfWidth"], d1=_H["decks"][0], d2=_H["decks"][1], d3=_H["decks"][2],
+             roof=_H["wheelhouseRoof"])
+BAYS = GA["cargo"]["bays"]
+BAY_LEN, BAY_HW = GA["cargo"]["hatchLength"], GA["cargo"]["hatchHalfWidth"]
+CARGO_ROWS, CARGO_ROW_PITCH = GA["cargo"]["rows"], GA["cargo"]["rowPitch"]
+PROP_X, SHAFT_Z = GA["propulsion"]["propellerX"], GA["propulsion"]["shaftY"]
+RUDDER_STOCK_X = GA["propulsion"]["rudderStockX"]
+# Bow thruster: forward of the collision bulkhead where the bow is still nearly wall-sided, ~1 D below the waterline.
+# The app's 'bow' slot puts its impeller hub on this axis.
+BT_X, BT_Z, BT_R = GA["bowThruster"]["x"], GA["bowThruster"]["y"], GA["bowThruster"]["diameter"] / 2
 
 
 def clamp01(t):
@@ -70,24 +77,22 @@ def reset_scene():
             coll.remove(item)
 
 
+def equipment_scale(eid):
+    return GA["equipmentScale"]["overrides"].get(eid, GA["equipmentScale"]["default"])
+
+
 def load_layout():
-    """Parse vesselLayout from vessel-layout.ts -> list of equipment boxes in BLENDER coordinates."""
-    src = open(LAYOUT_TS, encoding="utf-8").read()
-    body = src[src.index("export const vesselLayout"):]
-    pat = re.compile(r"(\w+):\s*\{\s*position:\s*\[([^\]]*)\],\s*size:\s*\[([^\]]*)\]\s*"
-                     r"(?:,\s*rotation:\s*([^,}]+?))?\s*,\s*space:\s*'(\w+)'")
+    """Equipment slots from general-arrangement.json -> list of display boxes in BLENDER coordinates."""
     items = []
-    for m in pat.finditer(body):
-        eid, pos, size, rot, space = m.groups()
-        p = [float(v) for v in pos.split(",")]
-        s = [float(v) for v in size.split(",")]
-        r = eval(rot.replace("Math.PI", "math.pi")) if rot else 0.0
-        k = 1.0 if eid.startswith("reeferUnit") else (0.9 if eid == "prop" else 0.75)
+    for eid, e in GA["equipment"].items():
+        p, s = e["position"], e["size"]
+        r = math.radians(e.get("rotationDeg", 0.0))
+        k = equipment_scale(eid)
         sx, sy, sz = s[0] * k, s[1] * k, s[2] * k
         if abs(math.sin(r)) > 0.5:
             sx, sz = sz, sx
         # Three (x, y, z) -> Blender (x, -z, y)
-        items.append(dict(id=eid, space=space, rot=r,
+        items.append(dict(id=eid, space=e["space"], rot=r,
                           x0=p[0] - sx / 2, x1=p[0] + sx / 2,
                           y0=-(p[2] + sz / 2), y1=-(p[2] - sz / 2),
                           z0=p[1], z1=p[1] + sy, cx=p[0], cy=-p[2]))
@@ -907,8 +912,6 @@ def build_decks(ctx):
 # ==================================================================================================
 # 8. INTERNAL STRUCTURE
 # ==================================================================================================
-TANKTOP_Z = -1.76
-BULKHEADS = [-15.2, -3.0, 11.0, 17.2]
 
 
 def section_outline(ctx, x, z_top, n=36, inset=0.0):
@@ -1265,7 +1268,7 @@ def build_appendages(ctx):
     st.finish()
 
     # --- semi-balanced rudder (NACA 0018) hung under the counter -----------------------------------------
-    stock_x = -18.05
+    stock_x = RUDDER_STOCK_X
     le = stock_x + 0.22
     counter_z = None
     for k in range(120):
@@ -1390,8 +1393,8 @@ def build_deck_outfit(ctx):
             for sgn in (1, -1):
                 co.box((xx, sgn * (BAY_HW + 0.07), DECK_Z + 0.07), (0.06, 0.05, 0.05), hwm)
         # container stacking sockets at the 40' corner positions of every row
-        for row in range(8):
-            zc = -((row - 3.5) * 0.66)
+        for row in range(CARGO_ROWS):
+            zc = -((row - (CARGO_ROWS - 1) / 2) * CARGO_ROW_PITCH)
             for xx in (bx - 1.49, bx + 1.49):
                 co.box((xx, zc, 1.010), (0.07, 0.10, 0.025), hwm)
     hc.finish()
@@ -2081,7 +2084,7 @@ def project_transom(ctx, b, geo, y0, z0, mat, offset=0.012, scale=1.0):
         y = y0 - a * scale          # viewed from astern, screen-right is -Y
         z = z0 + bb * scale
         hit = ctx.bvh.ray_cast(V(-15.0, y, z), V(-1, 0, 0), 8.0)
-        x = hit[0].x if hit[0] is not None else -19.7
+        x = hit[0].x if hit[0] is not None else GA["hull"]["transomX"]
         out.append(V(x - offset - (c - cmin), y, z))
     b.add_mesh(out, faces, mat)
 

@@ -5,7 +5,13 @@ import { createServer } from 'vite';
 const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
 try {
   const { equipment } = await server.ssrLoadModule('/src/core/network.ts');
-  const { vesselLayout, SHIP, CARGO, halfBeamAt } = await server.ssrLoadModule('/src/vessel/vessel-layout.ts');
+  const { vesselLayout, SHIP, CARGO, halfBeamAt, GENERAL_ARRANGEMENT: GA } = await server.ssrLoadModule('/src/vessel/vessel-layout.ts');
+  // Hull-owned features (built by the Blender generator from the same spec) must line up with their equipment slots.
+  for (const id of Object.keys(vesselLayout)) assert(GA.equipment[id], `${id}: missing from general-arrangement.json`);
+  assert.equal(vesselLayout.bow.position[0], GA.bowThruster.x, 'bow thruster slot must sit on the hull tunnel (bowThruster.x)');
+  assert.equal(vesselLayout.prop.position[0], GA.propulsion.propellerX, 'propeller slot must match propulsion.propellerX');
+  assert.equal(vesselLayout.prop.position[1], GA.propulsion.shaftY, 'propeller slot must sit on the shaft line (propulsion.shaftY)');
+  for (const b of GA.bulkheads) assert(b.x > SHIP.stations[0][0] && b.x < SHIP.stations[SHIP.stations.length - 1][0], `bulkhead ${b.name} outside the hull`);
   const { createVesselEquipment } = await server.ssrLoadModule('/src/vessel/vessel.ts');
   const bounds = [];
   for (const item of equipment) {

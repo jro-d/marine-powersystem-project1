@@ -1,6 +1,11 @@
+import GA from './general-arrangement.json';
+
 /** Display dimensions, in consistent scene units (approximately four metres each).
  * These are illustrative proportions, not a dimensional ship design.
  * Coordinates: X = stern to bow, Y = height, Z = port to starboard.
+ *
+ * Positions, decks, bulkheads, cargo bays and equipment slots come from general-arrangement.json, which the
+ * Blender hull generator (scripts/blender/hull_lib.py) reads as well. Edit that file, not the constants here.
  */
 export interface VesselPlacement {
   position: [number, number, number]; // Centre in plan, bottom of equipment in height.
@@ -10,13 +15,16 @@ export interface VesselPlacement {
   space: 'hull' | 'house' | 'deck' | 'external' | 'cargo';
 }
 
+/** The general-arrangement spec shared with the Blender hull generator. */
+export const GENERAL_ARRANGEMENT = GA;
+
 type Table = [number, number][];
 
 export const SHIP = {
-  mainDeck: 0.9,
-  keel: -3.15,
-  waterline: -1.25,
-  house: { minX: -13.5, maxX: -7.3, halfWidth: 2.65, roof: 4.7 },
+  mainDeck: GA.hull.mainDeck,
+  keel: GA.hull.keel,
+  waterline: GA.hull.waterline,
+  house: { minX: GA.house.minX, maxX: GA.house.maxX, halfWidth: GA.house.halfWidth, roof: GA.house.roofLimit },
   // Plan outline of the main deck: x (stern to bow) and half-beam. The bow is flared and raked.
   stations: [
     [-19.7, 1.90], [-17.4, 1.90], [-16.2, 2.93], [-13.5, 3.56], [-9, 3.85],
@@ -33,7 +41,15 @@ export const SHIP = {
   keelLine: [[-17.4, -2.15], [-16.6, -3.15], [20.8, -3.15], [22.6, -2.45], [23.5, -2.0]] as Table
 };
 
-export const CARGO = { bays: [-4.4, -1.15, 2.1, 9.9], length: 3.04, width: .61, height: .65, rowPitch: .66, rows: 8 };
+export const CARGO = {
+  bays: GA.cargo.bays, length: GA.cargo.length, width: GA.cargo.width, height: GA.cargo.height,
+  rowPitch: GA.cargo.rowPitch, rows: GA.cargo.rows
+};
+
+/** Display scale applied to an equipment model's slot size (0.75 by default, see equipmentScale in the spec). */
+export function equipmentScale(id: string): number {
+  return (GA.equipmentScale.overrides as Record<string, number>)[id] ?? GA.equipmentScale.default;
+}
 
 function lerpTable(table: Table, x: number): number {
   if (x <= table[0][0]) return table[0][1];
@@ -65,76 +81,19 @@ export function halfBeamAt(x: number, height = SHIP.mainDeck): number {
   return flat + (deckWidth - flat) * shape;
 }
 
-export const vesselLayout: Record<string, VesselPlacement> = {
-  dg1: { position: [-8.8, -1.72, -1.25], size: [2.05, 1.12, 0.98], space: 'hull' },
-  dg2: { position: [-5.9, -1.72, -1.25], size: [2.05, 1.12, 0.98], space: 'hull' },
-  dg3: { position: [-8.8, -1.72, 1.25], size: [2.05, 1.12, 0.98], space: 'hull' },
-  dg4: { position: [-5.9, -1.72, 1.25], size: [2.05, 1.12, 0.98], space: 'hull' },
-  busA: { position: [-8.7, -0.3, -0.7], size: [1.35, 0.86, 0.58], space: 'hull' },
-  busB: { position: [-6.8, -0.3, 0.7], size: [1.35, 0.86, 0.58], space: 'hull' },
-  drive: { position: [-11.3, -1.7, -1.25], size: [1.4, 1.15, 0.65], rotation: Math.PI, space: 'hull' },
-  motor: { position: [-13.5, -2.599, 0], size: [1.55, 0.85, 0.80], rotation: Math.PI, space: 'hull' },
-  prop: { position: [-17.38, -2.22, 0], size: [0.65, 1.0, 1.0], space: 'external' },
-  // Impeller hub sits on the hull's tunnel axis (x 18.3, y -2.30): keep in step with BT_X / BT_Z in scripts/blender/hull_lib.py
-  bow: { position: [18.3, -2.55, 0], size: [0.95, 1.72, 2.55], rotation: Math.PI / 2, space: 'hull' },
+type SpecEquipment = { position: number[]; size: number[]; rotationDeg?: number; space: string };
 
-  // Symmetrical Dual Main Step-Down Transformers (6.6 kV / 440 V, 2.5 MVA)
-  // Port machinery flat (Bus A) & Starboard machinery flat (Bus B)
-  txA: { position: [-4.0, -1.72, -1.25], size: [1.08, 1.0, 0.85], space: 'hull' },
-  txB: { position: [-4.0, -1.72, 1.25], size: [1.08, 1.0, 0.85], space: 'hull' },
-
-  // Symmetrical Dual Reefer Distribution Transformers (6.6 kV / 440 V, 1.5 MVA)
-  txReeferA: { position: [3.5, -0.30, -1.25], size: [1.0, 0.95, 0.8], space: 'hull' },
-  txReeferB: { position: [3.5, -0.30, 1.25], size: [1.0, 0.95, 0.8], space: 'hull' },
-
-  // Dual 440 V Main Switchboards
-  lvBusA: { position: [-4.25, -0.30, -0.9], size: [1.35, 0.86, 0.58], space: 'hull' },
-  lvBusB: { position: [-4.25, -0.30, 0.9], size: [1.35, 0.86, 0.58], space: 'hull' },
-
-  // Dual Reefer Distribution Boards
-  reeferA: { position: [7.75, 0.94, -2.3], size: [0.62, 0.67, 0.39], rotation: Math.PI, space: 'deck' },
-  reeferB: { position: [7.75, 0.94, 2.3], size: [0.62, 0.67, 0.39], rotation: Math.PI, space: 'deck' },
-
-  // Reefer Container Loads (Bay 4, 40-foot integral refrigerated units)
-  // Port container faces aft toward Reefer Board A; Starboard container faces aft toward Reefer Board B
-  reeferUnitA: { position: [9.9, 1.025, -2.31], size: [3.04, 0.65, 0.61], rotation: Math.PI, space: 'cargo' },
-  reeferUnitB: { position: [9.9, 1.025, 2.31], size: [3.04, 0.65, 0.61], rotation: Math.PI, space: 'cargo' },
-
-  // Dual Auxiliary / Control Transformers (440 V / 220 V, 500 kVA)
-  txConA: { position: [-10.5, 1.02, -1.45], size: [0.56, 0.55, 0.4], space: 'house' },
-  txConB: { position: [-10.5, 1.02, 1.45], size: [0.56, 0.55, 0.4], space: 'house' },
-
-  // Dual 220 V Sub-Boards
-  consumerA: { position: [-9.4, 1.02, -1.45], size: [0.72, 0.63, 0.34], space: 'house' },
-  consumerB: { position: [-9.4, 1.02, 1.45], size: [0.72, 0.63, 0.34], space: 'house' },
-
-  // 440 V Galley Primary Board & Auxiliary Machinery
-  galley440: { position: [-12.2, 1.02, -0.85], size: [0.76, 0.62, 0.38], space: 'house' },
-  fire1: { position: [-1.85, -1.72, -1.8], size: [0.7, 0.48, 0.45], space: 'hull' },
-  cooling1: { position: [-0.15, -1.72, -1.8], size: [0.7, 0.48, 0.45], space: 'hull' },
-  airCompressor: { position: [1.15, -1.72, -1.8], size: [0.66, 0.46, 0.42], space: 'hull' },
-  crane: { position: [6.6, 0.96, -0.9], size: [3.2, 3.0, 0.9], space: 'deck' },
-
-  fire2: { position: [-1.85, -1.72, 1.8], size: [0.7, 0.48, 0.45], space: 'hull' },
-  cooling2: { position: [-0.15, -1.72, 1.8], size: [0.7, 0.48, 0.45], space: 'hull' },
-  ballast: { position: [1.15, -1.72, 1.8], size: [0.66, 0.46, 0.42], space: 'hull' },
-  bilge: { position: [2.45, -1.72, 1.8], size: [0.61, 0.42, 0.4], space: 'hull' },
-
-  // 220 V Domestic & Service Loads
-  lightsA: { position: [-11.4, 3.15, -1.0], size: [1.6, 0.16, 0.18], space: 'house' },
-  galleySmall: { position: [-12.2, 1.02, -0.3], size: [0.65, 0.45, 0.45], space: 'house' },
-  nav: { position: [-8.5, 3.45, 0], size: [0.76, 0.48, 0.48], space: 'house' },
-
-  // 440 V SOLAS Emergency Switchboard & Emergency Loads (Located above bulkhead deck)
-  eg: { position: [-12.0, 2.35, -1.35], size: [1.34, 0.68, 0.65], space: 'house' },
-  eBus: { position: [-9.7, 2.35, -1.35], size: [0.72, 0.63, 0.34], space: 'house' },
-  ventFan: { position: [-8.0, 2.35, 1.15], size: [0.54, 0.48, 0.42], space: 'house' },
-  eSteer: { position: [-14.65, -0.35, 0], size: [0.85, 0.55, 0.6], space: 'hull' },
-  eFire: { position: [11.75, -1.72, 0.95], size: [0.67, 0.48, 0.43], space: 'hull' },
-  eLights: { position: [-12.7, 3.2, -0.05], size: [0.58, 0.13, 0.16], space: 'house' },
-  eRadio: { position: [-8.8, 3.45, 1.25], size: [0.64, 0.46, 0.38], space: 'house' },
-  shore: { position: [6.7, 0.94, -2.55], size: [0.58, 0.50, 0.36], space: 'deck' }
-};
+export const vesselLayout: Record<string, VesselPlacement> = Object.fromEntries(
+  Object.entries(GA.equipment as Record<string, SpecEquipment>).map(([id, e]) => {
+    const placement: VesselPlacement = {
+      position: [e.position[0], e.position[1], e.position[2]],
+      size: [e.size[0], e.size[1], e.size[2]],
+      space: e.space as VesselPlacement['space']
+    };
+    if (e.rotationDeg !== undefined) placement.rotation = e.rotationDeg * Math.PI / 180;
+    return [id, placement];
+  })
+);
 
 // ============================================================================
 // PHASE 3: SOLAS BLACKOUT RECOVERY 5-STAGE SEQUENTIAL WATERFALL

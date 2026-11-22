@@ -296,6 +296,7 @@ marine-powersystem-project1/
 │   ├── vessel/
 │   │   ├── scene.ts              # Three.js scene, lighting, camera controls
 │   │   ├── vessel.ts             # 3D hull, machinery foundations & animations
+│   │   ├── general-arrangement.json # Single GA spec: decks, bulkheads, house, bays, equipment slots (app + Blender)
 │   │   ├── vessel-layout.ts      # Spatial coordinates & equipment placement
 │   │   └── assets.ts             # Dynamic URL resolution for Pages hosting
 │   ├── assemblies/               # Procedural assembly models & LOTO managers
