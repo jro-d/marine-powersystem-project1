@@ -1218,8 +1218,8 @@ def build_bow_thruster(ctx, n=48):
         for dz in (-0.30, -0.15, 0.0, 0.15, 0.30):
             hz = math.sqrt(max(0.0, BT_R ** 2 - dz ** 2)) - 0.02
             z = BT_Z + dz
-            y = sgn * (min(ctx.hw(BT_X - hz, z), ctx.hw(BT_X + hz, z), ctx.hw(BT_X, z)) - 0.07)
-            gr.cyl((BT_X - hz, y, z), (BT_X + hz, y, z), 0.016, ctx.mats["hardware"], n=6)
+            # each bar follows the mouth: its ends sit just inside the opening at their own hull half-width
+            gr.tube([V(x, sgn * (ctx.hw(x, z) - 0.05), z) for x in (BT_X - hz, BT_X, BT_X + hz)], 0.016, ctx.mats["hardware"], n=6)
     gr.finish()
     # 4. cut the openings in the shell (exact boolean, applied so nothing extra is exported)
     shell = ctx.shell_obj
@@ -1322,18 +1322,28 @@ def build_appendages(ctx):
                 z = -2.25 if x > -14 else -1.9
                 w = ctx.hw(x, z)
                 if w > 0.1:
-                    an.box((x, sgn * (w + 0.03), z), (0.30, 0.05, 0.12), ctx.mats["anode"])
+                    # laid flat on the plating: box axes follow the local shell (along the hull, normal, girth)
+                    hit = ctx.bvh.find_nearest(V(x, sgn * w, z))
+                    nrm = hit[1] if hit[1].y * sgn > 0 else -hit[1]
+                    t = (V(1, 0, 0) - nrm * nrm.x).normalized()
+                    R = Matrix((t, nrm, t.cross(nrm))).transposed()
+                    an.box(hit[0] + nrm * 0.025, (0.30, 0.05, 0.12), ctx.mats["anode"], R=R)
         an.finish()
 
     if ctx.has("sea_chests"):
+        # grating bars follow the bilge: each bar runs through three points projected onto the shell
         sc = Builder("SeaChest_Gratings", uv_scale=1.0)
+
+        def on_shell(x, z, sgn, off):
+            return V(x, sgn * (ctx.hw(x, z) + off), z)
+
         for (x, sgn) in ((-10.6, 1), (-6.4, -1), (12.6, 1)):
             z = -2.55
-            w = ctx.hw(x, z)
             for k in range(9):
-                sc.box((x - 0.4 + k * 0.1, sgn * (w + 0.008), z), (0.025, 0.015, 0.36), ctx.mats["hardware"])
-            sc.box((x, sgn * (w + 0.008), z + 0.19), (0.86, 0.016, 0.03), ctx.mats["hardware"])
-            sc.box((x, sgn * (w + 0.008), z - 0.19), (0.86, 0.016, 0.03), ctx.mats["hardware"])
+                xb = x - 0.4 + k * 0.1
+                sc.tube([on_shell(xb, z + dz, sgn, 0.014) for dz in (-0.18, 0.0, 0.18)], 0.011, ctx.mats["hardware"], n=6)
+            for dz in (-0.19, 0.19):
+                sc.tube([on_shell(x + dx, z + dz, sgn, 0.016) for dx in (-0.43, 0.0, 0.43)], 0.015, ctx.mats["hardware"], n=6)
         sc.finish()
 
 
@@ -1473,18 +1483,21 @@ def build_deck_outfit(ctx):
         mo.cyl((hx, hy, hdz), (hx, hy, hdz + 0.08), 0.17, hwm, n=20)
         chain_links(ch, (wx + 0.18, wy, dz + 0.52), ((wx + hx) / 2 + 0.2, (wy + hy) / 2, hdz + 0.16), hwm)
         chain_links(ch, ((wx + hx) / 2 + 0.2, (wy + hy) / 2, hdz + 0.16), (hx, hy, hdz + 0.08), hwm)
-        # hawse pipe down to the anchor pocket in the shell
+        # hawse pipe down to the anchor pocket in the shell (runs inside the bow, so it goes with the chain)
         az = 0.45
         pocket = V(anchor_x, sgn * aw, az)
-        mo.cyl((hx, hy, hdz), (pocket.x - 0.08, pocket.y - sgn * 0.12, pocket.z + 0.06), 0.11, hwm, n=16)
-        mo.cyl((pocket.x - 0.04, pocket.y - sgn * 0.02, pocket.z), (pocket.x + 0.04, pocket.y + sgn * 0.05, pocket.z), 0.20, hwm, n=24)
-        # stockless anchor seated in the pocket
+        ch.cyl((hx, hy, hdz), (pocket.x - 0.08, pocket.y - sgn * 0.12, pocket.z + 0.06), 0.11, hwm, n=16)
+        ch.cyl((pocket.x - 0.04, pocket.y - sgn * 0.02, pocket.z), (pocket.x + 0.04, pocket.y + sgn * 0.05, pocket.z), 0.20, hwm, n=24)
+        # stockless anchor: shank out of the pocket, crown and flukes lying against the flared plating below
         ax = pocket.x + 0.02
-        ay = pocket.y + sgn * 0.10
-        mo.cyl((ax, ay, az - 0.02), (ax - 0.06, ay, az - 0.52), 0.04, hwm, n=10)
-        mo.box((ax - 0.07, ay, az - 0.58), (0.16, 0.12, 0.10), hwm)
+        ay = pocket.y + sgn * 0.07
+        cz = az - 0.58
+        cy = sgn * (max(ctx.hw(ax - 0.07 + dx, cz + dz) for dx in (-0.08, 0.08) for dz in (-0.05, 0.05)) + 0.065)
+        mo.cyl((ax, ay, az - 0.02), (ax - 0.06, cy, az - 0.52), 0.04, hwm, n=10)
+        mo.box((ax - 0.07, cy, cz), (0.16, 0.12, 0.10), hwm)
         for dx in (-0.16, 0.16):
-            mo.box((ax - 0.07 + dx, ay, az - 0.46), (0.07, 0.10, 0.30), hwm, R=rot_y(math.radians(-14 if dx < 0 else 14)))
+            fy = sgn * (max(ctx.hw(ax - 0.07 + dx, az - 0.46 + dz) for dz in (-0.15, 0.0, 0.15)) + 0.055)
+            mo.box((ax - 0.07 + dx, fy, az - 0.46), (0.07, 0.10, 0.30), hwm, R=rot_y(math.radians(-14 if dx < 0 else 14)))
         # bollards + fairleads near the bow and amidships
         for bx in (14.5 + S, 16.4 + S, 6.0, -1.0 + 0.0, -12.0 - 2.5):
             if 5.4 < bx < 8.6:
@@ -1678,8 +1691,8 @@ def build_superstructure(ctx):
         ou.box((-7.6, sgn * (wing_w - 0.3), d3 + 0.30), (0.40, 0.30, 0.60), hwm)          # wing console
         ou.box((-7.62, sgn * (wing_w - 0.3), d3 + 0.66), (0.30, 0.22, 0.10), mw)
         light = ctx.mats["light_port"] if sgn > 0 else ctx.mats["light_stbd"]
-        ou.box((-8.2, sgn * (wing_w + 0.03), d3 + 0.55), (0.18, 0.06, 0.14), light)       # sidelight
-        ou.box((-8.2, sgn * (wing_w + 0.02), d3 + 0.66), (0.24, 0.10, 0.03), hwm)
+        ou.box((-8.2, sgn * (wing_w + 0.03), d3 + 0.28), (0.18, 0.06, 0.14), light)       # sidelight on the wing bulwark
+        ou.box((-8.2, sgn * (wing_w + 0.05), d3 + 0.365), (0.24, 0.10, 0.03), hwm)       # its hood
         # rails on tier-2 roof (aft part of bridge deck)
         pts = [V(X0 - 0.08, sgn * (HW + 0.06), d3 + 0.34), V(wx0 - 0.1, sgn * (HW + 0.06), d3 + 0.34)]
         ou.tube(pts, 0.016, rail, n=6)
@@ -1801,11 +1814,13 @@ def build_funnel(ctx):
     if ctx.has("funnel_detail"):
         # SCR / silencer casings + platform + ladder up the aft face
         for dy in (-0.32, 0.32):
-            top.cyl((cx + 0.05, dy, fz0 + 0.2), (cx + 0.05, dy, fz0 + 1.2), 0.16, hwm, n=16)
+            top.cyl((cx + 0.05, dy, fz0), (cx + 0.05, dy, fz0 + 1.2), 0.16, hwm, n=16)      # stands on the casing floor
         top.box((cx - 0.95, 0, fz1 - 0.35), (0.25, 1.1, 0.04), ctx.mats["grating"])
         for k in range(14):
             z = fz0 + 0.2 + k * 0.17
-            top.box((cx - 0.88 - (z - fz0) * math.tan(rake) * 0 - 0.02, 0, z), (0.03, 0.32, 0.015), ctx.mats["rail"])
+            if z > fz1 - 0.42:                                      # rungs stop below the platform, within the stiles
+                break
+            top.box((cx - 0.90, 0, z), (0.03, 0.32, 0.015), ctx.mats["rail"])
         for dy in (-0.16, 0.16):
             top.cyl((cx - 0.90, dy, fz0 + 0.1), (cx - 0.90, dy, fz1 - 0.3), 0.012, ctx.mats["rail"], n=6)
     top.finish()
@@ -1824,6 +1839,8 @@ def build_mast(ctx, wx0, wx1, roof):
         for z in (roof + 0.95, roof + 1.65):
             mm.box((mx, 0, z), (0.80, 1.80, 0.04), ctx.mats["grating"])
             mm.tube([V(mx - 0.4, -0.9, z + 0.25), V(mx + 0.4, -0.9, z + 0.25), V(mx + 0.4, 0.9, z + 0.25), V(mx - 0.4, 0.9, z + 0.25)], 0.01, rail, n=5, closed=True)
+            for (px, py) in ((-0.4, -0.9), (0.4, -0.9), (0.4, 0.9), (-0.4, 0.9), (-0.4, 0.0), (0.4, 0.0)):   # guard-rail stanchions
+                mm.cyl((mx + px, py, z + 0.02), (mx + px, py, z + 0.26), 0.009, rail, n=5)
         # radar scanners
         mm.cyl((mx + 0.1, 0, roof + 1.69), (mx + 0.1, 0, roof + 1.82), 0.09, hwm, n=12)
         mm.box((mx + 0.1, 0, roof + 1.86), (0.12, 1.55, 0.09), mh)
@@ -1841,7 +1858,8 @@ def build_mast(ctx, wx0, wx1, roof):
         mm.cyl((mx, 0, top), (mx, 0, top + 0.70), 0.03, rail, n=8)
         mm.box((mx + 0.04, 0, top + 0.05), (0.08, 0.08, 0.10), ctx.mats["light_white"])
         mm.box((mx + 0.04, 0, top + 0.55), (0.08, 0.08, 0.10), ctx.mats["light_white"])
-        mm.box((mx, 0, roof + 1.3), (0.06, 1.2, 0.05), mh)
+        yard_t = (1.3 - 0.06) / (top - roof - 0.06)                       # yardarm crosses the forward tripod leg
+        mm.box((mx + 0.55 + (0.55 * 0.25 - 0.55) * yard_t, 0, roof + 1.3), (0.06, 1.2, 0.05), mh)
         mm.cyl((mx + 0.35, 0.3, roof + 1.0), (mx + 0.55, 0.3, roof + 1.0), 0.07, ctx.mats["accent"], r1=0.12, n=12)  # horn
     else:
         top = roof + 1.9
@@ -1959,7 +1977,7 @@ def build_lifesaving(ctx):
     # boat seated in the rails, bow down the ramp
     BL, BW, BH = 2.60, 0.86, 0.82
     n_up = V(-math.sin(FF_ANGLE), 0, math.cos(FF_ANGLE))
-    stern_keel = ff_point(0.22 + BL) - n_up * 0.05
+    stern_keel = ff_point(0.22 + BL) - n_up * 0.095   # chines rest on the rails
     freefall_boat(lb, stern_keel, BL, BW, BH, orange, white, dark)
     # recovery A-frame over the boat, raked aft, carrying the ensign staff
     ax_deck, ax_top, az_top = -16.90, -18.25, 4.70
@@ -2103,6 +2121,8 @@ def build_markings(ctx):
                 z = KEEL_Z + 0.30 * (k + 1)
                 if z > -0.6:
                     continue
+                if min(ctx.hw(xm + dx, z + dz) for dx in (-0.12, 0.12) for dz in (0.0, 0.13)) < 0.3:
+                    continue                                        # no plating there (stern run / forefoot)
                 project_side(ctx, mk, text_geometry(num, 0.13), xm, z, side, white)
         # load line: deck line, Plimsoll disc, ladder
         lx = 3.6
@@ -2130,9 +2150,91 @@ def build_markings(ctx):
 
 
 # ==================================================================================================
-# 13. VALIDATION + EXPORT
+# 13. QA: real-hull sections + geometry checks
 # ==================================================================================================
-def validate(ctx):
+# Thresholds (metres = scene units). Clearances follow the usual single-screw rules of thumb.
+QA_TIP_CLEARANCE_D = 0.25      # propeller tip to hull >= 0.25 D
+QA_RUDDER_CLEARANCE_D = 0.25   # propeller (aft face of the blades) to rudder >= 0.25 D
+QA_BT_AXIS_IMMERSION_D = 1.0   # bow thruster: tunnel axis >= 1 D below the waterline
+QA_BT_TOP_IMMERSION_D = 0.5    # ... and tunnel top >= 0.5 D below it
+QA_TOUCH = 0.03                # parts closer than this count as touching
+SECTION_DX, SECTION_DZ = 0.25, 0.10
+
+# Objects that belong inside the hull (or pass through its shell by design); everything else must stay outboard
+# of the shell or above the deck.
+INBOARD_OBJECTS = ("ShipHull", "Main_Deck", "EngineRoom_Conforming_TankTop", "Pad_Foundations", "Machinery_Mezzanine",
+                   "Mezzanine_Pillars", "Internal_", "BowThruster_", "Propeller_Shaft_Bossing", "Stern_Tube_Seal",
+                   "Rudder_Stock_Assembly", "Hatch_Coamings", "Anchor_Chain_Cable", "Deck_Fittings_Vents")
+
+
+def _world_verts(obj):
+    me = obj.data
+    co = np.empty(len(me.vertices) * 3)
+    me.vertices.foreach_get("co", co)
+    co = co.reshape(-1, 3)
+    mw = np.array(obj.matrix_world)
+    return co @ mw[:3, :3].T + mw[:3, 3]
+
+
+def _bvh(obj):
+    v = _world_verts(obj)
+    return BVHTree.FromPolygons([tuple(p) for p in v], [tuple(p.vertices) for p in obj.data.polygons])
+
+
+def _mesh_objects():
+    return [o for o in bpy.context.scene.objects if o.type == "MESH" and len(o.data.polygons)]
+
+
+def _inside_half_breadth(ctx, x, z):
+    """Half-breadth of the moulded (uncut) shell at (x, z), 0 when the centreline point is outside the hull."""
+    hit = ctx.bvh.ray_cast(V(x, 0.0, z), V(0, 1, 0), 30.0)
+    if hit[0] is None or hit[1].y <= 0:        # no hull, or we hit the shell from outside
+        return 0.0
+    return hit[3]
+
+
+def _keel_line_at(ctx, x):
+    """Lowest hull point on the centreline at x (the counter bottom over the propeller aperture), or None."""
+    hit = ctx.bvh.ray_cast(V(x, 0.0, KEEL_Z - 5.0), V(0, 0, 1), 20.0)
+    return hit[0].z if hit[0] is not None else None
+
+
+def hull_sections(ctx):
+    """Half-breadth table of the real shell, in three.js axes (x stern->bow, y up, |z| = half-breadth)."""
+    v = _world_verts(ctx.shell_obj)
+    x_min, x_max = float(v[:, 0].min()), float(v[:, 0].max())
+    z_min, z_max = float(v[:, 2].min()), float(v[:, 2].max())
+    xs = [x_min + 1e-3] + [float(x) for x in np.arange(math.ceil(x_min / SECTION_DX) * SECTION_DX, x_max, SECTION_DX)
+                           if x_min + 1e-3 < x < x_max - 1e-3] + [x_max - 1e-3]
+    zs = [z_min + 5e-3] + [float(z) for z in np.arange(math.ceil(z_min / SECTION_DZ) * SECTION_DZ, z_max, SECTION_DZ)
+                           if z_min + 5e-3 < z < z_max - 1e-3] + [z_max - 1e-3]
+    hb = [[round(_inside_half_breadth(ctx, x, z), 3) for z in zs] for x in xs]
+    keel = [_keel_line_at(ctx, x) for x in xs]
+    deck = [ctx.deck_at(x) for x in xs]
+    return dict(
+        about="Real-hull half-breadths written by scripts/blender/hull_lib.py; read by scripts/qa/check-layout.mjs. "
+              "three.js axes: x stern->bow, y up, z athwartships. halfBreadth[i][j] is the inner half-width of the "
+              "shell at x[i], y[j] (0 = outside the hull). keel = lowest hull point on the centreline, deck = main "
+              "deck height and half-width at the side.",
+        variant=ctx.cfg["name"], glb=ctx.cfg["export"],
+        extent=dict(xMin=round(x_min, 3), xMax=round(x_max, 3), yMin=round(z_min, 3), yMax=round(z_max, 3)),
+        x=[round(x, 3) for x in xs], y=[round(z, 3) for z in zs], halfBreadth=hb,
+        keel=[None if k is None else round(k, 3) for k in keel],
+        deck=[round(d[0], 3) for d in deck], deckHalfWidth=[round(d[1], 3) for d in deck])
+
+
+def export_sections(ctx):
+    path = os.path.join(MODELS_DIR, ctx.cfg["export"].replace(".glb", ".sections.json"))
+    data = hull_sections(ctx)
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(data, f, separators=(",", ":"))
+        f.write("\n")
+    print(f"[hull_lib] sections  {path}  ({len(data['x'])} frames x {len(data['y'])} waterlines)")
+    return path
+
+
+def _check_slots(ctx):
+    """Equipment boxes from the GA spec against the real shell (the app check does the same on the exported sections)."""
     problems = []
     for e in ctx.layout:
         if e["space"] != "hull":
@@ -2142,20 +2244,219 @@ def validate(ctx):
                 need = max(abs(e["y0"]), abs(e["y1"]))
                 have = ctx.hw(x, z)
                 if have + 0.015 < need:
-                    problems.append(f"{e['id']}: pokes through the shell at x={x:.2f} z={z:.2f} (needs {need:.2f}, hull {have:.2f})")
+                    problems.append(f"slot {e['id']}: pokes through the shell at x={x:.2f} z={z:.2f} (needs {need:.2f}, hull {have:.2f})")
         for bx in BULKHEADS:
             if e["x0"] < bx < e["x1"] and e["id"] != "bow":
-                problems.append(f"{e['id']}: crosses bulkhead at x={bx}")
+                problems.append(f"slot {e['id']}: crosses bulkhead at x={bx}")
     for e in ctx.layout:
-        if e["space"] == "house":
-            if not (HOUSE["x0"] <= e["x0"] and e["x1"] <= HOUSE["x1"]):
-                problems.append(f"{e['id']}: outside accommodation length")
-    print("\n[hull_lib] layout check:", "OK - every hull/house equipment box fits" if not problems else "")
+        if e["space"] == "house" and not (HOUSE["x0"] <= e["x0"] and e["x1"] <= HOUSE["x1"]):
+            problems.append(f"slot {e['id']}: outside accommodation length")
+    return problems
+
+
+def _check_protrusion(ctx, objs):
+    """Hull-owned parts against the moulded shell."""
+    problems = []
+    by_name = {o.name: o for o in objs}
+    hw = ctx.hw
+
+    def excess(o, limit, what):
+        v = _world_verts(o)
+        worst, at = -1e9, None
+        for p in v[:: max(1, len(v) // 1500)]:
+            d = abs(p[1]) - hw(p[0], p[2])
+            if d > worst:
+                worst, at = d, p
+        if worst > limit:
+            problems.append(f"{o.name}: {what} {worst:.3f} outside the shell at x={at[0]:.2f} z={at[2]:.2f}")
+
+    if "BowThruster_Tunnel" in by_name:
+        excess(by_name["BowThruster_Tunnel"], 0.01, "tunnel sticks out")
+    # outboard appendages: must sit on the shell, no deeper than their own depth
+    for name, depth in (("BowThruster_Grids", 0.10), ("Bilge_Keels", 0.30), ("Hull_Anodes", 0.06), ("SeaChest_Gratings", 0.04),
+                        ("Hull_Markings", 0.03)):
+        o = by_name.get(name)
+        if not o:
+            continue
+        v = _world_verts(o)
+        d = np.array([ctx.bvh.find_nearest(Vector(p))[3] for p in v[:: max(1, len(v) // 3000)]])
+        if d.max() > depth + 0.01:
+            problems.append(f"{name}: stands {d.max():.3f} off the shell (allowed {depth:.2f})")
+    # rudder: hung under the counter, not through it
+    rud = by_name.get("SemiBalanced_Rudder")
+    if rud:
+        rb = _bvh(rud)
+        if rb.overlap(ctx.bvh):
+            problems.append("SemiBalanced_Rudder: intersects the hull shell")
+        top = float(_world_verts(rud)[:, 2].max())
+        counter = _keel_line_at(ctx, RUDDER_STOCK_X)
+        if counter is None or not (0.02 <= counter - top <= 0.20):
+            problems.append(f"SemiBalanced_Rudder: gap to the counter is {(counter or 0) - top:.3f} (want 0.02-0.20)")
+    # everything else stays outboard of the shell or above the deck
+    xr = np.array([r[0] for r in ctx.deck_rows])
+    zr = np.array([r[1] for r in ctx.deck_rows])
+    x_lo, x_hi = float(xr.min()), float(xr.max())
+    for o in objs:
+        if o.name.startswith(INBOARD_OBJECTS):
+            continue
+        v = _world_verts(o)
+        low = v[(v[:, 0] > x_lo + 0.05) & (v[:, 0] < x_hi - 0.05) & (v[:, 2] < np.interp(v[:, 0], xr, zr) - 0.06)]
+        bad = [p for p in low if abs(p[1]) < hw(p[0], p[2]) - 0.06]
+        if bad:
+            p = bad[0]
+            problems.append(f"{o.name}: {len(bad)} vertices inside the hull below the deck (e.g. x={p[0]:.2f} y={p[1]:.2f} z={p[2]:.2f})")
+    return problems
+
+
+def _check_clearances(ctx, objs):
+    problems = []
+    P = GA["propulsion"]
+    D, L = P["propellerDiameter"], P["propellerLength"]
+    R = D / 2
+    shell = _bvh(ctx.shell_obj)
+    # propeller tip circle (over the blade length) to the hull
+    tip = min(shell.find_nearest(V(x, R * math.cos(a), SHAFT_Z + R * math.sin(a)))[3]
+              for x in (PROP_X - L / 2, PROP_X, PROP_X + L / 2) for a in np.linspace(0, 2 * math.pi, 72, endpoint=False))
+    # aft face of the blades to the rudder
+    rud = next((o for o in objs if o.name == "SemiBalanced_Rudder"), None)
+    rgap = None
+    if rud:
+        rb = _bvh(rud)
+        rgap = min(rb.find_nearest(V(PROP_X - L / 2, r * math.cos(a), SHAFT_Z + r * math.sin(a)))[3]
+                   for r in np.linspace(0.25 * R, R, 4) for a in np.linspace(0, 2 * math.pi, 48, endpoint=False))
+    bt_d = 2 * BT_R
+    axis, top = WL_Z - BT_Z, WL_Z - (BT_Z + BT_R)
+    keel = _keel_line_at(ctx, BT_X)
+    collision = max(BULKHEADS)
+    rows = [("propeller tip to hull", tip, QA_TIP_CLEARANCE_D * D, D),
+            ("propeller to rudder", rgap, QA_RUDDER_CLEARANCE_D * D, D),
+            ("bow thruster axis below WL", axis, QA_BT_AXIS_IMMERSION_D * bt_d, bt_d),
+            ("bow thruster top below WL", top, QA_BT_TOP_IMMERSION_D * bt_d, bt_d),
+            ("bow thruster tunnel above keel", (BT_Z - BT_R) - (keel if keel is not None else KEEL_Z), 0.10, bt_d),
+            ("bow thruster forward of collision bhd", (BT_X - BT_R) - collision, 0.20, bt_d)]
+    print("[hull_lib] clearances:")
+    for name, have, need, ref in rows:
+        if have is None:
+            continue
+        ok = have + 1e-6 >= need
+        print(f"   {'ok' if ok else '!!'} {name:38s} {have:6.3f}  (min {need:.3f}, {have / ref:.2f} D)")
+        if not ok:
+            problems.append(f"clearance: {name} is {have:.3f}, needs {need:.3f}")
+    return problems
+
+
+def _islands(obj):
+    """Connected pieces of one object: list of (vertex array, triangle index array)."""
+    me = obj.data
+    v = _world_verts(obj)
+    n = len(v)
+    ev = np.empty(len(me.edges) * 2, dtype=np.int64)
+    me.edges.foreach_get("vertices", ev)
+    ev = ev.reshape(-1, 2)
+    lab = np.arange(n)
+    while True:
+        m = np.minimum(lab[ev[:, 0]], lab[ev[:, 1]])
+        new = lab.copy()
+        np.minimum.at(new, ev[:, 0], m)
+        np.minimum.at(new, ev[:, 1], m)
+        new = new[new]
+        if np.array_equal(new, lab):
+            break
+        lab = new
+    me.calc_loop_triangles()
+    tri = np.empty(len(me.loop_triangles) * 3, dtype=np.int64)
+    me.loop_triangles.foreach_get("vertices", tri)
+    tri = tri.reshape(-1, 3)
+    out = []
+    tri_lab = lab[tri[:, 0]]
+    for l in np.unique(lab):
+        vid = np.nonzero(lab == l)[0]
+        t = tri[tri_lab == l]
+        if len(t) == 0:
+            continue
+        remap = np.full(n, -1, dtype=np.int64)
+        remap[vid] = np.arange(len(vid))
+        out.append((v[vid], remap[t]))
+    return out
+
+
+def _check_floating(ctx, objs):
+    """Every connected piece must touch the ship: pieces are linked when they intersect or come within QA_TOUCH,
+    and every group of linked pieces must reach the hull shell."""
+    pieces = []          # (object name, verts, tris)
+    for o in objs:
+        for vv, tt in _islands(o):
+            pieces.append((o.name, vv, tt))
+    n = len(pieces)
+    lo = np.array([p[1].min(0) for p in pieces]) - QA_TOUCH
+    hi = np.array([p[1].max(0) for p in pieces]) + QA_TOUCH
+    parent = list(range(n))
+
+    def find(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    trees = {}
+
+    def tree(i):
+        if i not in trees:
+            vv, tt = pieces[i][1], pieces[i][2]
+            trees[i] = BVHTree.FromPolygons([tuple(p) for p in vv], [tuple(t) for t in tt])
+        return trees[i]
+
+    def near(a, b):
+        """Some vertex of piece a lies on, or just inside, the surface of piece b."""
+        tb, vv = tree(b), pieces[a][1]
+        box_lo, box_hi = lo[b], hi[b]
+        vv = vv[np.all((vv >= box_lo) & (vv <= box_hi), axis=1)]
+        for p in vv[:: max(1, len(vv) // 96)]:
+            hit = tb.find_nearest(Vector(p), 0.12)
+            if hit[0] is not None and (hit[3] <= QA_TOUCH or (Vector(p) - hit[0]).dot(hit[1]) < 0):
+                return True
+        return False
+
+    def touch(a, b):
+        return bool(tree(a).overlap(tree(b))) or near(a, b) or near(b, a)
+
+    order = np.argsort(-np.array([len(p[1]) for p in pieces]))   # big pieces first: they link most things
+    for i in order:
+        cand = np.nonzero(np.all(lo <= hi[i], axis=1) & np.all(hi >= lo[i], axis=1))[0]
+        for j in cand:
+            if j == i or find(i) == find(j):
+                continue
+            if touch(i, j):
+                parent[find(i)] = find(j)
+    roots = {find(i) for i, p in enumerate(pieces) if p[0] == "ShipHull"}
+    groups = {}
+    for i in range(n):
+        r = find(i)
+        if r not in roots:
+            groups.setdefault(r, []).append(i)
+    problems = []
+    for idx in groups.values():
+        v = np.concatenate([pieces[i][1] for i in idx])
+        c, s = (v.min(0) + v.max(0)) / 2, v.max(0) - v.min(0)
+        names = sorted({pieces[i][0] for i in idx})
+        problems.append(f"floating: {len(idx)} piece(s) of {', '.join(names)} at x={c[0]:.2f} y={c[1]:.2f} z={c[2]:.2f} "
+                        f"(size {s[0]:.2f} x {s[1]:.2f} x {s[2]:.2f})")
+    print(f"[hull_lib] floating-part check: {n} pieces, {len(groups)} not connected to the hull")
+    return problems
+
+
+def validate(ctx):
+    objs = _mesh_objects()
+    problems = _check_slots(ctx) + _check_protrusion(ctx, objs) + _check_clearances(ctx, objs) + _check_floating(ctx, objs)
+    print("\n[hull_lib] QA:", "OK - slots fit, nothing protrudes or floats, clearances met" if not problems else f"{len(problems)} problem(s)")
     for p in problems:
         print("   !!", p)
     return problems
 
 
+# ==================================================================================================
+# 14. EXPORT
+# ==================================================================================================
 def export(ctx):
     path = os.path.join(MODELS_DIR, ctx.cfg["export"])
     os.makedirs(MODELS_DIR, exist_ok=True)
@@ -2173,7 +2474,7 @@ def export(ctx):
 
 
 # ==================================================================================================
-# 14. ENTRY POINT
+# 15. ENTRY POINT
 # ==================================================================================================
 def build(cfg):
     t0 = time.time()
@@ -2234,9 +2535,12 @@ def build(cfg):
     for b in list(Builder.ALL):
         if b.bm.is_valid:
             b.finish()
-    validate(ctx)
+    problems = validate(ctx)
     path = None
     if cfg.get("export"):
         path = export(ctx)
+        export_sections(ctx)
     print(f"[hull_lib] {cfg['name']} done in {time.time() - t0:.1f}s")
+    if problems and os.environ.get("HULL_QA", "strict") != "warn":
+        raise RuntimeError(f"hull QA failed with {len(problems)} problem(s), listed above (set HULL_QA=warn to export anyway)")
     return ctx, path

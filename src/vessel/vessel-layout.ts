@@ -18,27 +18,14 @@ export interface VesselPlacement {
 /** The general-arrangement spec shared with the Blender hull generator. */
 export const GENERAL_ARRANGEMENT = GA;
 
-type Table = [number, number][];
-
+/** Reference heights and the accommodation envelope. The hull shape itself is not tabulated here: the Blender build
+ * exports the real shell's half-breadths to public/models/<hull>.sections.json, and scripts/qa/check-layout.mjs
+ * checks the equipment against that. */
 export const SHIP = {
   mainDeck: GA.hull.mainDeck,
   keel: GA.hull.keel,
   waterline: GA.hull.waterline,
-  house: { minX: GA.house.minX, maxX: GA.house.maxX, halfWidth: GA.house.halfWidth, roof: GA.house.roofLimit },
-  // Plan outline of the main deck: x (stern to bow) and half-beam. The bow is flared and raked.
-  stations: [
-    [-19.7, 1.90], [-17.4, 1.90], [-16.2, 2.93], [-13.5, 3.56], [-9, 3.85],
-    [9.5, 3.85], [11.2, 3.85], [17.2, 3.85],
-    [18.5, 3.54], [20.0, 3.01], [21.2, 2.36], [22.2, 1.70], [23.0, 1.21], [23.8, 0.67], [24.4, 0.25], [24.7, 0.05]
-  ] as Table,
-  // Half-width of the flat of the bottom. It stays wide under the bow thruster, then closes into the forefoot.
-  bottom: [
-    [-17.4, 0.58], [-16.2, 1.67], [-13.5, 2.53], [-9, 2.88],
-    [9.5, 2.88], [11.2, 2.88], [17.2, 2.88],
-    [18.0, 2.76], [20.2, 2.13], [21.5, 1.38], [22.5, 0.58], [23.3, 0.09]
-  ] as Table,
-  // Keel line: flat for most of the length, rising under the stern run and into the forefoot.
-  keelLine: [[-17.4, -2.15], [-16.6, -3.15], [20.8, -3.15], [22.6, -2.45], [23.5, -2.0]] as Table
+  house: { minX: GA.house.minX, maxX: GA.house.maxX, halfWidth: GA.house.halfWidth, roof: GA.house.roofLimit }
 };
 
 export const CARGO = {
@@ -49,36 +36,6 @@ export const CARGO = {
 /** Display scale applied to an equipment model's slot size (0.75 by default, see equipmentScale in the spec). */
 export function equipmentScale(id: string): number {
   return (GA.equipmentScale.overrides as Record<string, number>)[id] ?? GA.equipmentScale.default;
-}
-
-function lerpTable(table: Table, x: number): number {
-  if (x <= table[0][0]) return table[0][1];
-  for (let i = 1; i < table.length; i++) {
-    const [x1, y1] = table[i], [x0, y0] = table[i - 1];
-    if (x <= x1) return y0 + (y1 - y0) * (x - x0) / (x1 - x0);
-  }
-  return table[table.length - 1][1];
-}
-const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
-const smooth = (a: number, b: number, v: number) => { const t = clamp01((v - a) / (b - a)); return t * t * (3 - 2 * t); };
-
-export const hullStart = SHIP.stations[0][0];
-export const hullEnd = SHIP.stations[SHIP.stations.length - 1][0];
-/** Height of the keel line at x. */
-export function keelAt(x: number): number { return lerpTable(SHIP.keelLine, x); }
-
-/** Half-beam of the hull at plan position x and height. Returns 0 outside the hull or below the local keel line. */
-export function halfBeamAt(x: number, height = SHIP.mainDeck): number {
-  if (x < hullStart || x > hullEnd) return 0;
-  const keel = keelAt(x);
-  if (height < keel - 1e-6) return 0;
-  const t = clamp01((height - keel) / (SHIP.mainDeck - keel));
-  const deckWidth = lerpTable(SHIP.stations, x);
-  const flat = Math.min(deckWidth, lerpTable(SHIP.bottom, x));
-  // Midships the sides rise with a rounded bilge; towards the bow they flare outwards instead.
-  const w = smooth(9, 14.5, x);
-  const shape = (1 - Math.pow(1 - t, 2.4)) * (1 - w) + Math.pow(t, 1.35) * w;
-  return flat + (deckWidth - flat) * shape;
 }
 
 type SpecEquipment = { position: number[]; size: number[]; rotationDeg?: number; space: string };

@@ -1,14 +1,26 @@
 # Vessel model: scan findings, implementation plan and roadmap
 
-Status: **M1 and M2 done.**
-- M1 was merged in #9.
-- M2 is on `feat/hull-m2-ga-spec`: `src/vessel/general-arrangement.json` is now the single spec. Both
-  `vessel-layout.ts` and `hull_lib.py` read it, and the old regex parse of the TypeScript and the duplicated
-  constants are gone.
-- Verified unchanged:
-  - the app's layout and all 44 equipment bounding boxes;
-  - the V8-C geometry (36 objects) rebuilt from the spec.
-- `check:layout` now asserts that the thruster and propeller slots sit on the spec's tunnel and shaft axes. Measurements were taken on `main` at `b8ea922` (V8-C default hull),
+Status: **M1, M2 and M3 done.**
+- M1 was merged in #9, M2 in #10.
+- M2: `src/vessel/general-arrangement.json` is the single spec. Both `vessel-layout.ts` and `hull_lib.py` read it.
+- M3 (`feat/hull-m3-real-hull-qa`): checks run against the real shell.
+  - The V8-C build writes `public/models/blender-hull-V8C.sections.json` (half-breadth every 0.25 m × 0.1 m, keel and
+    deck lines). `check:layout` tests every vertex of every equipment model against it; the V7 `SHIP.stations / bottom /
+    keelLine` tables and `halfBeamAt` are deleted.
+  - The Blender build runs a QA pass and **fails** (exit 1) on any problem; `HULL_QA=warn` exports anyway.
+    It checks slots against the shell, hull-owned parts (tunnel, grids, bilge keels, anodes, sea chests, markings,
+    rudder) against the shell, anything else dipping into the hull below the deck, clearances, and floating parts
+    (every connected piece must link to the shell by touching or intersecting other pieces).
+  - Its first run found 23 problems, all fixed: rudder 0.20 D behind the propeller (stock moved aft 0.07 to
+    X = −18.12, now 0.27 D), sea-chest gratings half buried in the bilge, anodes standing off the stern run, anchors
+    hanging clear of the flared bow, thruster grid bars 0.43 m inside the aft half of the mouth, draft marks floating
+    below the stern run, guard rails on the mast platforms with no stanchions, a yardarm in mid-air, sidelights above
+    the wing bulwark, SCR casings and top ladder rungs floating in the funnel, and the free-fall boat hovering about 5 cm
+    over its rails.
+  - Tunnel immersion is checked as axis ≥ 1 D and top ≥ 0.5 D below the waterline (now 1.17 D and 0.67 D). A top
+    ≥ 1 D would need the tunnel lowered into the bilge turn.
+
+The scan measurements below were taken before M1, on `main` at `b8ea922` (V8-C default hull),
 using the Blender build, the exported GLBs and the running app.
 
 Decisions taken:
@@ -157,7 +169,7 @@ Hull half-width (V8-C) around the current tunnel:
   - **protrusion**: sampled vertices of the tunnel, rudder, appendages and boats against the shell
   - **floating parts**: every outfit item must touch a deck, rail or wall
   - **clearances**: propeller tip to hull ≥ 0.25 D, propeller to rudder ≥ 0.25 D, tunnel submergence ≥ 1 D
-- The build fails on any 🔴-class violation.
+- The build fails on any violation (done in M3; see the status at the top).
 
 ### Phase 3: Bow thruster rebuild (fixes A1–A4)
 - Choose X from the section table; update the GA spec (the app's `bow` position follows automatically).
@@ -196,9 +208,9 @@ Hull half-width (V8-C) around the current tunnel:
 
 | Milestone | Phases | Outcome | Effort |
 |---|---|---|---|
-| **M1: Visible fixes** | 3 + 4 (inside `hull_lib`, `bow` slot moved by hand) | Thruster fits the hull with a real opening; lifeboats, stairs and rafts placed correctly. All three variants rebuilt. | 1 session |
-| **M2: Single GA spec** | 1 | One file drives app + Blender; no duplicated constants | 1 session |
-| **M3: Real-hull QA** | 2 | `check:layout` and the Blender build both validate against the actual shell, including protrusion, floating parts and clearance | 1 session |
+| **M1: Visible fixes** ✅ | 3 + 4 (inside `hull_lib`, `bow` slot moved by hand) | Thruster fits the hull with a real opening; lifeboats, stairs and rafts placed correctly. All three variants rebuilt. | 1 session |
+| **M2: Single GA spec** ✅ | 1 | One file drives app + Blender; no duplicated constants | 1 session |
+| **M3: Real-hull QA** ✅ | 2 | `check:layout` and the Blender build both validate against the actual shell, including protrusion, floating parts and clearance | 1 session |
 | **M4: Arrangement corrections** | 5 | Steering gear on the rudder stock; compartments match the GA | ½–1 session |
 | **M5: Polish** | 6 | Smaller downloads, solid/glass toggle, clean scripts | ½ session |
 
