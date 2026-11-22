@@ -45,6 +45,9 @@ BAY_LEN, BAY_HW = GA["cargo"]["hatchLength"], GA["cargo"]["hatchHalfWidth"]
 CARGO_ROWS, CARGO_ROW_PITCH = GA["cargo"]["rows"], GA["cargo"]["rowPitch"]
 PROP_X, SHAFT_Z = GA["propulsion"]["propellerX"], GA["propulsion"]["shaftY"]
 RUDDER_STOCK_X = GA["propulsion"]["rudderStockX"]
+# Steering gear room aft of the aft-peak bulkhead: flat over the aft peak tank, ladder + deck scuttle at accessX.
+STEER_FLAT_Z = GA["steeringGear"]["flatY"]
+STEER_ACCESS_X = GA["steeringGear"]["accessX"]
 # Bow thruster: forward of the collision bulkhead where the bow is still nearly wall-sided, ~1 D below the waterline.
 # The app's 'bow' slot puts its impeller hub on this axis.
 BT_X, BT_Z, BT_R = GA["bowThruster"]["x"], GA["bowThruster"]["y"], GA["bowThruster"]["diameter"] / 2
@@ -985,10 +988,12 @@ def build_internal(ctx):
         for xx in (e["x0"] + 0.02, e["x1"] - 0.02):
             for yy in (e["y0"] - 0.02, e["y1"] + 0.02):
                 pads.cyl((xx, yy, top), (xx, yy, top + 0.025), 0.012, ctx.mats["hardware"], n=6)
-        if e["z0"] > TANKTOP_Z + 0.4:
+        # mezzanine items stand on platforms; the steering gear (aft of the aft-peak bulkhead) stands on its flat
+        if e["z0"] > TANKTOP_Z + 0.4 and _compartment(e["cx"]) >= 0:
             platform_items.append(e)
     pads.finish()
     build_platforms(ctx, platform_items)
+    build_steering_flat(ctx)
 
     if ctx.has("structure"):
         build_structure(ctx)
@@ -1001,6 +1006,44 @@ def _compartment(x):
         if BULKHEADS[i] <= x <= BULKHEADS[i + 1]:
             return i
     return -1
+
+
+def build_steering_flat(ctx):
+    """Steering gear room aft of the aft-peak bulkhead: a flat over the aft peak tank that carries the gear on the
+    rudder stock, and a vertical ladder on the bulkhead up to a deck scuttle."""
+    mi, rail = ctx.mats["internal"], ctx.mats["rail"]
+    fl = Builder("Internal_Steering_Gear_Flat", uv_scale=0.5)
+    zt = STEER_FLAT_Z
+    xs = np.arange(BULKHEADS[0] - 0.02, GA["hull"]["transomX"] + 0.02, -0.25).tolist()
+    for a, b in zip(xs[:-1], xs[1:]):
+        wa, wb = ctx.hw(a, zt - 0.005) - 0.01, ctx.hw(b, zt - 0.005) - 0.01
+        if wa <= 0.05 or wb <= 0.05:
+            continue
+        fl.poly([V(b, -wb, zt), V(a, -wa, zt), V(a, wa, zt), V(b, wb, zt)], mi)
+    # access: vertical ladder just aft of the bulkhead, braced to it, from the flat to the deck underside
+    lx = STEER_ACCESS_X + 0.12
+    top = ctx.deck_at(lx)[0] - 0.005
+    for yy in (-0.20, 0.20):
+        fl.cyl((lx, yy, zt), (lx, yy, top), 0.016, rail, n=6)
+        for zz in (zt + 0.35, top - 0.25):
+            fl.cyl((lx, yy, zz), (BULKHEADS[0] - 0.005, yy, zz), 0.012, rail, n=5)
+    for z in np.arange(zt + 0.25, top - 0.05, 0.25):
+        fl.cyl((lx, -0.20, float(z)), (lx, 0.20, float(z)), 0.010, rail, n=5)
+    fl.finish()
+    # watertight scuttle on the main deck above the ladder
+    sc = Builder("Deck_Steering_Scuttle", uv_scale=1.0)
+    hwm = ctx.mats["hardware"]
+    dz = ctx.deck_at(STEER_ACCESS_X)[0]
+    cx, h, k = STEER_ACCESS_X, 0.15, 0.25
+    for (x0, x1, y0, y1) in ((cx - k, cx + k, -k, -k + 0.03), (cx - k, cx + k, k - 0.03, k),
+                             (cx - k, cx - k + 0.03, -k, k), (cx + k - 0.03, cx + k, -k, k)):
+        sc.box_between(x0, x1, y0, y1, dz, dz + h, hwm)
+    sc.box_between(cx - k - 0.02, cx + k + 0.02, -k - 0.02, k + 0.02, dz + h, dz + h + 0.03, ctx.mats["accent"])
+    for yy in (-0.14, 0.14):                                                     # hinges on the forward edge
+        sc.cyl((cx + k + 0.02, yy - 0.04, dz + h + 0.015), (cx + k + 0.02, yy + 0.04, dz + h + 0.015), 0.018, hwm, n=8)
+    sc.cyl((cx, 0, dz + h + 0.03), (cx, 0, dz + h + 0.07), 0.012, hwm, n=6)      # handwheel spindle
+    sc.cyl((cx, 0, dz + h + 0.07), (cx, 0, dz + h + 0.085), 0.08, hwm, n=16)
+    sc.finish()
 
 
 def build_platforms(ctx, items):
@@ -1156,7 +1199,7 @@ def build_structure(ctx):
 
 def build_tanks(ctx):
     tanks = [
-        ("Ballast_AftPeak", -19.0, -15.25, None, "tank_ballast"),
+        ("Ballast_AftPeak", -19.0, -15.25, STEER_FLAT_Z - 0.06, "tank_ballast"),   # under the steering flat
         ("Fuel_MGO_ER", -12.4, -7.2, TANKTOP_Z - 0.02, "tank_fuel"),
         ("LubeOil_Sump", -7.1, -5.0, TANKTOP_Z - 0.02, "tank_lube"),
         ("Fuel_HFO_ER", -4.9, -3.05, TANKTOP_Z - 0.02, "tank_fuel"),
@@ -1288,8 +1331,11 @@ def build_appendages(ctx):
     rb.loft(rings, mu)
     rb.finish()
     rs = Builder("Rudder_Stock_Assembly", uv_scale=1.0)
-    rs.cyl((stock_x, 0, z_top - 0.05), (stock_x, 0, counter_z + 0.9), 0.055, hw, n=16)
+    # stock up through the rudder trunk and the steering flat into the steering gear (the app's eSteer slot)
+    rs.cyl((stock_x, 0, z_top - 0.05), (stock_x, 0, STEER_FLAT_Z + 0.10), 0.055, hw, n=16)
     rs.cyl((stock_x, 0, counter_z - 0.02), (stock_x, 0, counter_z + 0.02), 0.13, hw, n=20)
+    rs.cyl((stock_x, 0, counter_z + 0.02), (stock_x, 0, STEER_FLAT_Z - 0.005), 0.085, hw, n=18)     # rudder trunk
+    rs.cyl((stock_x, 0, STEER_FLAT_Z), (stock_x, 0, STEER_FLAT_Z + 0.03), 0.12, hw, n=20)            # carrier bearing
     rs.cyl((stock_x, 0, z_top), (stock_x, 0, z_top + 0.05), 0.10, hw, n=20)
     for sgn in (1, -1):
         rs.box((stock_x - 0.25, sgn * 0.075, -2.45), (0.18, 0.03, 0.10), ctx.mats["anode"])
@@ -2248,6 +2294,15 @@ def _check_slots(ctx):
         for bx in BULKHEADS:
             if e["x0"] < bx < e["x1"] and e["id"] != "bow":
                 problems.append(f"slot {e['id']}: crosses bulkhead at x={bx}")
+    # steering gear: on the rudder stock, on its flat, aft of the aft-peak bulkhead
+    steer = next((e for e in ctx.layout if e["id"] == "eSteer"), None)
+    if steer:
+        if abs(steer["cx"] - RUDDER_STOCK_X) > 0.01 or abs(steer["cy"]) > 0.01:
+            problems.append(f"slot eSteer: not on the rudder stock (x={steer['cx']:.2f}, stock {RUDDER_STOCK_X:.2f})")
+        if abs(steer["z0"] - (STEER_FLAT_Z + 0.033)) > 0.005:
+            problems.append(f"slot eSteer: not standing on the steering flat (z0={steer['z0']:.3f}, flat {STEER_FLAT_Z:.3f})")
+        if steer["x1"] > BULKHEADS[0] - 0.10:
+            problems.append("slot eSteer: not aft of the aft-peak bulkhead")
     for e in ctx.layout:
         if e["space"] == "house" and not (HOUSE["x0"] <= e["x0"] and e["x1"] <= HOUSE["x1"]):
             problems.append(f"slot {e['id']}: outside accommodation length")

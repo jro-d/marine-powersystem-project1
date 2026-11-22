@@ -1,7 +1,7 @@
 # Vessel model: scan findings, implementation plan and roadmap
 
-Status: **M1, M2 and M3 done.**
-- M1 was merged in #9, M2 in #10.
+Status: **M1–M4 done.**
+- M1 was merged in #9, M2 in #10, M3 in #11.
 - M2: `src/vessel/general-arrangement.json` is the single spec. Both `vessel-layout.ts` and `hull_lib.py` read it.
 - M3 (`feat/hull-m3-real-hull-qa`): checks run against the real shell.
   - The V8-C build writes `public/models/blender-hull-V8C.sections.json` (half-breadth every 0.25 m × 0.1 m, keel and
@@ -19,6 +19,21 @@ Status: **M1, M2 and M3 done.**
     over its rails.
   - Tunnel immersion is checked as axis ≥ 1 D and top ≥ 0.5 D below the waterline (now 1.17 D and 0.67 D). A top
     ≥ 1 D would need the tunnel lowered into the bilge turn.
+- M4 (`feat/hull-m4-steering-flat`): arrangement corrections.
+  - **Steering gear room** aft of the aft-peak bulkhead (D1): a flat at Y = −0.383 (`steeringGear.flatY`) over the
+    aft peak tank, which now tops out under it. `eSteer` moved from X = −14.65 (engine room) onto the rudder stock at
+    X = −18.12 on the centreline. In the hull the stock rises through a rudder trunk to a carrier bearing on the flat
+    and into the gear. Access is a vertical ladder on the bulkhead up to a watertight scuttle on the main deck between
+    the two aft mooring winches (`steeringGear.accessX`). No main steering gear was added (as decided).
+  - The emergency steering feeder now runs down through the house, aft under the main deck and down to the gear,
+    instead of across the open aft deck at 2.35.
+  - **Compartments** are named in the spec (`compartments`: steering gear room, engine room, hold, auxiliary
+    machinery room, fore peak / thruster room) and every `hull` slot says which one it stands in. `check:layout` fails
+    if a slot stands in a different compartment or comes within 0.10 of a bulkhead, and prints the list. The Blender
+    QA also checks that the gear sits on the stock and on its flat.
+  - Review result: every slot was already in a sensible space apart from `eSteer`. The tank-top pumps
+    (`fire1/2`, `cooling1/2`, `airCompressor`, `ballast`, `bilge`) and the reefer transformers stand at the aft end of
+    the hold, under hatches 2 and 3; there is no pump-room bulkhead (see the open question in section 5).
 
 The scan measurements below were taken before M1, on `main` at `b8ea922` (V8-C default hull),
 using the Blender build, the exported GLBs and the running app.
@@ -193,8 +208,8 @@ Hull half-width (V8-C) around the current tunnel:
 - Acceptance: floating-part check = 0; boat pitch bow-down along the ramp; preview sheet reviewed.
 
 ### Phase 5: Machinery placement corrections (fixes D1–D2)
-- Steering-gear flat aft of the aft-peak bulkhead over the rudder stock; move `eSteer` there and optionally add main steering gear `steering` (needs a network/sim entry if it is electrical).
-- Review the remaining slots against GA compartments (thruster room, pump room, ER flats).
+- Steering-gear flat aft of the aft-peak bulkhead over the rudder stock; move `eSteer` there and optionally add main steering gear `steering` (needs a network/sim entry if it is electrical). Done in M4 (no main gear).
+- Review the remaining slots against GA compartments (thruster room, pump room, ER flats). Done in M4.
 - Acceptance: `check:layout` passes on real-hull sections; teardown links and the sim are unaffected.
 
 ### Phase 6: Tidy-up and performance (F1–F4)
@@ -211,7 +226,7 @@ Hull half-width (V8-C) around the current tunnel:
 | **M1: Visible fixes** ✅ | 3 + 4 (inside `hull_lib`, `bow` slot moved by hand) | Thruster fits the hull with a real opening; lifeboats, stairs and rafts placed correctly. All three variants rebuilt. | 1 session |
 | **M2: Single GA spec** ✅ | 1 | One file drives app + Blender; no duplicated constants | 1 session |
 | **M3: Real-hull QA** ✅ | 2 | `check:layout` and the Blender build both validate against the actual shell, including protrusion, floating parts and clearance | 1 session |
-| **M4: Arrangement corrections** | 5 | Steering gear on the rudder stock; compartments match the GA | ½–1 session |
+| **M4: Arrangement corrections** ✅ | 5 | Steering gear on the rudder stock; compartments match the GA | ½–1 session |
 | **M5: Polish** | 6 | Smaller downloads, solid/glass toggle, clean scripts | ½ session |
 
 Recommended order: **M1 first** (it is what you see), then M2 → M3 so these bugs can't come back, then M4 and M5.
@@ -222,3 +237,5 @@ M1 can be done without M2: it only touches `hull_lib.py`, the `bow` entry in `ve
 2. **V8-C lifeboat:** free-fall boat at the stern (needs the aft mooring winch split into two side winches), or switch to davit boats on both sides like V8-A?
 3. **Steering gear (M4):** move `eSteer` aft onto the rudder stock, and also add a main steering gear?
 4. **Scope:** fix all three variants, or only V8-C (the default) and retire A/B?
+5. **Pump room (open, from M4):** the pumps and reefer transformers stand in the aft end of the hold, under cargo
+   hatches. Add a pump-room bulkhead forward of them (about X = 4.3), or leave the hold as one space?

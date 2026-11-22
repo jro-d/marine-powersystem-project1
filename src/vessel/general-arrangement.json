@@ -25,6 +25,17 @@
       "name": "Collision"
     }
   ],
+  "compartments": {
+    "$comment": "Spaces between the transom, the bulkheads above (in order) and the stem. Every 'hull' equipment slot names the compartment it stands in, and check:layout keeps it clear of the bulkheads.",
+    "order": ["steeringGear", "engineRoom", "hold", "auxMachinery", "forePeak"],
+    "names": {
+      "steeringGear": "Steering gear room (flat over the aft peak tank)",
+      "engineRoom": "Engine room",
+      "hold": "Hold (pumps on the tank top at its aft end)",
+      "auxMachinery": "Auxiliary machinery room (emergency fire pump)",
+      "forePeak": "Fore peak / bow thruster room"
+    }
+  },
   "house": {
     "minX": -13.5,
     "maxX": -7.3,
@@ -50,6 +61,11 @@
     "propellerDiameter": 0.9,
     "propellerLength": 0.58
   },
+  "steeringGear": {
+    "$comment": "Steering gear room aft of the aft-peak bulkhead: a flat over the aft peak tank, with the gear standing on the rudder stock (propulsion.rudderStockX). flatY is the top of the flat; the eSteer slot stands 0.033 above it. accessX is the ladder and deck scuttle, just aft of the bulkhead.",
+    "flatY": -0.383,
+    "accessX": -15.45
+  },
   "bowThruster": {
     "x": 18.3,
     "y": -2.3,
@@ -69,36 +85,42 @@
       "position": [-8.8, -1.72, -1.25],
       "size": [2.05, 1.12, 0.98],
       "space": "hull",
+      "compartment": "engineRoom",
       "group": "6.6 kV main diesel generators (engine room tank top)"
     },
     "dg2": {
       "position": [-5.9, -1.72, -1.25],
       "size": [2.05, 1.12, 0.98],
       "space": "hull",
+      "compartment": "engineRoom",
       "group": "6.6 kV main diesel generators (engine room tank top)"
     },
     "dg3": {
       "position": [-8.8, -1.72, 1.25],
       "size": [2.05, 1.12, 0.98],
       "space": "hull",
+      "compartment": "engineRoom",
       "group": "6.6 kV main diesel generators (engine room tank top)"
     },
     "dg4": {
       "position": [-5.9, -1.72, 1.25],
       "size": [2.05, 1.12, 0.98],
       "space": "hull",
+      "compartment": "engineRoom",
       "group": "6.6 kV main diesel generators (engine room tank top)"
     },
     "busA": {
       "position": [-8.7, -0.3, -0.7],
       "size": [1.35, 0.86, 0.58],
       "space": "hull",
+      "compartment": "engineRoom",
       "group": "6.6 kV main switchboards (engine room mezzanine)"
     },
     "busB": {
       "position": [-6.8, -0.3, 0.7],
       "size": [1.35, 0.86, 0.58],
       "space": "hull",
+      "compartment": "engineRoom",
       "group": "6.6 kV main switchboards (engine room mezzanine)"
     },
     "drive": {
@@ -106,6 +128,7 @@
       "size": [1.4, 1.15, 0.65],
       "rotationDeg": 180.0,
       "space": "hull",
+      "compartment": "engineRoom",
       "group": "Propulsion VFD"
     },
     "motor": {
@@ -113,6 +136,7 @@
       "size": [1.55, 0.85, 0.8],
       "rotationDeg": 180.0,
       "space": "hull",
+      "compartment": "engineRoom",
       "group": "Propulsion motor (in the tank-top well)"
     },
     "prop": {
@@ -126,42 +150,49 @@
       "size": [0.95, 1.72, 2.55],
       "rotationDeg": 90.0,
       "space": "hull",
+      "compartment": "forePeak",
       "group": "Bow thruster: impeller hub on the hull tunnel axis (bowThruster.x / bowThruster.y)"
     },
     "txA": {
       "position": [-4, -1.72, -1.25],
       "size": [1.08, 1, 0.85],
       "space": "hull",
+      "compartment": "engineRoom",
       "group": "Symmetrical Dual Main Step-Down Transformers (6.6 kV / 440 V, 2.5 MVA) Port machinery flat (Bus A) & Starboard machinery flat (Bus B)"
     },
     "txB": {
       "position": [-4, -1.72, 1.25],
       "size": [1.08, 1, 0.85],
       "space": "hull",
+      "compartment": "engineRoom",
       "group": "Symmetrical Dual Main Step-Down Transformers (6.6 kV / 440 V, 2.5 MVA) Port machinery flat (Bus A) & Starboard machinery flat (Bus B)"
     },
     "txReeferA": {
       "position": [3.5, -0.3, -1.25],
       "size": [1, 0.95, 0.8],
       "space": "hull",
+      "compartment": "hold",
       "group": "Symmetrical Dual Reefer Distribution Transformers (6.6 kV / 440 V, 1.5 MVA)"
     },
     "txReeferB": {
       "position": [3.5, -0.3, 1.25],
       "size": [1, 0.95, 0.8],
       "space": "hull",
+      "compartment": "hold",
       "group": "Symmetrical Dual Reefer Distribution Transformers (6.6 kV / 440 V, 1.5 MVA)"
     },
     "lvBusA": {
       "position": [-4.25, -0.3, -0.9],
       "size": [1.35, 0.86, 0.58],
       "space": "hull",
+      "compartment": "engineRoom",
       "group": "Dual 440 V Main Switchboards"
     },
     "lvBusB": {
       "position": [-4.25, -0.3, 0.9],
       "size": [1.35, 0.86, 0.58],
       "space": "hull",
+      "compartment": "engineRoom",
       "group": "Dual 440 V Main Switchboards"
     },
     "reeferA": {
@@ -226,18 +257,21 @@
       "position": [-1.85, -1.72, -1.8],
       "size": [0.7, 0.48, 0.45],
       "space": "hull",
+      "compartment": "hold",
       "group": "Auxiliary machinery on the tank top (pump room, forward of the engine room)"
     },
     "cooling1": {
       "position": [-0.15, -1.72, -1.8],
       "size": [0.7, 0.48, 0.45],
       "space": "hull",
+      "compartment": "hold",
       "group": "Auxiliary machinery on the tank top (pump room, forward of the engine room)"
     },
     "airCompressor": {
       "position": [1.15, -1.72, -1.8],
       "size": [0.66, 0.46, 0.42],
       "space": "hull",
+      "compartment": "hold",
       "group": "Auxiliary machinery on the tank top (pump room, forward of the engine room)"
     },
     "crane": {
@@ -250,24 +284,28 @@
       "position": [-1.85, -1.72, 1.8],
       "size": [0.7, 0.48, 0.45],
       "space": "hull",
+      "compartment": "hold",
       "group": "Auxiliary machinery on the tank top (pump room, forward of the engine room)"
     },
     "cooling2": {
       "position": [-0.15, -1.72, 1.8],
       "size": [0.7, 0.48, 0.45],
       "space": "hull",
+      "compartment": "hold",
       "group": "Auxiliary machinery on the tank top (pump room, forward of the engine room)"
     },
     "ballast": {
       "position": [1.15, -1.72, 1.8],
       "size": [0.66, 0.46, 0.42],
       "space": "hull",
+      "compartment": "hold",
       "group": "Auxiliary machinery on the tank top (pump room, forward of the engine room)"
     },
     "bilge": {
       "position": [2.45, -1.72, 1.8],
       "size": [0.61, 0.42, 0.4],
       "space": "hull",
+      "compartment": "hold",
       "group": "Auxiliary machinery on the tank top (pump room, forward of the engine room)"
     },
     "lightsA": {
@@ -307,15 +345,17 @@
       "group": "440 V SOLAS Emergency Switchboard & Emergency Loads (Located above bulkhead deck)"
     },
     "eSteer": {
-      "position": [-14.65, -0.35, 0],
+      "position": [-18.12, -0.35, 0],
       "size": [0.85, 0.55, 0.6],
       "space": "hull",
-      "group": "440 V SOLAS Emergency Switchboard & Emergency Loads (Located above bulkhead deck)"
+      "compartment": "steeringGear",
+      "group": "Emergency steering gear: on the rudder stock in the steering gear room (fed from the emergency switchboard)"
     },
     "eFire": {
       "position": [11.75, -1.72, 0.95],
       "size": [0.67, 0.48, 0.43],
       "space": "hull",
+      "compartment": "auxMachinery",
       "group": "440 V SOLAS Emergency Switchboard & Emergency Loads (Located above bulkhead deck)"
     },
     "eLights": {
