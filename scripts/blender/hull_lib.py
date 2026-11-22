@@ -38,7 +38,9 @@ HOUSE = dict(x0=-13.5, x1=-7.3, hw=2.65, d1=1.00, d2=2.33, d3=3.43, roof=4.50)
 BAYS = [-4.4, -1.15, 2.1, 9.9]
 BAY_LEN, BAY_HW = 3.14, 2.725
 PROP_X, SHAFT_Z = -17.38, -2.22
-BT_X, BT_Z, BT_R = 20.1, -2.15, 0.48
+# Bow thruster: forward of the collision bulkhead (17.2) where the bow is still nearly wall-sided, ~1 D below the
+# waterline. Must match the 'bow' slot in vessel-layout.ts (its impeller hub sits on this axis).
+BT_X, BT_Z, BT_R = 18.3, -2.30, 0.45
 
 
 def clamp01(t):
@@ -866,6 +868,7 @@ def build_shell(ctx):
     bpy.context.scene.collection.objects.link(obj)
     for m in (m_top, m_under, m_boot):
         me.materials.append(m)
+    ctx.shell_obj = obj
     # deck rows (x, z, half width) from the exact form, used by every deck fitting
     ctx.deck_rows = []
     for (u, s) in rows:
@@ -1186,6 +1189,57 @@ def naca_ring(chord, t, x_le, y_c, z, n=24):
     return pts
 
 
+def build_bow_thruster(ctx, n=48):
+    """Transverse tunnel that follows the real hull: a clean circular hole is cut through the shell, and each end
+    ring of the tunnel is projected onto the (uncut) shell surface, so the mouth matches the hull shape exactly."""
+    # 1. end rings on the hull surface (both sides)
+    ends = {}
+    for sgn in (1, -1):
+        ring = []
+        for k in range(n):
+            a = 2 * math.pi * k / n
+            x, z = BT_X + BT_R * math.cos(a), BT_Z + BT_R * math.sin(a)
+            ring.append(V(x, sgn * ctx.hw(x, z), z))
+        ends[sgn] = ring
+    ctx.bt_ends = ends
+    # 2. tunnel tube (straight generators between the two projected ends), antifouling inside like the hull
+    tb = Builder("BowThruster_Tunnel", uv_scale=1.0, recalc=False)
+    rings = [[ends[-1][k].lerp(ends[1][k], t) for k in range(n)] for t in np.linspace(0, 1, 9)]
+    tb.loft(rings, ctx.mats["hull_under"], cap0=False, cap1=False)
+    tb.finish()
+    # 3. faired lip around each mouth + grid bars recessed just inside the opening
+    gr = Builder("BowThruster_Grids", uv_scale=1.0)
+    for sgn in (1, -1):
+        lip = [p + V(0, sgn * 0.012, 0) for p in ends[sgn]]
+        gr.tube(lip, 0.026, ctx.mats["hardware"], n=8, closed=True)
+        for dz in (-0.30, -0.15, 0.0, 0.15, 0.30):
+            hz = math.sqrt(max(0.0, BT_R ** 2 - dz ** 2)) - 0.02
+            z = BT_Z + dz
+            y = sgn * (min(ctx.hw(BT_X - hz, z), ctx.hw(BT_X + hz, z), ctx.hw(BT_X, z)) - 0.07)
+            gr.cyl((BT_X - hz, y, z), (BT_X + hz, y, z), 0.016, ctx.mats["hardware"], n=6)
+    gr.finish()
+    # 4. cut the openings in the shell (exact boolean, applied so nothing extra is exported)
+    shell = ctx.shell_obj
+    bpy.ops.mesh.primitive_cylinder_add(vertices=n, radius=BT_R, depth=12.0, location=(BT_X, 0, BT_Z), rotation=(math.pi / 2, 0, 0))
+    cutter = bpy.context.active_object
+    mod = shell.modifiers.new("BowThrusterCut", "BOOLEAN")
+    mod.operation = "DIFFERENCE"
+    mod.solver = "EXACT"
+    mod.object = cutter
+    if hasattr(mod, "use_hole_tolerant"):
+        mod.use_hole_tolerant = True
+    dg = bpy.context.evaluated_depsgraph_get()
+    cut = bpy.data.meshes.new_from_object(shell.evaluated_get(dg))
+    shell.modifiers.clear()
+    old = shell.data
+    shell.data = cut
+    bpy.data.meshes.remove(old)
+    cut.name = "ShipHull"
+    cutter_mesh = cutter.data
+    bpy.data.objects.remove(cutter)
+    bpy.data.meshes.remove(cutter_mesh)
+
+
 def build_appendages(ctx):
     mu = ctx.mats["hull_under"]
     hw = ctx.mats["hardware"]
@@ -1239,17 +1293,7 @@ def build_appendages(ctx):
         rs.box((stock_x - 0.25, sgn * 0.075, -1.55), (0.18, 0.03, 0.10), ctx.mats["anode"])
     rs.finish()
 
-    # --- bow thruster tunnel sized to the actual shell, with collars and grid bars -----------------------
-    w = ctx.hw(BT_X, BT_Z)
-    bt = Builder("BowThruster_Tunnel", uv_scale=1.0)
-    bt.cyl((BT_X, -w + 0.04, BT_Z), (BT_X, w - 0.04, BT_Z), BT_R, hw, n=36, caps=False)
-    for sgn in (1, -1):
-        y = sgn * (ctx.hw(BT_X, BT_Z) - 0.02)
-        bt.torus((BT_X, y, BT_Z), (0, 1, 0), BT_R + 0.03, 0.035, hw, n1=36, n2=8)
-        for dz in (-0.3, -0.15, 0.0, 0.15, 0.3):
-            hz = math.sqrt(max(0.0, BT_R ** 2 - dz ** 2))
-            bt.cyl((BT_X - hz, y, BT_Z + dz), (BT_X + hz, y, BT_Z + dz), 0.014, ctx.mats["rail"], n=6)
-    bt.finish()
+    build_bow_thruster(ctx)
 
     if ctx.has("bilge_keels"):
         bk = Builder("Bilge_Keels", uv_scale=1.0, recalc=False)
@@ -1467,23 +1511,23 @@ def build_deck_outfit(ctx):
     jdz = ctx.deck_at(jx)[0]
     mo.cyl((jx, 0, jdz), (jx + 0.06, 0, jdz + 0.9), 0.018, rail, n=6)
     # --- aft mooring winch, stern bollards, ensign staff ----------------------------------------------------
-    awx = -15.4
-    adz = ctx.deck_at(awx)[0]
-    mo.box((awx, 0, adz + 0.03), (1.10, 1.95, 0.06), hwm)
-    mo.box((awx, 0, adz + 0.26), (0.52, 0.46, 0.40), hwm)
-    mo.cyl((awx + 0.26, 0, adz + 0.25), (awx + 0.70, 0, adz + 0.25), 0.14, acc, n=18)
+    awx = -15.25
+    adz, aw = ctx.deck_at(awx)
     for sgn in (1, -1):
-        mo.cyl((awx, sgn * 0.36, adz + 0.25), (awx, sgn * 0.88, adz + 0.25), 0.17, hwm, n=20)
-        for yy in (0.36, 0.88):
-            mo.cyl((awx, sgn * (yy - 0.015), adz + 0.25), (awx, sgn * (yy + 0.015), adz + 0.25), 0.25, acc, n=20)
+        yc = sgn * min(1.75, aw - 0.85)            # one mooring winch per quarter, clear of the free-fall ramp
+        inner, outer = yc - sgn * 0.42, yc + sgn * 0.42
+        mo.box((awx, yc, adz + 0.03), (1.00, 1.00, 0.06), hwm)
+        mo.box((awx, inner, adz + 0.24), (0.46, 0.30, 0.36), hwm)                       # gearbox
+        mo.cyl((awx + 0.22, inner, adz + 0.22), (awx + 0.58, inner, adz + 0.22), 0.13, acc, n=18)   # motor
+        mo.cyl((awx, inner + sgn * 0.15, adz + 0.24), (awx, yc + sgn * 0.28, adz + 0.24), 0.16, hwm, n=20)  # drum
+        for yy in (inner + sgn * 0.16, yc + sgn * 0.28):
+            mo.cyl((awx, yy - 0.015, adz + 0.24), (awx, yy + 0.015, adz + 0.24), 0.24, acc, n=20)
+        mo.cyl((awx, yc + sgn * 0.30, adz + 0.24), (awx, outer, adz + 0.24), 0.10, hwm, r1=0.13, n=18)   # warping head
         for bx in (-16.4, -18.6):
             bdz, bw = ctx.deck_at(bx)
             bollard(mo, bx, sgn * (bw - 0.40), bdz, hwm)
         bdz, bw = ctx.deck_at(-17.2)
         mo.box((-17.2, sgn * (bw - 0.08), bdz + 0.18), (0.36, 0.12, 0.20), hwm)
-    edz = ctx.deck_at(-19.35)[0]
-    mo.cyl((-19.35, 0, edz), (-19.35, 0, edz + 0.10), 0.05, hwm, n=10)
-    mo.cyl((-19.35, 0, edz + 0.10), (-19.61, 0, edz + 1.55), 0.022, rail, n=8)
     mo.finish()
     ch.finish()
 
@@ -1638,19 +1682,38 @@ def build_superstructure(ctx):
         ou.tube(pts, 0.016, rail, n=6)
         for x in np.arange(X0 - 0.08, wx0 - 0.05, 0.6):
             ou.cyl((x, sgn * (HW + 0.06), d3), (x, sgn * (HW + 0.06), d3 + 0.34), 0.013, rail, n=6)
-        # external ladders between decks on the aft face
-        for (za, zb) in ((DECK_Z, d2), (d2, d3)):
-            ly = sgn * (1.75 if za == DECK_Z else 1.05)
-            xa_, xb_ = X0 - 0.95, X0 - 0.06
-            for dy in (-0.22, 0.22):
-                ou.cyl((xa_, ly + dy, za), (xb_, ly + dy, zb), 0.016, rail, n=6)
-                ou.cyl((xa_ - 0.02, ly + dy, za + 0.45), (xb_, ly + dy, zb + 0.45), 0.012, rail, n=6)
-            nst = int((zb - za) / 0.16)
-            for k in range(1, nst):
-                tt = k / nst
-                ou.box((mix(xa_, xb_, tt), ly, mix(za, zb, tt)), (0.10, 0.44, 0.015), md)
-            if za == d2:
-                ou.box_between(X0 - 0.30, X0, ly - 0.35, ly + 0.35, d2 - 0.04, d2, md)
+        # deck-2 open walkway along the house side (embarkation / life-raft deck), on brackets
+        wo = sgn * (HW + WALK_W)
+        ou.box_between(X0 - WALK_W, WALK_FWD, sgn * HW, wo, d2 - 0.05, d2, md)
+        for x in np.arange(X0 + 0.25, WALK_FWD, 1.1):          # triangular knee brackets welded to the house side
+            ou.prism([V(x - 0.015, sgn * HW, d2 - 0.05), V(x - 0.015, wo - sgn * 0.03, d2 - 0.05), V(x - 0.015, sgn * HW, d2 - 0.48)], (0.03, 0, 0), hwm)
+        posts = np.arange(X0 - WALK_W + 0.03, WALK_FWD + 0.01, 0.6).tolist() + [WALK_FWD - 0.03]
+        for x in posts:
+            ou.cyl((x, wo - sgn * 0.03, d2), (x, wo - sgn * 0.03, d2 + 0.42), 0.013, rail, n=6)
+        for hgt in (0.21, 0.42):
+            ou.tube([V(X0 - WALK_W + 0.03, wo - sgn * 0.03, d2 + hgt), V(WALK_FWD - 0.03, wo - sgn * 0.03, d2 + hgt)], 0.014, rail, n=6)
+        ou.tube([V(WALK_FWD - 0.03, sgn * HW, d2 + 0.42), V(WALK_FWD - 0.03, sgn * (HW + 0.17), d2 + 0.42)], 0.014, rail, n=6)
+        ou.box((X0 + 1.15, sgn * (HW + 0.008), d2 + 0.40), (0.40, 0.016, 0.76), hwm)      # walkway door
+        # stairs: main deck -> deck-2 walkway (forward end), deck-2 aft strip -> bridge deck
+        stairs(ou, V(WALK_FWD + 1.30, sgn * (HW + 0.40), DECK_Z), V(WALK_FWD, sgn * (HW + 0.40), d2), 0.40, md, rail)
+        stairs(ou, V(X0 - WALK_W / 2, sgn * 2.15, d2), V(X0 - WALK_W / 2, sgn * 0.95, d3), 0.40, md, rail)
+        ou.box_between(X0 - WALK_W, X0 - 0.12, sgn * 0.50, sgn * 0.98, d3 - 0.05, d3, md)  # stair landing
+        # bridge-wing brackets
+        for x in (-9.45, -8.45, -7.45):
+            ou.cyl((x, sgn * HW, d3 - 0.80), (x, sgn * (wing_w - 0.10), d3 - 0.07), 0.035, hwm, n=8)
+    # deck-2 aft strip (joins the two side walkways behind the house) with its rail and a door
+    ou.box_between(X0 - WALK_W, X0, -HW, HW, d2 - 0.05, d2, md)
+    ou.tube([V(X0 - WALK_W + 0.03, -(HW + WALK_W) + 0.03, d2 + 0.42), V(X0 - WALK_W + 0.03, HW + WALK_W - 0.03, d2 + 0.42)], 0.014, rail, n=6)
+    for y in np.arange(-(HW + WALK_W) + 0.03, HW + WALK_W, 0.6):
+        ou.cyl((X0 - WALK_W + 0.03, y, d2), (X0 - WALK_W + 0.03, y, d2 + 0.42), 0.013, rail, n=6)
+    ou.box((X0 - 0.008, 0.0, d2 + 0.40), (0.016, 0.40, 0.76), hwm)
+    for y in (-2.2, -1.1, 1.1, 2.2):                            # knee brackets under the aft strip
+        ou.prism([V(X0, y - 0.015, d2 - 0.05), V(X0 - WALK_W + 0.03, y - 0.015, d2 - 0.05), V(X0, y - 0.015, d2 - 0.48)], (0, 0.03, 0), hwm)
+    # bridge-deck aft edge rail, open at the two stair landings
+    for (ya, yb) in ((-(HW + 0.06), -1.02), (-0.46, 0.46), (1.02, HW + 0.06)):
+        ou.tube([V(X0 - 0.10, ya, d3 + 0.34), V(X0 - 0.10, yb, d3 + 0.34)], 0.014, rail, n=6)
+        for y in np.linspace(ya, yb, max(2, int(abs(yb - ya) / 0.55) + 1)):
+            ou.cyl((X0 - 0.10, float(y), d3), (X0 - 0.10, float(y), d3 + 0.34), 0.012, rail, n=6)
     # compass deck rails
     for sgn in (1, -1):
         ou.tube([V(wx0 - 0.02, sgn * (HW + 0.05), roof + 0.38), V(wx1 + rake + 0.25, sgn * (HW + 0.05), roof + 0.38)], 0.014, rail, n=6)
@@ -1664,6 +1727,27 @@ def build_superstructure(ctx):
     build_funnel(ctx)
     build_mast(ctx, wx0, wx1, roof)
     build_lifesaving(ctx)
+
+
+WALK_W = 0.65         # deck-2 walkway width outside the house
+WALK_FWD = -9.70      # forward end of the deck-2 side walkways
+
+
+def stairs(b, p0, p1, width, tread_mat, rail_mat):
+    """Straight ship's stair from p0 (foot) to p1 (head): stringers, treads and handrails."""
+    p0, p1 = Vector(p0), Vector(p1)
+    run = V(p1.x - p0.x, p1.y - p0.y, 0)
+    side = V(-run.y, run.x, 0).normalized() * (width / 2)
+    for s_ in (side, -side):
+        b.cyl(p0 + s_, p1 + s_, 0.018, rail_mat, n=6)
+        b.cyl(p0 + s_ + V(0, 0, 0.45), p1 + s_ + V(0, 0, 0.45), 0.013, rail_mat, n=6)
+        b.cyl(p0 + s_, p0 + s_ + V(0, 0, 0.45), 0.012, rail_mat, n=6)
+    rise = p1.z - p0.z
+    nst = max(2, int(rise / 0.16))
+    ang = math.atan2(run.y, run.x)
+    for k in range(1, nst):
+        c = p0.lerp(p1, k / nst)
+        b.box(c, (0.12, width, 0.015), tread_mat, R=rot_z(ang))
 
 
 def build_funnel(ctx):
@@ -1773,60 +1857,163 @@ def build_mast(ctx, wx0, wx1, roof):
     mm.finish()
 
 
+# Free-fall launch arrangement at the stern (shared by the ramp, the boat, the A-frame and the deck outfit).
+FF_ANGLE = math.radians(35.0)
+FF_LOW = V(-19.80, 0.0, 1.55)          # lower (launch) end of the rails, just past the transom
+FF_LEN = 3.20                          # rail length up the ramp
+FF_RAIL_Y = 0.40
+
+
+def ff_point(u):
+    """Point on the rail top line, u metres up the ramp from the launch end."""
+    return FF_LOW + V(math.cos(FF_ANGLE), 0, math.sin(FF_ANGLE)) * u
+
+
+def freefall_boat(b, stern_keel, L, W, H, hull_mat, trim_mat, dark_mat):
+    """Enclosed free-fall lifeboat, bow pointing down the ramp (aft, out over the stern)."""
+    d = V(-math.cos(FF_ANGLE), 0, -math.sin(FF_ANGLE))    # forward (bow) direction
+    n = V(-math.sin(FF_ANGLE), 0, math.cos(FF_ANGLE))     # boat 'up'
+    lat = V(0, 1, 0)
+    Rb = rot_y(-FF_ANGLE) @ rot_z(math.pi)                # boat-local axes -> world (x = bow)
+
+    def P(s_, y, h):
+        return stern_keel + d * s_ + lat * y + n * h
+
+    def keel(t):
+        return 0.22 * H * smoothstep(0.62, 1.0, t) ** 1.4 + 0.04 * H * (1 - smoothstep(0.0, 0.12, t))
+
+    def top(t):
+        return keel(t) + (H - keel(t)) * (1 - 0.38 * t ** 1.6)
+
+    def half(t):
+        return W / 2 * (0.80 + 0.20 * smoothstep(0.0, 0.3, t)) * math.sqrt(max(0.0, 1 - t ** 3.2))
+
+    rings = []
+    for i in range(19):
+        t = i / 18
+        k, tp, w = keel(t), top(t), max(0.012, half(t))
+        mid, hh = (k + tp) / 2, (tp - k) / 2
+        ring = []
+        for j in range(20):
+            a_ = 2 * math.pi * j / 20
+            ca, sa = math.cos(a_), math.sin(a_)
+            e = 0.62 if sa < 0 else 0.75     # deeper V below, rounded canopy above
+            ring.append(P(t * L, w * math.copysign(abs(ca) ** e, ca), mid + hh * math.copysign(abs(sa) ** e, sa)))
+        rings.append(ring)
+    b.loft(rings, hull_mat, cap0=True, cap1=False)
+    # rub rail, side windows, helm cupola with window band, stern hatch, release hook
+    for sgn in (1, -1):
+        rr = []
+        for i in range(2, 17):
+            t = i / 18
+            rr.append(P(t * L, sgn * (half(t) + 0.012), keel(t) + 0.42 * (top(t) - keel(t))))
+        b.tube(rr, 0.022, trim_mat, n=6)
+        for t in (0.34, 0.47, 0.60, 0.73):
+            b.box(P(t * L, sgn * half(t) * 0.93, keel(t) + 0.72 * (top(t) - keel(t))), (0.16, 0.06, 0.08), dark_mat, R=Rb)
+    cup = P(0.17 * L, 0, top(0.17) + 0.02)
+    b.ellipsoid(cup, (0.24, 0.20, 0.13), hull_mat, R=Rb, nu=16, nv=8)
+    b.ellipsoid(cup + n * 0.03, (0.25, 0.205, 0.07), dark_mat, R=Rb, nu=16, nv=6)
+    b.box(P(0.0, 0, keel(0) + 0.45 * H), (0.03, 0.30, 0.40), dark_mat, R=Rb)
+    b.box(P(0.06 * L, 0, top(0.06) + 0.03), (0.12, 0.10, 0.06), trim_mat, R=Rb)
+
+
+def rib_boat(b, c, L, W, tube_mat, hull_mat):
+    path = []
+    for k in range(28):
+        a_ = 2 * math.pi * k / 28
+        path.append(c + V(L / 2 * math.copysign(abs(math.cos(a_)) ** 0.55, math.cos(a_)) - (0.06 if math.cos(a_) > 0 else 0),
+                          W / 2 * math.sin(a_), 0))
+    b.tube(path, 0.075, tube_mat, n=8, closed=True)
+    b.ellipsoid(c + V(0, 0, -0.07), (L * 0.47, W * 0.40, 0.10), hull_mat, nu=16, nv=6)
+    b.box(c + V(-L * 0.28, 0, 0.02), (0.14, 0.14, 0.14), hull_mat)          # outboard
+    b.box(c + V(0.05, 0, 0.0), (0.22, 0.20, 0.12), hull_mat)                # console
+
+
 def build_lifesaving(ctx):
-    lb = Builder("LifeSaving_Appliances", uv_scale=1.0, bevel=0.0)
+    lb = Builder("LifeSaving_Appliances", uv_scale=1.0)
+    st = Builder("LifeSaving_Davits_Structure", uv_scale=1.0)
     orange = ctx.mats["lifeboat"]
     white = ctx.mats["house"]
     hwm = ctx.mats["hardware"]
+    rail = ctx.mats["rail"]
+    dark = ctx.mats["window"]
     X0, HW, d2, d3 = HOUSE["x0"], HOUSE["hw"], HOUSE["d2"], HOUSE["d3"]
-    if ctx.has("freefall"):
-        # free-fall lifeboat on an inclined launch ramp off the aft face of the house
-        ang = math.radians(32)
-        top = V(X0 - 0.05, 0.0, d3 - 0.05)
-        L = 3.0
-        dirv = V(-math.cos(ang), 0, -math.sin(ang))
-        for sgn in (1, -1):
-            a = top + V(0, sgn * 0.45, 0)
-            b = a + dirv * L
-            lb.cyl(a, b, 0.045, hwm, n=10)
-            lb.cyl(b, V(b.x, b.y, DECK_Z), 0.05, hwm, n=10)
-            lb.cyl(a + dirv * 1.4, V((a + dirv * 1.4).x, a.y, DECK_Z), 0.05, hwm, n=10)
-        lifeboat(lb, top + dirv * 1.45 + V(0, 0, 0.42), 2.55, 0.86, 0.82, orange, orange, yaw=math.pi, pitch=-ang)
-        # rescue boat davit (stbd) + liferafts
-        dx, dy = -11.4, -(HW + 0.05)
-        lb.cyl((dx, dy, d3), (dx, dy, d3 + 1.0), 0.07, hwm, n=12)
-        lb.cyl((dx, dy, d3 + 1.0), (dx, dy - 0.9, d3 + 1.25), 0.05, hwm, n=10)
-        lb.cyl((dx, dy - 0.9, d3 + 1.25), (dx, dy - 0.9, d3 + 0.55), 0.008, hwm, n=4)
-        rib = V(dx, dy - 0.9, d3 + 0.42)
-        path = []
-        for k in range(24):
-            a = 2 * math.pi * k / 24
-            path.append(rib + V(0.62 * math.copysign(abs(math.cos(a)) ** 0.5, math.cos(a)), 0.24 * math.sin(a), 0))
-        lb.tube(path, 0.075, orange, n=8, closed=True)
-        lb.ellipsoid(rib + V(0, 0, -0.06), (0.66, 0.24, 0.10), ctx.mats["hardware"], nu=16, nv=6)
-        lb.box(rib + V(-0.45, 0, 0.06), (0.14, 0.12, 0.14), ctx.mats["hardware"])
-        for x in (-12.6, -12.0):
-            for sgn in (1, -1):
-                lb.ellipsoid((x, sgn * (HW + 0.32), d2 + 0.25), (0.26, 0.17, 0.17), white, R=rot_x(0), nu=14, nv=8)
-                lb.box((x, sgn * (HW + 0.32), d2 + 0.06), (0.40, 0.30, 0.03), hwm)
-    else:
-        # gravity davit lifeboats on both sides of the house at tier-2 level
-        for sgn in (1, -1):
-            bx, by, bz = -11.15, sgn * (HW + 0.62), d2 + 0.42
-            lifeboat(lb, (bx, by, bz), 2.4, 0.78, 0.72, orange, white)
-            for dx in (-0.95, 0.95):
-                p0 = V(bx + dx, sgn * (HW + 0.02), d2)
-                p1 = V(bx + dx, sgn * (HW + 0.15), d2 + 1.05)
-                p2 = V(bx + dx, by, d2 + 1.05)
-                lb.tube([p0, p1, p2], 0.045, hwm, n=8)
-                lb.cyl(p2, V(p2.x, p2.y, bz + 0.25), 0.007, hwm, n=4)
-        for sgn in (1, -1):
-            lb.ellipsoid((-8.6, sgn * (HW + 0.30), d2 + 0.25), (0.26, 0.17, 0.17), white, nu=14, nv=8)
-            lb.box((-8.6, sgn * (HW + 0.30), d2 + 0.06), (0.40, 0.30, 0.03), hwm)
-    # lifebuoys on the stern rail + house sides
-    for (x, y, z) in ((-18.4, 1.55, 1.40), (-18.4, -1.55, 1.40), (X0 + 0.3, HW + 0.02, 1.70), (X0 + 0.3, -HW - 0.02, 1.70)):
-        lb.torus((x, y, z), (0, 1, 0), 0.20, 0.045, orange, n1=20, n2=8)
+
+    # --- free-fall lifeboat on a stern ramp (launches bow-first, aft, over the transom) --------------------
+    for sgn in (1, -1):
+        y = sgn * FF_RAIL_Y
+        p0, p1 = ff_point(0) + V(0, y, -0.06), ff_point(FF_LEN) + V(0, y, -0.06)
+        st.box((p0 + p1) * 0.5, (FF_LEN, 0.08, 0.12), hwm, R=rot_y(-FF_ANGLE))     # rail beam
+        for u in (0.45, 1.65, FF_LEN - 0.08):                                          # posts down to the deck
+            q = ff_point(u) + V(0, y, -0.12)
+            dz = ctx.deck_at(q.x)[0]
+            st.box((q.x, y, (q.z + dz) / 2), (0.10, 0.10, q.z - dz), hwm)
+        q0, q1 = ff_point(0.45) + V(0, y, -0.12), ff_point(FF_LEN - 0.08) + V(0, y, -0.12)
+        st.cyl(V(q0.x, y, ctx.deck_at(q0.x)[0] + 0.1), V(q1.x, y, q1.z - 0.1), 0.03, hwm, n=8)   # diagonal brace
+    for u in (0.45, 1.65, FF_LEN - 0.08):
+        q = ff_point(u) + V(0, 0, -0.16)
+        st.box(q, (0.10, 2 * FF_RAIL_Y + 0.10, 0.08), hwm)
+    # boat seated in the rails, bow down the ramp
+    BL, BW, BH = 2.60, 0.86, 0.82
+    n_up = V(-math.sin(FF_ANGLE), 0, math.cos(FF_ANGLE))
+    stern_keel = ff_point(0.22 + BL) - n_up * 0.05
+    freefall_boat(lb, stern_keel, BL, BW, BH, orange, white, dark)
+    # recovery A-frame over the boat, raked aft, carrying the ensign staff
+    ax_deck, ax_top, az_top = -16.90, -18.25, 4.70
+    for sgn in (1, -1):
+        st.cyl((ax_deck, sgn * 0.98, ctx.deck_at(ax_deck)[0]), (ax_top, sgn * 0.98, az_top), 0.065, hwm, n=12)
+        st.box((ax_deck, sgn * 0.98, ctx.deck_at(ax_deck)[0] + 0.03), (0.30, 0.24, 0.06), hwm)
+    st.box((ax_top, 0, az_top + 0.05), (0.16, 2.12, 0.16), hwm)
+    hook_z = stern_keel.z + 1.35
+    st.cyl((ax_top, 0, az_top - 0.03), (ax_top, 0, hook_z + 0.25), 0.010, hwm, n=4)
+    st.box((ax_top, 0, hook_z + 0.18), (0.10, 0.08, 0.14), ctx.mats["accent"])
+    st.cyl((ax_top + 0.05, 0.75, az_top + 0.12), (ax_top - 0.20, 0.75, az_top + 1.30), 0.020, rail, n=6)
+    # boarding platform at the top of the ramp + vertical ladder from the deck
+    px0, px1 = ff_point(FF_LEN).x - 0.18, ff_point(FF_LEN).x + 0.50
+    pz = ff_point(FF_LEN).z - 0.06
+    st.box_between(px0, px1, -0.80, 0.80, pz - 0.05, pz, ctx.mats["grating"])
+    for sgn in (1, -1):
+        st.tube([V(px0, sgn * 0.78, pz + 0.42), V(px1, sgn * 0.78, pz + 0.42), V(px1, sgn * 0.25, pz + 0.42)], 0.014, rail, n=6)
+        for xx in (px0, (px0 + px1) / 2, px1):
+            st.cyl((xx, sgn * 0.78, pz), (xx, sgn * 0.78, pz + 0.42), 0.012, rail, n=6)
+    lx = px1 + 0.04
+    ldz = ctx.deck_at(lx)[0]
+    for yy in (-0.20, 0.20):
+        st.cyl((lx, yy, ldz), (lx, yy, pz + 0.45), 0.016, rail, n=6)
+    for z in np.arange(ldz + 0.25, pz, 0.25):
+        st.cyl((lx, -0.20, float(z)), (lx, 0.20, float(z)), 0.010, rail, n=5)
+
+    # --- rescue boat in a cradle on the bridge deck (stbd, aft), slewing davit at the deck edge ------------
+    rb = V(-12.40, -1.95, d3 + 0.30)
+    for dx in (-0.42, 0.42):
+        st.box(rb + V(dx, 0, -0.19), (0.10, 0.56, 0.16), hwm)
+    rib_boat(lb, rb, 1.45, 0.62, orange, hwm)
+    dvx, dvy = -11.45, -(HW - 0.18)
+    st.cyl((dvx, dvy, d3), (dvx, dvy, d3 + 1.20), 0.075, hwm, n=14)
+    st.cyl((dvx, dvy, d3 + 1.18), (rb.x, rb.y, d3 + 1.18), 0.055, hwm, n=10)
+    st.cyl((rb.x, rb.y, d3 + 1.15), (rb.x, rb.y, rb.z + 0.12), 0.007, hwm, n=4)
+    st.box((dvx, dvy, d3 + 0.02), (0.36, 0.36, 0.04), hwm)
+
+    # --- life-raft canisters in cradles on the deck-2 walkways ------------------------------------------
+    for sgn in (1, -1):
+        for x in (-11.95, -11.20):
+            y = sgn * (HW + 0.34)
+            st.box((x, y, d2 + 0.03), (0.56, 0.30, 0.05), hwm)
+            for dx in (-0.18, 0.18):
+                st.box((x + dx, y, d2 + 0.09), (0.05, 0.30, 0.10), hwm)
+            lb.ellipsoid((x, y, d2 + 0.24), (0.31, 0.15, 0.15), white, nu=16, nv=8)
+            lb.box((x - 0.33, y, d2 + 0.20), (0.04, 0.06, 0.08), ctx.mats["accent"])   # hydrostatic release
+
+    # --- lifebuoys hung on the stern rail and the house walls --------------------------------------------
+    for sgn in (1, -1):
+        x = -18.95
+        dz, w = ctx.deck_at(x)
+        y = sgn * (w - 0.12 - 0.07)
+        lb.torus((x, y, dz + 0.31), (0, 1, 0), 0.17, 0.040, orange, n1=20, n2=8)
+        st.box((x, sgn * (w - 0.12 - 0.02), dz + 0.46), (0.06, 0.06, 0.05), hwm)
+        lb.torus((X0 + 0.3, sgn * (HW + 0.05), 1.70), (0, 1, 0), 0.17, 0.040, orange, n1=20, n2=8)
     lb.finish()
+    st.finish()
 
 
 # ==================================================================================================

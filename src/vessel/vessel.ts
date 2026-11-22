@@ -111,7 +111,7 @@ export function createVessel(): THREE.Group {
   // Container stacks on weather deck
   cargo(ship);
 
-  // Load the Blender ship hull (choose a variant with ?hull=v7|v8a|v8b|v8c, see hull-style.ts)
+  // Load the Blender ship hull (V8-C by default; ?hull=v7 loads the backup, see hull-style.ts)
   const loader = new GLTFLoader();
   const hullFile = HULL_VARIANTS[selectedHullVariant()].file;
   const modelUrl = resolvePublicAsset(hullFile);
@@ -293,6 +293,29 @@ function loadModel(e:Equipment):THREE.Group {
   box(g,[.53,.81,.035],[0,.5,.235],0x7d9aab);box(g,[.2,.15,.025],[0,.7,.261],0x243e51);
   for(const x of [-.17,.17])cylinder(g,.08,.04,[x,.29,.27],0xd3b277,'z');
   return g;
+}
+
+/** Diameter of the bow-thruster tunnel built into the hull GLB (2 × BT_R in scripts/blender/hull_lib.py). */
+const HULL_BOW_TUNNEL_DIAMETER = 0.90;
+
+/**
+ * In the vessel view the hull owns the bow-thruster tunnel. Drop the assembly's own smaller tunnel so there is only
+ * one, and grow the impeller around its hub so it fills the hull tunnel (the hub already sits on the tunnel axis).
+ */
+function fitThrusterToHullTunnel(root:THREE.Group){
+  const topParts=(id:string)=>{const out:THREE.Object3D[]=[];root.traverse(o=>{if(o.userData.partId===id&&o.parent?.userData.partId!==id)out.push(o);});return out;};
+  topParts('tunnel').forEach(o=>o.parent?.remove(o));
+  root.updateMatrixWorld(true);
+  for(const blades of topParts('blades')){
+    const parent=blades.parent;if(!parent)continue;
+    const box=new THREE.Box3().setFromObject(blades),size=box.getSize(new THREE.Vector3());
+    const span=Math.max(size.x,size.y);if(span<=0)continue;
+    const before=box.getCenter(new THREE.Vector3());
+    blades.scale.multiplyScalar((HULL_BOW_TUNNEL_DIAMETER*0.9)/span);
+    blades.updateMatrixWorld(true);
+    const after=new THREE.Box3().setFromObject(blades).getCenter(new THREE.Vector3());
+    blades.position.add(parent.worldToLocal(before.clone()).sub(parent.worldToLocal(after)));
+  }
 }
 
 export function createVesselEquipment(e:Equipment):THREE.Group {
@@ -499,6 +522,7 @@ export function createVesselEquipment(e:Equipment):THREE.Group {
   model.scale.setScalar(scale);model.updateMatrixWorld(true);bounds=measureBounds(model);
   const center=bounds.getCenter(new THREE.Vector3());model.position.set(-center.x,-bounds.min.y,-center.z);
   root.add(model);root.userData.height=bounds.max.y-bounds.min.y;
+  if(e.id==='bow'||e.kind==='thruster')fitThrusterToHullTunnel(root);
   if(placement.space!=='external'&&placement.space!=='cargo'&&e.id!=='bow'&&e.kind!=='thruster'){
     const base=box(root,[Math.min(size[0]+.09*EQ_SCALE,2.2*EQ_SCALE),.035*EQ_SCALE,size[2]+.07*EQ_SCALE],[0,-.025*EQ_SCALE,0],0x375b70,.7);base.userData.foundation=true;
   }

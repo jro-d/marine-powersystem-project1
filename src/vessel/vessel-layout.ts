@@ -75,7 +75,8 @@ export const vesselLayout: Record<string, VesselPlacement> = {
   drive: { position: [-11.3, -1.7, -1.25], size: [1.4, 1.15, 0.65], rotation: Math.PI, space: 'hull' },
   motor: { position: [-13.5, -2.599, 0], size: [1.55, 0.85, 0.80], rotation: Math.PI, space: 'hull' },
   prop: { position: [-17.38, -2.22, 0], size: [0.65, 1.0, 1.0], space: 'external' },
-  bow: { position: [20.1, -2.55, 0], size: [0.95, 1.72, 2.55], rotation: Math.PI / 2, space: 'hull' },
+  // Impeller hub sits on the hull's tunnel axis (x 18.3, y -2.30): keep in step with BT_X / BT_Z in scripts/blender/hull_lib.py
+  bow: { position: [18.3, -2.55, 0], size: [0.95, 1.72, 2.55], rotation: Math.PI / 2, space: 'hull' },
 
   // Symmetrical Dual Main Step-Down Transformers (6.6 kV / 440 V, 2.5 MVA)
   // Port machinery flat (Bus A) & Starboard machinery flat (Bus B)

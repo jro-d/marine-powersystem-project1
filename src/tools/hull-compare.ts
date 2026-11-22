@@ -53,7 +53,7 @@ function setCam(name: string) {
 const loader = new GLTFLoader();
 const cache = new Map<HullVariant, { gltf: THREE.Group; bytes: number }>();
 let current: THREE.Object3D | null = null;
-let variant: HullVariant = 'v8a';
+let variant: HullVariant = 'v8c';
 let mode: Mode = 'textured';
 
 async function fetchHull(v: HullVariant) {

@@ -1,4 +1,4 @@
-// Run one or more Blender generator scripts headless:  node scripts/blender/run-blender.mjs generate_hull_v8a.py [more.py ...]
+// Run one or more Blender generator scripts headless:  node scripts/blender/run-blender.mjs generate_hull_v8c.py [more.py ...]
 // Blender is found via $BLENDER_PATH, then PATH, then the usual install folders.
 import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
