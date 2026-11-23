@@ -31,7 +31,7 @@ The **Marine Power System Simulator** is a full-featured educational platform en
 ## ✨ Key Features & Capabilities
 
 ### 1. Spatial 3D Vessel View
-* **Translucent Machinery Hull & Engineered Grid Datum**: A translucent hull with dual-sided depth sorting reveals internal machinery compartments, tanktop chocks, and watertight bulkheads without geometry clipping.
+* **Translucent Machinery Hull & Engineered Grid Datum**: A translucent hull with dual-sided depth sorting reveals internal machinery compartments, tanktop chocks, and watertight bulkheads without geometry clipping. The **Solid** button in the vessel toolbar switches to the painted, textured hull.
 * **Symmetrical Switchboard Architecture**: True-to-scale 6.6 kV Medium-Voltage and 440 V Low-Voltage main switchboards positioned athwartships with matching dimensional scale and cubicle compartmentalization.
 * **Full Electric Propulsion Drivetrain**: Features a 6,000 kW Totally Enclosed Water-to-Air Cooled (TEWAC) propulsion motor, 12-pulse variable frequency inverter drive (VFD), intermediate shaft with plummer block bearings, stern tube seals, and a 4-blade skewed Nickel-Aluminum Bronze (Ni-Al Bronze) propeller.
 * **Maneuvering & Deck Machinery**: Athwartships bow thruster tunnel with protective trash racks and Kaplan bronze propeller, electro-hydraulic twin-ram steering gear, 40 t pedestal cargo deck cranes, and raised forecastle mooring winches.
@@ -239,10 +239,11 @@ marine-powersystem-project1/
 │   │   ├── universal_viewer.html # Data-driven Three.js 3D CAD Twin Viewer
 │   │   ├── tutorial.html         # Interactive in-app visual operating guide
 │   │   └── *.html                # Compatibility shims for legacy assembly links
+│   ├── draco/                    # Draco decoder (from three/examples/jsm/libs/draco/gltf) for the compressed hull GLB
 │   ├── manifests/
 │   │   └── equipment_catalog.json# Technical catalog metadata for 3D equipment
 │   ├── models/                   # 25 production 3D GLB models (Hull V7, machinery)
-│   │   ├── blender-hull-V8C.glb  # Default hull (V8-C Modern Feeder)
+│   │   ├── blender-hull-V8C.glb  # Default hull (V8-C Modern Feeder), Draco-compressed, ~0.9 MB
 │   │   ├── blender-hull-V7.glb   # Backup hull, load with ?hull=v7
 │   │   ├── marine_propulsion_motor.glb
 │   │   ├── marine_propeller_assembly.glb
@@ -296,6 +297,7 @@ marine-powersystem-project1/
 │   ├── vessel/
 │   │   ├── scene.ts              # Three.js scene, lighting, camera controls
 │   │   ├── vessel.ts             # 3D hull, machinery foundations & animations
+│   │   ├── gltf-loader.ts        # Hull GLB loader with the Draco decoder
 │   │   ├── general-arrangement.json # Single GA spec: decks, bulkheads, house, bays, equipment slots (app + Blender)
 │   │   ├── vessel-layout.ts      # Spatial coordinates & equipment placement
 │   │   └── assets.ts             # Dynamic URL resolution for Pages hosting

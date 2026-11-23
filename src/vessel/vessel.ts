@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { CARGO, GENERAL_ARRANGEMENT as GA, equipmentScale, vesselLayout } from './vessel-layout';
 import { createModel } from '../assemblies/models';
 import type { Equipment } from '../core/network';
@@ -21,7 +20,8 @@ import {
   bridgeNavComAssembly
 } from '../assemblies/consumer-assemblies';
 import { resolvePublicAsset } from './assets';
-import { HULL_VARIANTS, applyAppHullStyle, selectedHullVariant } from './hull-style';
+import { HULL_VARIANTS, selectedHullVariant, setHullLook, type HullLook } from './hull-style';
+import { createHullLoader } from './gltf-loader';
 export { propellerAssembly } from '../assemblies/propeller-assembly';
 export { transformerAssembly } from '../assemblies/transformer-assembly';
 export { driveAssembly } from '../assemblies/drive-assembly';
@@ -113,14 +113,16 @@ export function createVessel(): THREE.Group {
   cargo(ship);
 
   // Load the Blender ship hull (V8-C by default; ?hull=v7 loads the backup, see hull-style.ts)
-  const loader = new GLTFLoader();
+  const loader = createHullLoader();
+  ship.userData.hullLook = 'glass' as HullLook;
   const hullFile = HULL_VARIANTS[selectedHullVariant()].file;
   const modelUrl = resolvePublicAsset(hullFile);
 
   loader.load(
     modelUrl,
     (gltf) => {
-      applyAppHullStyle(gltf.scene);
+      setHullLook(gltf.scene, ship.userData.hullLook);
+      ship.userData.hullRoot = gltf.scene;
       ship.add(gltf.scene);
     },
     undefined,
@@ -133,6 +135,12 @@ export function createVessel(): THREE.Group {
   addCompartmentEnclosures(ship);
 
   return ship;
+}
+
+/** Switch the loaded hull between the translucent 'glass' look and its solid painted look (applied on load if called earlier). */
+export function setVesselHullLook(ship: THREE.Group, look: HullLook) {
+  ship.userData.hullLook = look;
+  if (ship.userData.hullRoot) setHullLook(ship.userData.hullRoot, look);
 }
 
 function addCompartmentEnclosures(parent: THREE.Group) {

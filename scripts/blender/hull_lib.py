@@ -2521,7 +2521,12 @@ def export(ctx):
         o.select_set(True)
     bpy.context.view_layer.objects.active = objs[0]
     bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", use_selection=True, export_apply=True,
-                              export_yup=True, export_image_format="JPEG", export_jpeg_quality=86, export_extras=True)
+                              export_yup=True, export_image_format="JPEG", export_jpeg_quality=86, export_extras=True,
+                              # Draco mesh compression: geometry is ~90 % of the file. Positions keep 14 bits
+                              # (~3 mm over the 45 m hull); the app decodes with public/draco (see gltf-loader.ts).
+                              export_draco_mesh_compression_enable=True, export_draco_mesh_compression_level=7,
+                              export_draco_position_quantization=14, export_draco_normal_quantization=10,
+                              export_draco_texcoord_quantization=12)
     tris = sum(len(o.data.loop_triangles) if o.data.loop_triangles else 0 for o in objs)
     size = os.path.getsize(path) / 1e6
     print(f"[hull_lib] exported {path}  ({len(objs)} objects, {size:.2f} MB)")

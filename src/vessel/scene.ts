@@ -4,6 +4,7 @@ import { connections, equipment, type SimState, type ModelType, type Connection,
 import { createModel, type ModelInstance } from '../assemblies/models';
 import {
   createVessel,
+  setVesselHullLook,
   createVesselEquipment,
   propellerAssembly,
   transformerAssembly,
@@ -611,6 +612,8 @@ export class VesselView {
     }
   }
   setShell(visible: boolean) { this.hull.visible = visible; }
+  /** Solid: the hull as painted in Blender (hides the machinery); otherwise the translucent glass look. */
+  setHullSolid(solid: boolean) { setVesselHullLook(this.hull, solid ? 'solid' : 'glass'); }
   setLabels(visible: boolean) { this.labelsVisible = visible; }
   setFlowFilter(mode: FlowFilterMode) {
     this.flowFilter = mode;
