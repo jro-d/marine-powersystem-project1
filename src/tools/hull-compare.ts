@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { HULL_VARIANTS, applyAppHullStyle, isHullVariant, type HullVariant } from '../vessel/hull-style';
 import { resolvePublicAsset } from '../vessel/assets';
+import { createHullLoader } from '../vessel/gltf-loader';
 
 type Mode = 'textured' | 'glass' | 'xray';
 const XRAY_HIDE = ['ShipHull', 'Main_Deck', 'CargoBay', 'Hatch_', 'Accommodation', 'House_Deck', 'Bridge_Window', 'Deck_Safety', 'Deck_Mooring', 'Anchor_Chain', 'Bilge_Keel', 'Hull_Markings', 'Deck_Fittings'];
@@ -50,7 +50,7 @@ function setCam(name: string) {
   document.querySelectorAll<HTMLButtonElement>('#cams button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cam === name)));
 }
 
-const loader = new GLTFLoader();
+const loader = createHullLoader();
 const cache = new Map<HullVariant, { gltf: THREE.Group; bytes: number }>();
 let current: THREE.Object3D | null = null;
 let variant: HullVariant = 'v8c';
@@ -110,6 +110,7 @@ async function show() {
     scene.add(current);
     scene.background = new THREE.Color(mode === 'glass' ? 0xf8fafc : 0xdfe6ec);
     const s = statsOf(gltf);
+    showStats(variant);
     status.textContent = `${HULL_VARIANTS[variant].label} · ${s.meshes} meshes · ${s.tris.toLocaleString()} tris · ${s.textures} textures`;
     (document.getElementById('open') as HTMLAnchorElement).href = `./?hull=${variant}`;
     const u = new URL(window.location.href);
@@ -122,8 +123,17 @@ async function show() {
   document.querySelectorAll<HTMLButtonElement>('#modes button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
 }
 
-// Variant cards (with file size once loaded)
+// Variant cards. Only the selected hull is downloaded: the other cards show their file size from a HEAD request,
+// and fill in triangle and texture counts once that hull has been opened.
 const list = document.getElementById('variants')!;
+const statsEl = (v: HullVariant) => list.querySelector<HTMLElement>(`.card[data-v="${v}"] .stats`)!;
+const mb = (bytes: number) => `${(bytes / 1e6).toFixed(1)} MB`;
+function showStats(v: HullVariant) {
+  const hit = cache.get(v);
+  if (!hit) return;
+  const s = statsOf(hit.gltf);
+  statsEl(v).textContent = `${mb(hit.bytes)} · ${(s.tris / 1000).toFixed(0)}k tris · ${s.textures} tex`;
+}
 for (const [key, info] of Object.entries(HULL_VARIANTS)) {
   const card = document.createElement('button');
   card.className = 'card';
@@ -131,12 +141,13 @@ for (const [key, info] of Object.entries(HULL_VARIANTS)) {
   card.innerHTML = `<b>${info.label}</b><span>${info.blurb}</span><div class="stats"></div>`;
   card.addEventListener('click', () => { variant = key as HullVariant; show(); });
   list.appendChild(card);
-  fetchHull(key as HullVariant)
-    .then(({ gltf, bytes }) => {
-      const s = statsOf(gltf);
-      card.querySelector('.stats')!.textContent = `${(bytes / 1e6).toFixed(1)} MB · ${(s.tris / 1000).toFixed(0)}k tris · ${s.textures} tex`;
+  fetch(resolvePublicAsset(info.file), { method: 'HEAD' })
+    .then((res) => {
+      if (!res.ok) throw new Error(String(res.status));
+      const bytes = Number(res.headers.get('content-length'));
+      if (!cache.has(key as HullVariant)) statsEl(key as HullVariant).textContent = bytes ? `${mb(bytes)} · open to inspect` : '';
     })
-    .catch(() => { card.querySelector('.stats')!.textContent = 'not built yet'; });
+    .catch(() => { statsEl(key as HullVariant).textContent = 'not built yet'; });
 }
 document.querySelectorAll<HTMLButtonElement>('#modes button').forEach((b) => b.addEventListener('click', () => { mode = b.dataset.mode as Mode; show(); }));
 document.querySelectorAll<HTMLButtonElement>('#cams button').forEach((b) => b.addEventListener('click', () => setCam(b.dataset.cam!)));

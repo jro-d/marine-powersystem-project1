@@ -30,7 +30,7 @@ let live=powered(state);
 let selected='busA';
 let view:View='vessel';
 let message='DG 1 and DG 2 are running in parallel. Additional DGs auto-start on high load demand.';
-let showShell=true,showLabels=true;
+let showShell=true,showLabels=true,solidHull=false;
 let leftPanelOpen=true;
 let leftPanelExpanded=false;
 let rightPanelOpen=true;
@@ -121,6 +121,7 @@ app.innerHTML=`
           <button id="resetCamera" type="button">Reset view</button>
           <button id="focusEquipment" type="button">Focus selection</button>
           <button id="toggleShell" type="button" aria-pressed="true">Hull</button>
+          <button id="toggleSolid" type="button" aria-pressed="false" title="Show the hull solid and painted (hides the machinery inside)">Solid</button>
           <button id="toggleLabels" type="button" aria-pressed="true">Labels</button>
         </div>
         <div class="schematic-legend-card hidden" id="schematicLegendCard" aria-label="Single-line diagram legend">
@@ -2092,6 +2093,7 @@ document.querySelector('#resetAll')!.addEventListener('click',reset);
 document.querySelector('#resetCamera')!.addEventListener('click',()=>vessel.resetCamera());
 document.querySelector('#focusEquipment')!.addEventListener('click',()=>vessel.focusSelection());
 document.querySelector('#toggleShell')!.addEventListener('click',e=>{showShell=!showShell;vessel.setShell(showShell);(e.currentTarget as HTMLElement).setAttribute('aria-pressed',String(showShell));});
+document.querySelector('#toggleSolid')!.addEventListener('click',e=>{solidHull=!solidHull;vessel.setHullSolid(solidHull);(e.currentTarget as HTMLElement).setAttribute('aria-pressed',String(solidHull));});
 document.querySelector('#toggleLabels')!.addEventListener('click',e=>{showLabels=!showLabels;vessel.setLabels(showLabels);(e.currentTarget as HTMLElement).setAttribute('aria-pressed',String(showLabels));});
 document.querySelectorAll<HTMLButtonElement>('[data-flow-filter]').forEach(btn=>{
   btn.addEventListener('click',()=>{

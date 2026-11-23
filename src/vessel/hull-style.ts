@@ -23,6 +23,47 @@ export function selectedHullVariant(): HullVariant {
   return isHullVariant(requested) ? requested : DEFAULT_HULL;
 }
 
+export type HullLook = 'glass' | 'solid';
+
+type MaterialLook = { transparent: boolean; opacity: number; depthWrite: boolean; side: THREE.Side; transmission?: number };
+const lookOf = (m: THREE.Material): MaterialLook => {
+  const look: MaterialLook = { transparent: m.transparent, opacity: m.opacity, depthWrite: m.depthWrite, side: m.side };
+  if ('transmission' in m) look.transmission = (m as THREE.MeshPhysicalMaterial).transmission;
+  return look;
+};
+const meshesOf = (root: THREE.Object3D) => {
+  const meshes: THREE.Mesh[] = [];
+  root.traverse((o) => { if (o instanceof THREE.Mesh) meshes.push(o); });
+  return meshes;
+};
+const materialsOf = (mesh: THREE.Mesh) => (Array.isArray(mesh.material) ? mesh.material : [mesh.material]);
+
+/**
+ * Show a loaded hull either in the simulator's translucent 'glass' look (machinery visible inside) or 'solid', as
+ * exported from Blender (painted, textured, opaque). The first call records both looks so later calls just switch.
+ */
+export function setHullLook(root: THREE.Object3D, look: HullLook): void {
+  if (!root.userData.hullLooks) {
+    for (const mesh of meshesOf(root)) {
+      mesh.userData.renderOrders = { solid: mesh.renderOrder };
+      for (const m of materialsOf(mesh)) m.userData.looks ??= { solid: lookOf(m) };
+    }
+    applyAppHullStyle(root);
+    for (const mesh of meshesOf(root)) {
+      mesh.userData.renderOrders.glass = mesh.renderOrder;
+      for (const m of materialsOf(mesh)) m.userData.looks.glass ??= lookOf(m);
+    }
+    root.userData.hullLooks = true;
+  }
+  for (const mesh of meshesOf(root)) {
+    mesh.renderOrder = mesh.userData.renderOrders[look];
+    for (const m of materialsOf(mesh)) {
+      Object.assign(m, m.userData.looks[look]);
+      m.needsUpdate = true;
+    }
+  }
+}
+
 /**
  * The simulator's "glass ship" look: translucent plating and superstructure so the machinery inside stays visible,
  * solid foundation pads, semi-transparent hardware. Classification is by material / object name keywords, which every

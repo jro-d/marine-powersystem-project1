@@ -1,7 +1,7 @@
 # Vessel model: scan findings, implementation plan and roadmap
 
-Status: **M1–M4 done.**
-- M1 was merged in #9, M2 in #10, M3 in #11.
+Status: **M1–M5 done.**
+- M1 was merged in #9, M2 in #10, M3 in #11, M4 in #12.
 - M2: `src/vessel/general-arrangement.json` is the single spec. Both `vessel-layout.ts` and `hull_lib.py` read it.
 - M3 (`feat/hull-m3-real-hull-qa`): checks run against the real shell.
   - The V8-C build writes `public/models/blender-hull-V8C.sections.json` (half-breadth every 0.25 m × 0.1 m, keel and
@@ -34,6 +34,17 @@ Status: **M1–M4 done.**
   - Review result: every slot was already in a sensible space apart from `eSteer`. The tank-top pumps
     (`fire1/2`, `cooling1/2`, `airCompressor`, `ballast`, `bilge`) and the reefer transformers stand at the aft end of
     the hold, under hatches 2 and 3; there is no pump-room bulkhead (see the open question in section 5).
+- M5 (`feat/hull-m5-polish`): tidy-up and performance.
+  - **Smaller hull download:** geometry was about 93 % of the V8-C GLB (textures only 0.35 MB, so WebP/KTX2 would
+    have saved little). The build now exports Draco-compressed meshes (positions 14-bit, about 3 mm over the hull):
+    **5.19 MB → 0.90 MB**. The app and the compare page load hulls through `src/vessel/gltf-loader.ts`, which
+    decodes with `public/draco/` (250 KB, copied from three; re-copy it when upgrading three). The uncompressed V7
+    backup still loads through the same loader.
+  - **Compare page** downloads only the selected hull; the other cards show the file size from a HEAD request and fill
+    in triangle and texture counts once opened.
+  - **Solid / Glass:** a **Solid** button in the vessel toolbar shows the hull as painted in Blender; off is the usual
+    translucent look. `setHullLook` in `hull-style.ts` records both looks on first use and switches between them.
+  - F1 and F2 were already done (`build:hull` goes through `run-blender.mjs`; V6 was deleted in M1).
 
 The scan measurements below were taken before M1, on `main` at `b8ea922` (V8-C default hull),
 using the Blender build, the exported GLBs and the running app.
@@ -213,9 +224,11 @@ Hull half-width (V8-C) around the current tunnel:
 - Acceptance: `check:layout` passes on real-hull sections; teardown links and the sim are unaffected.
 
 ### Phase 6: Tidy-up and performance (F1–F4)
-- `build:hull` via `run-blender.mjs`; remove `blender-hull-V6.glb`.
-- Compare page loads a hull only when selected (stats from a small manifest written by the build).
-- Optional: WebP/KTX2 textures (≈ −50 % GLB size); a "Solid / Glass" hull toggle in the vessel view.
+- `build:hull` via `run-blender.mjs`; remove `blender-hull-V6.glb`. (Already done.)
+- Compare page loads a hull only when selected (stats from a small manifest written by the build). Done in M5, with a
+  HEAD request for the size instead of a manifest.
+- Optional: WebP/KTX2 textures (≈ −50 % GLB size); a "Solid / Glass" hull toggle in the vessel view. Done in M5 as
+  Draco geometry compression (−83 %; textures were too small to matter) and a Solid button.
 
 ---
 
@@ -227,7 +240,7 @@ Hull half-width (V8-C) around the current tunnel:
 | **M2: Single GA spec** ✅ | 1 | One file drives app + Blender; no duplicated constants | 1 session |
 | **M3: Real-hull QA** ✅ | 2 | `check:layout` and the Blender build both validate against the actual shell, including protrusion, floating parts and clearance | 1 session |
 | **M4: Arrangement corrections** ✅ | 5 | Steering gear on the rudder stock; compartments match the GA | ½–1 session |
-| **M5: Polish** | 6 | Smaller downloads, solid/glass toggle, clean scripts | ½ session |
+| **M5: Polish** ✅ | 6 | Smaller downloads, solid/glass toggle, clean scripts | ½ session |
 
 Recommended order: **M1 first** (it is what you see), then M2 → M3 so these bugs can't come back, then M4 and M5.
 M1 can be done without M2: it only touches `hull_lib.py`, the `bow` entry in `vessel-layout.ts` and the thruster model.
